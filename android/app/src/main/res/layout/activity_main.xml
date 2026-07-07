@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VTuber 直播实时翻译 v1.0"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Gemini API Key（可填多个，英文逗号分隔，会话随机选一个）" />
+
+        <EditText
+            android:id="@+id/etApiKeys"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="AIza... , AIza..."
+            android:importantForAutofill="no"
+            android:inputType="textVisiblePassword"
+            android:maxLines="2" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="API Base URL（默认官方地址，走代理时不用改）" />
+
+        <EditText
+            android:id="@+id/etBaseUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="提示词预设（按主播存多套，开播前选一套）"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Spinner
+                android:id="@+id/spPreset"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/btnNewPreset"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="新建" />
+
+            <Button
+                android:id="@+id/btnDeletePreset"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="删除" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/etPresetName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="预设名（如：風真いろは）"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:maxLines="1" />
+
+        <EditText
+            android:id="@+id/etPrompt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:hint="提示词内容"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine"
+            android:minLines="5"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnSavePreset"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="保存当前预设" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="悬浮窗样式（改完立即生效）"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvFontVal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="字号 16sp" />
+
+        <SeekBar
+            android:id="@+id/sbFont"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="26"
+            android:min="12" />
+
+        <TextView
+            android:id="@+id/tvOpacityVal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="背景不透明度 66%" />
+
+        <SeekBar
+            android:id="@+id/sbOpacity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="95"
+            android:min="20" />
+
+        <TextView
+            android:id="@+id/tvLinesVal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="最多行数 3" />
+
+        <SeekBar
+            android:id="@+id/sbLines"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="3"
+            android:min="1" />
+
+        <Button
+            android:id="@+id/btnBattery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="加入电池白名单（防止被系统杀掉）" />
+
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="开始翻译" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="monospace"
+            android:text="○ 未运行"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="使用：填 Key → 选预设 → 点开始 → 同意权限和系统录制确认 → 切到 YouTube。\n悬浮窗：拖动换位置；点一下收成小圆点，再点展开。圆点颜色：绿=已连接 黄=连接中/重连 红=出错。\n约 8 分半会自动换一次连接（绿→黄→绿），字幕短暂停顿属正常。\n翻译记录自动存到 手机存储/Download/LiveTranslate/。"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+</ScrollView>
