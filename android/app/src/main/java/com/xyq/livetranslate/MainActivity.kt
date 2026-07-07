@@ -13,31 +13,29 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.View
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.SeekBar
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.slider.Slider
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var etApiKeys: EditText
     private lateinit var etBaseUrl: EditText
-    private lateinit var spPreset: Spinner
+    private lateinit var acPreset: MaterialAutoCompleteTextView
     private lateinit var etPresetName: EditText
     private lateinit var etPrompt: EditText
     private lateinit var btnNewPreset: Button
     private lateinit var btnDeletePreset: Button
     private lateinit var btnSavePreset: Button
-    private lateinit var sbFont: SeekBar
-    private lateinit var sbOpacity: SeekBar
-    private lateinit var sbLines: SeekBar
+    private lateinit var slFont: Slider
+    private lateinit var slOpacity: Slider
+    private lateinit var slLines: Slider
     private lateinit var tvFontVal: TextView
     private lateinit var tvOpacityVal: TextView
     private lateinit var tvLinesVal: TextView
@@ -46,7 +44,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
 
     private var presetNames: List<String> = emptyList()
-    private var suppressSpinner = false
     private var permRequested = false
 
     private val ui = Handler(Looper.getMainLooper())
@@ -81,15 +78,15 @@ class MainActivity : AppCompatActivity() {
 
         etApiKeys = findViewById(R.id.etApiKeys)
         etBaseUrl = findViewById(R.id.etBaseUrl)
-        spPreset = findViewById(R.id.spPreset)
+        acPreset = findViewById(R.id.acPreset)
         etPresetName = findViewById(R.id.etPresetName)
         etPrompt = findViewById(R.id.etPrompt)
         btnNewPreset = findViewById(R.id.btnNewPreset)
         btnDeletePreset = findViewById(R.id.btnDeletePreset)
         btnSavePreset = findViewById(R.id.btnSavePreset)
-        sbFont = findViewById(R.id.sbFont)
-        sbOpacity = findViewById(R.id.sbOpacity)
-        sbLines = findViewById(R.id.sbLines)
+        slFont = findViewById(R.id.slFont)
+        slOpacity = findViewById(R.id.slOpacity)
+        slLines = findViewById(R.id.slLines)
         tvFontVal = findViewById(R.id.tvFontVal)
         tvOpacityVal = findViewById(R.id.tvOpacityVal)
         tvLinesVal = findViewById(R.id.tvLinesVal)
@@ -101,23 +98,18 @@ class MainActivity : AppCompatActivity() {
         etBaseUrl.setText(SettingsStore.baseUrl(this))
         reloadPresets(SettingsStore.selectedPreset(this))
 
-        spPreset.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                if (suppressSpinner) return
-                val name = presetNames.getOrNull(pos) ?: return
-                SettingsStore.setSelectedPreset(this@MainActivity, name)
-                etPresetName.setText(name)
-                etPrompt.setText(SettingsStore.presetText(this@MainActivity, name))
-            }
-
-            override fun onNothingSelected(p: AdapterView<*>?) {}
+        acPreset.setOnItemClickListener { _, _, pos, _ ->
+            val name = presetNames.getOrNull(pos) ?: return@setOnItemClickListener
+            SettingsStore.setSelectedPreset(this, name)
+            etPresetName.setText(name)
+            etPrompt.setText(SettingsStore.presetText(this, name))
         }
 
         btnNewPreset.setOnClickListener {
             etPresetName.setText("")
             etPrompt.setText(SettingsStore.DEFAULT_PROMPT)
             etPresetName.requestFocus()
-            toast("填好预设名和提示词后，点“保存当前预设”")
+            toast("填好预设名和提示词后，点“保存”")
         }
 
         btnSavePreset.setOnClickListener {
@@ -133,7 +125,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnDeletePreset.setOnClickListener {
-            val name = presetNames.getOrNull(spPreset.selectedItemPosition) ?: return@setOnClickListener
+            val name = acPreset.text.toString()
             if (!SettingsStore.deletePreset(this, name)) {
                 toast("至少保留一个预设")
                 return@setOnClickListener
@@ -171,14 +163,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun reloadPresets(selectName: String) {
         presetNames = SettingsStore.presetNames(this)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, presetNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        suppressSpinner = true
-        spPreset.adapter = adapter
-        val idx = presetNames.indexOf(selectName).coerceAtLeast(0)
-        spPreset.setSelection(idx)
-        suppressSpinner = false
-        val name = presetNames[idx]
+        acPreset.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, presetNames)
+        )
+        val name = if (selectName in presetNames) selectName else presetNames.first()
+        acPreset.setText(name, false)
         etPresetName.setText(name)
         etPrompt.setText(SettingsStore.presetText(this, name))
     }
@@ -186,33 +175,33 @@ class MainActivity : AppCompatActivity() {
     // ---------- 样式 ----------
 
     private fun setupStyleSliders() {
-        sbFont.progress = SettingsStore.fontSizeSp(this)
-        sbOpacity.progress = SettingsStore.bgOpacityPct(this)
-        sbLines.progress = SettingsStore.overlayMaxLines(this)
+        slFont.value = SettingsStore.fontSizeSp(this).toFloat().coerceIn(12f, 26f)
+        slOpacity.value = (SettingsStore.bgOpacityPct(this) / 5 * 5).toFloat().coerceIn(20f, 95f)
+        slLines.value = SettingsStore.overlayMaxLines(this).toFloat().coerceIn(1f, 3f)
         updateStyleLabels()
 
-        val l = object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
-                updateStyleLabels()
-            }
-
-            override fun onStartTrackingTouch(s: SeekBar?) {}
-
-            override fun onStopTrackingTouch(s: SeekBar?) {
+        val change = Slider.OnChangeListener { _, _, _ -> updateStyleLabels() }
+        val touch = object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {}
+            override fun onStopTrackingTouch(slider: Slider) {
                 SettingsStore.saveStyle(
-                    this@MainActivity, sbFont.progress, sbOpacity.progress, sbLines.progress
+                    this@MainActivity,
+                    slFont.value.toInt(),
+                    slOpacity.value.toInt(),
+                    slLines.value.toInt()
                 )
             }
         }
-        sbFont.setOnSeekBarChangeListener(l)
-        sbOpacity.setOnSeekBarChangeListener(l)
-        sbLines.setOnSeekBarChangeListener(l)
+        listOf(slFont, slOpacity, slLines).forEach {
+            it.addOnChangeListener(change)
+            it.addOnSliderTouchListener(touch)
+        }
     }
 
     private fun updateStyleLabels() {
-        tvFontVal.text = "字号 ${sbFont.progress}sp"
-        tvOpacityVal.text = "背景不透明度 ${sbOpacity.progress}%"
-        tvLinesVal.text = "最多行数 ${sbLines.progress}"
+        tvFontVal.text = "字号 ${slFont.value.toInt()}sp"
+        tvOpacityVal.text = "背景不透明度 ${slOpacity.value.toInt()}%"
+        tvLinesVal.text = "最多行数 ${slLines.value.toInt()}"
     }
 
     // ---------- 电池白名单 ----------
@@ -232,7 +221,6 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }.onFailure {
-            // 个别 ROM 不支持该 intent，退而求其次跳电池优化列表
             runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
         }
     }
@@ -240,7 +228,6 @@ class MainActivity : AppCompatActivity() {
     // ---------- 启动流程 ----------
 
     private fun onStartClicked() {
-        // 保存所有设置（key 加密入库；当前编辑的预设顺手保存并选中）
         SettingsStore.saveApiKeys(this, etApiKeys.text.toString())
         SettingsStore.saveBaseUrl(
             this,
@@ -256,7 +243,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 1) 运行时权限
         val need = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             need += Manifest.permission.RECORD_AUDIO
@@ -278,7 +264,6 @@ class MainActivity : AppCompatActivity() {
         }
         permRequested = false
 
-        // 2) 悬浮窗权限
         if (!Settings.canDrawOverlays(this)) {
             toast("请开启悬浮窗权限，开启后回到本页再点开始")
             startActivity(
@@ -287,7 +272,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 3) MediaProjection（系统录制确认框）
         val mpm = getSystemService(MediaProjectionManager::class.java)
         projLauncher.launch(mpm.createScreenCaptureIntent())
     }

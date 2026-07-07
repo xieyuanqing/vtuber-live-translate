@@ -14,8 +14,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * 悬浮字幕窗：半透明黑底白字，可拖动；点一下整体收起成小圆点，再点展开。
- * 小圆点颜色 = 连接状态（绿=已连接 黄=连接中/重连 红=出错）。
+ * 悬浮字幕窗。
+ * 结构：圆角黑底 [ 状态点 | 确认行(暗一档、小一号) / 当前行(亮、带阴影) ]
+ * 交互：拖动换位置；点一下收起成小圆点，再点展开。
  * 字号/背景不透明度/行数从 SettingsStore 读取，styleVersion 变化时自动重新应用。
  * 所有方法必须在主线程调用。
  */
@@ -23,7 +24,9 @@ class SubtitleOverlay(private val context: Context) {
 
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var root: LinearLayout? = null
-    private var tvText: TextView? = null
+    private var textColumn: LinearLayout? = null
+    private var tvConfirmed: TextView? = null
+    private var tvCurrent: TextView? = null
     private var dot: View? = null
     private var lp: WindowManager.LayoutParams? = null
     private var collapsed = false
@@ -43,10 +46,11 @@ class SubtitleOverlay(private val context: Context) {
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             background = GradientDrawable().apply {
-                cornerRadius = dp(10).toFloat()
+                cornerRadius = dp(14).toFloat()
                 setColor(Color.argb(170, 0, 0, 0))
+                setStroke(dp(1), Color.argb(50, 255, 255, 255))
             }
         }
 
@@ -56,17 +60,45 @@ class SubtitleOverlay(private val context: Context) {
                 setColor(Color.parseColor("#FFC107"))
             }
         }
-        container.addView(d, LinearLayout.LayoutParams(dp(10), dp(10)).apply { rightMargin = dp(8) })
+        container.addView(d, LinearLayout.LayoutParams(dp(10), dp(10)).apply { rightMargin = dp(10) })
 
-        val tv = TextView(context).apply {
+        val column = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        val confirmed = TextView(context).apply {
+            setTextColor(Color.argb(175, 255, 255, 255))
+            textSize = 13f
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            visibility = View.GONE
+        }
+        column.addView(
+            confirmed,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val current = TextView(context).apply {
             setTextColor(Color.WHITE)
             textSize = 16f
             maxLines = 3
             ellipsize = TextUtils.TruncateAt.END
+            setShadowLayer(4f, 0f, 1f, Color.argb(140, 0, 0, 0))
             text = "等待字幕…"
         }
+        column.addView(
+            current,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         container.addView(
-            tv,
+            column,
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         )
 
@@ -115,7 +147,9 @@ class SubtitleOverlay(private val context: Context) {
 
         wm.addView(container, params)
         root = container
-        tvText = tv
+        textColumn = column
+        tvConfirmed = confirmed
+        tvCurrent = current
         dot = d
         lp = params
         applyStyleNow()
@@ -124,7 +158,9 @@ class SubtitleOverlay(private val context: Context) {
     fun hide() {
         root?.let { runCatching { wm.removeView(it) } }
         root = null
-        tvText = null
+        textColumn = null
+        tvConfirmed = null
+        tvCurrent = null
         dot = null
         lp = null
         collapsed = false
@@ -137,14 +173,14 @@ class SubtitleOverlay(private val context: Context) {
         collapsed = !collapsed
         val dotLp = dot?.layoutParams as? LinearLayout.LayoutParams
         if (collapsed) {
-            tvText?.visibility = View.GONE
+            textColumn?.visibility = View.GONE
             dotLp?.apply { width = dp(18); height = dp(18); rightMargin = 0 }
             r.setPadding(dp(10), dp(10), dp(10), dp(10))
             p.width = WindowManager.LayoutParams.WRAP_CONTENT
         } else {
-            tvText?.visibility = View.VISIBLE
-            dotLp?.apply { width = dp(10); height = dp(10); rightMargin = dp(8) }
-            r.setPadding(dp(12), dp(8), dp(12), dp(8))
+            textColumn?.visibility = View.VISIBLE
+            dotLp?.apply { width = dp(10); height = dp(10); rightMargin = dp(10) }
+            r.setPadding(dp(14), dp(10), dp(14), dp(10))
             p.width = expandedWidth
         }
         dot?.requestLayout()
@@ -153,14 +189,23 @@ class SubtitleOverlay(private val context: Context) {
 
     /** 稳定器输出：上一句确认行 + 正在生成的当前行。 */
     fun setLines(confirmed: String, current: String) {
-        val t = buildString {
-            if (confirmed.isNotEmpty()) append(confirmed)
-            if (current.isNotEmpty()) {
-                if (isNotEmpty()) append('\n')
-                append(current)
+        tvConfirmed?.apply {
+            text = confirmed
+            visibility = if (confirmed.isEmpty()) View.GONE else View.VISIBLE
+        }
+        tvCurrent?.apply {
+            when {
+                current.isNotEmpty() -> {
+                    text = current
+                    visibility = View.VISIBLE
+                }
+                confirmed.isEmpty() -> {
+                    text = "等待字幕…"
+                    visibility = View.VISIBLE
+                }
+                else -> visibility = View.GONE
             }
         }
-        tvText?.text = t.ifEmpty { "等待字幕…" }
     }
 
     fun setStateColor(colorHex: String) {
@@ -175,9 +220,10 @@ class SubtitleOverlay(private val context: Context) {
 
     private fun applyStyleNow() {
         appliedStyle = StatusBus.styleVersion.get()
-        val tv = tvText ?: return
-        tv.textSize = SettingsStore.fontSizeSp(context).toFloat()
-        tv.maxLines = SettingsStore.overlayMaxLines(context)
+        val font = SettingsStore.fontSizeSp(context)
+        tvCurrent?.textSize = font.toFloat()
+        tvCurrent?.maxLines = SettingsStore.overlayMaxLines(context)
+        tvConfirmed?.textSize = (font - 3).coerceAtLeast(11).toFloat()
         val alpha = 255 * SettingsStore.bgOpacityPct(context).coerceIn(10, 100) / 100
         (root?.background as? GradientDrawable)?.setColor(Color.argb(alpha, 0, 0, 0))
     }

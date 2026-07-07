@@ -285,7 +285,7 @@ class CaptureService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_stat_subtitle)
             .setContentTitle("直播翻译运行中")
             .setContentText("正在捕获系统音频并实时翻译")
             .setOngoing(true)
