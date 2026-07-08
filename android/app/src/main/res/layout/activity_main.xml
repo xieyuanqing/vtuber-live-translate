@@ -26,16 +26,186 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="VTuber 直播实时字幕 · v1.1"
+            android:text="VTuber 直播实时字幕 · v1.2"
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="13sp" />
+
+        <!-- 运行控制台 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvHeroStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="○ 待开始"
+                            android:textColor="?attr/colorPrimary"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvHeroSubStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="填 Key、选预设，然后开始翻译"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvAudioLevel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:text="0%"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="输入音量"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+
+                <ProgressBar
+                    android:id="@+id/pbAudio"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:layout_marginTop="6dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressBackgroundTint="#2A000000"
+                    android:progressTint="?attr/colorPrimary" />
+
+                <Button
+                    android:id="@+id/btnToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:paddingVertical="14dp"
+                    android:text="开始翻译"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/btnBattery"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="加入电池白名单（可选兜底）" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 当前会话 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.Material3.CardView.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="当前会话"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="中文字幕（稳定后）"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvLiveZh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:minHeight="52dp"
+                    android:text="等待中文字幕…"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="日文听写（最近）"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvLiveJa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:minHeight="40dp"
+                    android:text="等待日文输入…"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvTranscriptPath"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="记录：开始后自动保存到 下载/LiveTranslate/"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="设置"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <!-- 连接设置 -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.Material3.CardView.Filled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="10dp"
             app:cardCornerRadius="16dp">
 
             <LinearLayout
@@ -260,25 +430,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 操作 -->
-        <Button
-            android:id="@+id/btnBattery"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="加入电池白名单（防止被系统杀掉）" />
-
-        <Button
-            android:id="@+id/btnToggle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:paddingVertical="14dp"
-            android:text="开始翻译"
-            android:textSize="16sp" />
-
-        <!-- 运行状态 -->
+        <!-- 诊断状态 -->
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.Material3.CardView.Outlined"
             android:layout_width="match_parent"
@@ -301,7 +453,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:lineSpacingExtra="3dp"
-            android:text="使用：填 Key → 选预设 → 点开始 → 同意权限和系统录制确认 → 切到 YouTube。\n悬浮窗：拖动换位置；点一下收成小圆点，再点展开。圆点：绿=已连接 黄=连接中 红=出错。\n约 8 分半自动换一次连接，字幕短暂停顿属正常。\n翻译记录自动存到 下载/LiveTranslate/。"
+            android:text="使用：填 Key → 选预设 → 点开始 → 同意权限和系统录制确认 → 切到 YouTube。\n悬浮窗：拖动换位置；点一下收成小圆点，再点展开。圆点：绿=已连接 黄=连接中 红=出错。\n翻译记录自动存到 下载/LiveTranslate/。"
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="12sp" />
 

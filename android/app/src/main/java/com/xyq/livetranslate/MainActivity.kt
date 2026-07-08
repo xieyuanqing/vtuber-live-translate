@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +42,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvLinesVal: TextView
     private lateinit var btnBattery: Button
     private lateinit var btnToggle: Button
+    private lateinit var tvHeroStatus: TextView
+    private lateinit var tvHeroSubStatus: TextView
+    private lateinit var tvAudioLevel: TextView
+    private lateinit var pbAudio: ProgressBar
+    private lateinit var tvLiveZh: TextView
+    private lateinit var tvLiveJa: TextView
+    private lateinit var tvTranscriptPath: TextView
     private lateinit var tvStatus: TextView
 
     private var presetNames: List<String> = emptyList()
@@ -50,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     private val refresh = object : Runnable {
         override fun run() {
             renderStatus()
-            ui.postDelayed(this, 1000)
+            ui.postDelayed(this, 300)
         }
     }
 
@@ -92,6 +100,13 @@ class MainActivity : AppCompatActivity() {
         tvLinesVal = findViewById(R.id.tvLinesVal)
         btnBattery = findViewById(R.id.btnBattery)
         btnToggle = findViewById(R.id.btnToggle)
+        tvHeroStatus = findViewById(R.id.tvHeroStatus)
+        tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
+        tvAudioLevel = findViewById(R.id.tvAudioLevel)
+        pbAudio = findViewById(R.id.pbAudio)
+        tvLiveZh = findViewById(R.id.tvLiveZh)
+        tvLiveJa = findViewById(R.id.tvLiveJa)
+        tvTranscriptPath = findViewById(R.id.tvTranscriptPath)
         tvStatus = findViewById(R.id.tvStatus)
 
         etApiKeys.setText(SettingsStore.apiKeysRaw(this))
@@ -151,6 +166,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ui.removeCallbacks(refresh)
         ui.post(refresh)
     }
 
@@ -278,10 +294,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderStatus() {
         val s = StatusBus
+        val running = s.serviceRunning
+        val conn = s.connState
+        val level = s.audioLevelPct.coerceIn(0, 100)
+
+        tvHeroStatus.text = when {
+            !running -> "○ 待开始"
+            conn == "ready" -> "● 翻译中"
+            conn.startsWith("error") -> "● 出错"
+            else -> "● 准备连接"
+        }
+        tvHeroSubStatus.text = buildString {
+            append("连接: ").append(conn)
+            if (s.currentKeyLabel.isNotEmpty()) append(" · ").append(s.currentKeyLabel)
+            append(" · 已发送 ").append(s.chunksSent.get()).append(" 块")
+        }
+        tvAudioLevel.text = "$level%"
+        pbAudio.progress = level
+
+        tvLiveZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
+        tvLiveJa.text = s.jaTail.ifBlank { "等待日文输入…" }
+        tvTranscriptPath.text = if (s.transcriptPath.isNotEmpty()) {
+            "记录：${s.transcriptPath}"
+        } else {
+            "记录：开始后自动保存到 下载/LiveTranslate/"
+        }
+
         tvStatus.text = buildString {
-            append(if (s.serviceRunning) "● 运行中" else "○ 未运行")
-            append("  连接: ").append(s.connState)
+            append(if (running) "● 运行中" else "○ 未运行")
+            append("  连接: ").append(conn)
             if (s.currentKeyLabel.isNotEmpty()) append("  ").append(s.currentKeyLabel)
+            append("  音量: ").append(level).append("%")
             append("  已发送: ").append(s.chunksSent.get()).append(" 块\n")
             if (s.transcriptPath.isNotEmpty()) {
                 append("记录: ").append(s.transcriptPath).append("\n")
@@ -289,7 +332,7 @@ class MainActivity : AppCompatActivity() {
             if (s.jaTail.isNotEmpty()) append("ja: …").append(s.jaTail).append("\n")
             if (s.zhTail.isNotEmpty()) append("zh: …").append(s.zhTail)
         }
-        btnToggle.text = if (s.serviceRunning) "停止翻译" else "开始翻译"
+        btnToggle.text = if (running) "停止翻译" else "开始翻译"
     }
 
     private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_LONG).show()

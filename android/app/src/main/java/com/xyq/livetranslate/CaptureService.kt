@@ -23,6 +23,7 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import kotlin.math.sqrt
 
 /**
  * 前台服务：整条管线的宿主。
@@ -50,6 +51,8 @@ class CaptureService : Service() {
 
     @Volatile private var capturing = false
     private val jaTail = StringBuilder()
+    private val zhLines = ArrayDeque<String>()
+    private var lastConfirmedZh = ""
     private var stabilizer: SubtitleStabilizer? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -114,6 +117,8 @@ class CaptureService : Service() {
         audioRecord = record
 
         StatusBus.reset()
+        zhLines.clear()
+        lastConfirmedZh = ""
         logger = TranscriptLogger(this)
         StatusBus.transcriptPath = logger?.pathHint ?: ""
 
@@ -121,7 +126,7 @@ class CaptureService : Service() {
         stabilizer = SubtitleStabilizer(mainHandler) { confirmed, current ->
             overlay?.maybeReapplyStyle()
             overlay?.setLines(confirmed, current)
-            StatusBus.zhTail = if (current.isEmpty()) confirmed else "$confirmed▏$current"
+            updateZhPanel(confirmed, current)
         }
         mainHandler.post { overlay?.show() }
 
@@ -174,6 +179,7 @@ class CaptureService : Service() {
             while (capturing) {
                 val n = audioRecord?.read(buf, 0, buf.size) ?: break
                 if (n > 0) {
+                    StatusBus.audioLevelPct = estimateLevelPct(buf, n)
                     processor.feed(buf, n)
                 } else if (n < 0) {
                     Log.w(TAG, "AudioRecord.read error $n")
@@ -188,6 +194,36 @@ class CaptureService : Service() {
     private fun appendTail(sb: StringBuilder, t: String) {
         sb.append(t)
         if (sb.length > 100) sb.delete(0, sb.length - 100)
+    }
+
+    private fun updateZhPanel(confirmed: String, current: String) {
+        val c = confirmed.trim()
+        if (c.isNotEmpty() && c != lastConfirmedZh) {
+            zhLines.addLast(c)
+            lastConfirmedZh = c
+            while (zhLines.size > 4) zhLines.removeFirst()
+        }
+        StatusBus.zhTail = buildString {
+            zhLines.forEachIndexed { index, line ->
+                if (index > 0) append('\n')
+                append(line)
+            }
+            if (current.isNotBlank()) {
+                if (isNotEmpty()) append('\n')
+                append('▏').append(current.trim())
+            }
+        }
+    }
+
+    private fun estimateLevelPct(buf: ShortArray, n: Int): Int {
+        if (n <= 0) return 0
+        var sum = 0.0
+        for (i in 0 until n) {
+            val v = buf[i] / 32768.0
+            sum += v * v
+        }
+        val rms = sqrt(sum / n)
+        return (rms * 180).toInt().coerceIn(0, 100)
     }
 
     private fun createAudioRecord(proj: MediaProjection): AudioRecord? {
@@ -256,6 +292,7 @@ class CaptureService : Service() {
         runCatching { wakeLock?.release() }
         wakeLock = null
         StatusBus.serviceRunning = false
+        StatusBus.audioLevelPct = 0
         if (!StatusBus.connState.startsWith("error")) StatusBus.connState = "idle"
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()

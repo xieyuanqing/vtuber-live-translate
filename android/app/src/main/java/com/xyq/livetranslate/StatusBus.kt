@@ -11,6 +11,7 @@ object StatusBus {
     @Volatile var jaTail = ""
     @Volatile var zhTail = ""
     @Volatile var currentKeyLabel = ""
+    @Volatile var audioLevelPct = 0
     val chunksSent = AtomicLong(0)
 
     /** 悬浮窗样式版本号：设置保存时 +1，悬浮窗发现变化就重新读取应用。 */
@@ -22,6 +23,7 @@ object StatusBus {
         jaTail = ""
         zhTail = ""
         currentKeyLabel = ""
+        audioLevelPct = 0
         chunksSent.set(0)
     }
 }
