@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-09 · v1.3 App 壳子 + P1 后端第一版（编译通过）
+
+响应用户反馈：一页平铺太简陋，先做正常 App 风格；同时 P1 优先“后端逻辑固定”，前端只做够用入口。
+
+**P0 收尾：App 壳子**
+
+- 主界面改为 `DrawerLayout + NavigationView + MaterialToolbar`：左侧侧边栏包含“实时翻译 / 主播资料 / 设置 / 诊断”
+- 实时翻译页只保留运行控制台和当前会话，不再堆设置项
+- 设置页承载 API key、Base URL、prompt 预设、悬浮窗样式
+- 诊断页承载电池白名单和原始状态文本
+
+**P1 后端第一版**
+
+- 新增 `StreamerProfile` / `StreamerProfileStore`：本地主播资料库，SharedPreferences JSON 保存；字段包含日文名、中文名、所属、别名/口癖、术语、错听、中文风格
+- 新增 `PromptBuilder`：根据主播资料 + YouTube 信息 + 本场补充上下文生成 Gemini Live systemInstruction 文本
+- 新增 `YouTubeOEmbedClient`：解析 `youtu.be` / `youtube.com/watch` / `/live/` / `/shorts/` URL，并通过 YouTube oEmbed 获取标题和频道
+- 主播资料页可新建/保存资料、获取 YouTube 标题频道、生成 prompt、应用到现有提示词预设
+
+**版本**：versionCode 13 / versionName 1.3。APK：`LiveTranslate-v1.3.apk`。
+
+**验证**：`../tools/gradle-8.9/bin/gradle assembleDebug` → BUILD SUCCESSFUL（12s）。
+
+---
+
 ## 2026-07-09 · v1.2 P0 页面整体打磨第一版（编译通过）
 
 按 Felo Translator 对标方向先做 P0 的“页面整体搞好”，不改核心翻译链路。

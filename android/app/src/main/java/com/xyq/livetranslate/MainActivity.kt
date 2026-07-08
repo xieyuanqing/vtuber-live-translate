@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -21,10 +22,22 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navView: NavigationView
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var pageLive: View
+    private lateinit var pageStreamer: View
+    private lateinit var pageSettings: View
+    private lateinit var pageDiagnostics: View
 
     private lateinit var etApiKeys: EditText
     private lateinit var etBaseUrl: EditText
@@ -51,7 +64,28 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTranscriptPath: TextView
     private lateinit var tvStatus: TextView
 
+    private lateinit var acStreamerProfile: MaterialAutoCompleteTextView
+    private lateinit var etStreamerKey: EditText
+    private lateinit var etStreamerNameJp: EditText
+    private lateinit var etStreamerNameZh: EditText
+    private lateinit var etStreamerAffiliation: EditText
+    private lateinit var etStreamerAliases: EditText
+    private lateinit var etStreamerTerms: EditText
+    private lateinit var etStreamerMisheard: EditText
+    private lateinit var etStreamerStyle: EditText
+    private lateinit var btnNewStreamer: Button
+    private lateinit var btnSaveStreamer: Button
+    private lateinit var etYoutubeUrl: EditText
+    private lateinit var btnFetchYoutube: Button
+    private lateinit var tvYoutubeInfo: TextView
+    private lateinit var etVideoContext: EditText
+    private lateinit var btnGeneratePrompt: Button
+    private lateinit var etGeneratedPrompt: EditText
+    private lateinit var btnApplyPrompt: Button
+
     private var presetNames: List<String> = emptyList()
+    private var streamerProfiles: List<StreamerProfile> = emptyList()
+    private var currentVideoInfo: YouTubeVideoInfo? = null
     private var permRequested = false
 
     private val ui = Handler(Looper.getMainLooper())
@@ -84,6 +118,45 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        bindViews()
+        setupDrawer()
+        setupSettings()
+        setupStreamerPage()
+        setupStyleSliders()
+
+        btnBattery.setOnClickListener { requestBatteryWhitelist() }
+        btnToggle.setOnClickListener {
+            if (StatusBus.serviceRunning) {
+                startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP))
+            } else {
+                onStartClicked()
+            }
+        }
+
+        navView.setCheckedItem(R.id.nav_live)
+        showPage(R.id.nav_live)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ui.removeCallbacks(refresh)
+        ui.post(refresh)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        ui.removeCallbacks(refresh)
+    }
+
+    private fun bindViews() {
+        drawerLayout = findViewById(R.id.drawerLayout)
+        navView = findViewById(R.id.navView)
+        toolbar = findViewById(R.id.toolbar)
+        pageLive = findViewById(R.id.pageLive)
+        pageStreamer = findViewById(R.id.pageStreamer)
+        pageSettings = findViewById(R.id.pageSettings)
+        pageDiagnostics = findViewById(R.id.pageDiagnostics)
+
         etApiKeys = findViewById(R.id.etApiKeys)
         etBaseUrl = findViewById(R.id.etBaseUrl)
         acPreset = findViewById(R.id.acPreset)
@@ -109,6 +182,52 @@ class MainActivity : AppCompatActivity() {
         tvTranscriptPath = findViewById(R.id.tvTranscriptPath)
         tvStatus = findViewById(R.id.tvStatus)
 
+        acStreamerProfile = findViewById(R.id.acStreamerProfile)
+        etStreamerKey = findViewById(R.id.etStreamerKey)
+        etStreamerNameJp = findViewById(R.id.etStreamerNameJp)
+        etStreamerNameZh = findViewById(R.id.etStreamerNameZh)
+        etStreamerAffiliation = findViewById(R.id.etStreamerAffiliation)
+        etStreamerAliases = findViewById(R.id.etStreamerAliases)
+        etStreamerTerms = findViewById(R.id.etStreamerTerms)
+        etStreamerMisheard = findViewById(R.id.etStreamerMisheard)
+        etStreamerStyle = findViewById(R.id.etStreamerStyle)
+        btnNewStreamer = findViewById(R.id.btnNewStreamer)
+        btnSaveStreamer = findViewById(R.id.btnSaveStreamer)
+        etYoutubeUrl = findViewById(R.id.etYoutubeUrl)
+        btnFetchYoutube = findViewById(R.id.btnFetchYoutube)
+        tvYoutubeInfo = findViewById(R.id.tvYoutubeInfo)
+        etVideoContext = findViewById(R.id.etVideoContext)
+        btnGeneratePrompt = findViewById(R.id.btnGeneratePrompt)
+        etGeneratedPrompt = findViewById(R.id.etGeneratedPrompt)
+        btnApplyPrompt = findViewById(R.id.btnApplyPrompt)
+    }
+
+    private fun setupDrawer() {
+        toolbar.setNavigationOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+        navView.setNavigationItemSelectedListener { item ->
+            showPage(item.itemId)
+            drawerLayout.closeDrawers()
+            true
+        }
+    }
+
+    private fun showPage(itemId: Int) {
+        pageLive.visibility = if (itemId == R.id.nav_live) View.VISIBLE else View.GONE
+        pageStreamer.visibility = if (itemId == R.id.nav_streamer) View.VISIBLE else View.GONE
+        pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
+        pageDiagnostics.visibility = if (itemId == R.id.nav_diagnostics) View.VISIBLE else View.GONE
+        toolbar.title = when (itemId) {
+            R.id.nav_streamer -> "主播资料"
+            R.id.nav_settings -> "设置"
+            R.id.nav_diagnostics -> "诊断"
+            else -> "实时翻译"
+        }
+        navView.setCheckedItem(itemId)
+    }
+
+    // ---------- 设置 / prompt 预设 ----------
+
+    private fun setupSettings() {
         etApiKeys.setText(SettingsStore.apiKeysRaw(this))
         etBaseUrl.setText(SettingsStore.baseUrl(this))
         reloadPresets(SettingsStore.selectedPreset(this))
@@ -148,44 +267,148 @@ class MainActivity : AppCompatActivity() {
             reloadPresets(SettingsStore.selectedPreset(this))
             toast("已删除：$name")
         }
-
-        setupStyleSliders()
-
-        btnBattery.setOnClickListener { requestBatteryWhitelist() }
-
-        btnToggle.setOnClickListener {
-            if (StatusBus.serviceRunning) {
-                startService(
-                    Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP)
-                )
-            } else {
-                onStartClicked()
-            }
-        }
     }
-
-    override fun onResume() {
-        super.onResume()
-        ui.removeCallbacks(refresh)
-        ui.post(refresh)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        ui.removeCallbacks(refresh)
-    }
-
-    // ---------- 预设 ----------
 
     private fun reloadPresets(selectName: String) {
         presetNames = SettingsStore.presetNames(this)
-        acPreset.setAdapter(
-            ArrayAdapter(this, android.R.layout.simple_list_item_1, presetNames)
-        )
+        acPreset.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, presetNames))
         val name = if (selectName in presetNames) selectName else presetNames.first()
         acPreset.setText(name, false)
         etPresetName.setText(name)
         etPrompt.setText(SettingsStore.presetText(this, name))
+    }
+
+    // ---------- 主播资料 / prompt 后端 ----------
+
+    private fun setupStreamerPage() {
+        reloadStreamerProfiles(StreamerProfileStore.selectedKey(this))
+
+        acStreamerProfile.setOnItemClickListener { _, _, pos, _ ->
+            val profile = streamerProfiles.getOrNull(pos) ?: return@setOnItemClickListener
+            StreamerProfileStore.setSelected(this, profile.key)
+            renderStreamerProfile(profile)
+        }
+
+        btnNewStreamer.setOnClickListener {
+            renderStreamerProfile(StreamerProfileStore.DEFAULT_PROFILE.copy(key = "", nameZh = ""))
+            acStreamerProfile.setText("", false)
+            toast("填好资料后点“保存资料”")
+        }
+
+        btnSaveStreamer.setOnClickListener {
+            val profile = collectStreamerProfile()
+            if (profile.key.isBlank()) {
+                toast("资料名不能为空")
+                return@setOnClickListener
+            }
+            StreamerProfileStore.save(this, profile)
+            reloadStreamerProfiles(profile.key)
+            toast("已保存主播资料：${profile.key}")
+        }
+
+        btnFetchYoutube.setOnClickListener { fetchYoutubeInfo() }
+        btnGeneratePrompt.setOnClickListener { generatePromptFromForm() }
+        btnApplyPrompt.setOnClickListener { applyGeneratedPrompt() }
+    }
+
+    private fun reloadStreamerProfiles(selectKey: String) {
+        streamerProfiles = StreamerProfileStore.all(this)
+        val keys = streamerProfiles.map { it.key }
+        acStreamerProfile.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, keys))
+        val key = if (selectKey in keys) selectKey else keys.first()
+        acStreamerProfile.setText(key, false)
+        renderStreamerProfile(StreamerProfileStore.get(this, key))
+    }
+
+    private fun renderStreamerProfile(p: StreamerProfile) {
+        etStreamerKey.setText(p.key)
+        etStreamerNameJp.setText(p.nameJp)
+        etStreamerNameZh.setText(p.nameZh)
+        etStreamerAffiliation.setText(p.affiliation)
+        etStreamerAliases.setText(p.aliases.joinToString("\n"))
+        etStreamerTerms.setText(p.terms.joinToString("\n"))
+        etStreamerMisheard.setText(p.misheard.joinToString("\n"))
+        etStreamerStyle.setText(p.style)
+    }
+
+    private fun collectStreamerProfile(): StreamerProfile {
+        val key = etStreamerKey.text.toString().trim()
+            .ifEmpty { etStreamerNameJp.text.toString().trim() }
+            .ifEmpty { etStreamerNameZh.text.toString().trim() }
+        return StreamerProfile(
+            key = key,
+            nameJp = etStreamerNameJp.text.toString().trim(),
+            nameZh = etStreamerNameZh.text.toString().trim(),
+            affiliation = etStreamerAffiliation.text.toString().trim(),
+            aliases = parseLines(etStreamerAliases.text.toString()),
+            terms = parseLines(etStreamerTerms.text.toString()),
+            misheard = parseLines(etStreamerMisheard.text.toString()),
+            style = etStreamerStyle.text.toString().trim(),
+        )
+    }
+
+    private fun parseLines(raw: String): List<String> = raw
+        .split('\n', ',', '，')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinct()
+
+    private fun fetchYoutubeInfo() {
+        val url = etYoutubeUrl.text.toString().trim()
+        if (url.isEmpty()) {
+            toast("请先粘贴 YouTube URL")
+            return
+        }
+        btnFetchYoutube.isEnabled = false
+        btnFetchYoutube.text = "获取中…"
+        tvYoutubeInfo.text = "正在请求 YouTube oEmbed…"
+        Thread({
+            val result = runCatching { YouTubeOEmbedClient.fetch(url) }
+            runOnUiThread {
+                btnFetchYoutube.isEnabled = true
+                btnFetchYoutube.text = "获取标题和频道（oEmbed）"
+                result.onSuccess { info ->
+                    currentVideoInfo = info
+                    tvYoutubeInfo.text = "标题：${info.title}\n频道：${info.authorName}\nURL：${info.url}"
+                }.onFailure { e ->
+                    tvYoutubeInfo.text = "获取失败：${e.message}"
+                    toast("获取 YouTube 信息失败：${e.message}")
+                }
+            }
+        }, "youtube-oembed").start()
+    }
+
+    private fun generatePromptFromForm() {
+        val profile = collectStreamerProfile()
+        if (profile.key.isBlank()) {
+            toast("请先填写主播资料名")
+            return
+        }
+        val prompt = PromptBuilder.build(
+            profile = profile,
+            video = currentVideoInfo,
+            extraContext = etVideoContext.text.toString(),
+        )
+        etGeneratedPrompt.setText(prompt)
+        toast("已生成 prompt")
+    }
+
+    private fun applyGeneratedPrompt() {
+        val profile = collectStreamerProfile()
+        val prompt = etGeneratedPrompt.text.toString().ifBlank {
+            PromptBuilder.build(profile, currentVideoInfo, etVideoContext.text.toString())
+        }
+        if (profile.key.isBlank()) {
+            toast("请先填写主播资料名")
+            return
+        }
+        StreamerProfileStore.save(this, profile)
+        SettingsStore.savePreset(this, profile.key, prompt)
+        SettingsStore.setSelectedPreset(this, profile.key)
+        reloadStreamerProfiles(profile.key)
+        reloadPresets(profile.key)
+        showPage(R.id.nav_settings)
+        toast("已应用到提示词预设：${profile.key}")
     }
 
     // ---------- 样式 ----------
@@ -204,7 +427,7 @@ class MainActivity : AppCompatActivity() {
                     this@MainActivity,
                     slFont.value.toInt(),
                     slOpacity.value.toInt(),
-                    slLines.value.toInt()
+                    slLines.value.toInt(),
                 )
             }
         }
@@ -233,8 +456,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(
                 Intent(
                     Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:$packageName")
-                )
+                    Uri.parse("package:$packageName"),
+                ),
             )
         }.onFailure {
             runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
@@ -247,15 +470,15 @@ class MainActivity : AppCompatActivity() {
         SettingsStore.saveApiKeys(this, etApiKeys.text.toString())
         SettingsStore.saveBaseUrl(
             this,
-            etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL }
+            etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
         )
-        val pn = etPresetName.text.toString().trim()
-            .ifEmpty { SettingsStore.DEFAULT_PRESET_NAME }
+        val pn = etPresetName.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_PRESET_NAME }
         SettingsStore.savePreset(this, pn, etPrompt.text.toString())
         SettingsStore.setSelectedPreset(this, pn)
 
         if (SettingsStore.apiKeyList(this).isEmpty()) {
-            toast("请先填入 Gemini API Key")
+            toast("请先在设置页填入 Gemini API Key")
+            showPage(R.id.nav_settings)
             return
         }
 
@@ -282,9 +505,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!Settings.canDrawOverlays(this)) {
             toast("请开启悬浮窗权限，开启后回到本页再点开始")
-            startActivity(
-                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            )
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             return
         }
 
