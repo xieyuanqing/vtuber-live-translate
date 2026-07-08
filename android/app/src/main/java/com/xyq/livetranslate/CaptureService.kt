@@ -138,7 +138,7 @@ class CaptureService : Service() {
                 }
             },
             baseUrl = SettingsStore.baseUrl(this),
-            prompt = SettingsStore.activePrompt(this),
+            prompt = SettingsStore.composedPrompt(this),
             listener = object : GeminiLiveClient.Listener {
                 override fun onState(state: String) {
                     StatusBus.connState = state

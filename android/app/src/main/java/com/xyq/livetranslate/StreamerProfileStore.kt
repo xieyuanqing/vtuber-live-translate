@@ -14,6 +14,7 @@ object StreamerProfileStore {
         nameJp = "",
         nameZh = "通用VTuber",
         affiliation = "VTuber / 直播主",
+        category = "通用",
         aliases = listOf("VTuber", "主播"),
         terms = listOf("YouTube = YouTube", "SC = SC", "メンバーシップ = 会员"),
         misheard = emptyList(),

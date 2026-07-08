@@ -8,6 +8,9 @@
             android:id="@+id/nav_streamer"
             android:title="主播资料" />
         <item
+            android:id="@+id/nav_history"
+            android:title="历史记录" />
+        <item
             android:id="@+id/nav_settings"
             android:title="设置" />
         <item

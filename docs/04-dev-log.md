@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-07-09 · v1.4 状态栏修复 + 提示词分层 + 历史页 + 前端文案重做（编译通过）
+
+按用户三点反馈一次做完，核心翻译链路不动。
+
+**1. 状态栏遮挡**
+
+- targetSdk 35 默认 edge-to-edge，顶部内容会压到状态栏。用 `ViewCompat.setOnApplyWindowInsetsListener` 给 toolbar 顶部、页面容器底部、侧边栏上下分别让出 system bars 高度。toolbar 改 `wrap_content + minHeight`，状态栏区域用品牌色填充。
+
+**2. 提示词拆成固定 / 临时两层**
+
+- `PromptBuilder` 重构：`build(profile, session: SessionPromptContext)`，输出「固定提示词（主播资料）+ 临时提示词（仅本次会话）+ 中文风格」。
+- 新增 `SessionPromptContext`（YouTube 信息 + 手动补充），**不保存**，只组装进当前会话。
+- `StreamerProfile` 增加 `category` 字段（可选，带常用分类下拉）。
+- 开播时 `MainActivity` 组装 `固定资料 + 临时上下文` → `SettingsStore.saveComposedPrompt`；`CaptureService` 读 `composedPrompt`（为空退回旧预设，保证兜底）。
+- 主播资料页去掉旧“提示词预设”编辑器；改为固定资料卡 + 临时提示词卡 + 完整提示词预览。
+- 备注：临时提示词后续计划接小模型自动总结，先留手动入口。
+
+**3. 历史记录页**
+
+- 新增 `HistoryStore`：transcript 同时写一份到 App 内部 `files/history/`（`TranscriptLogger` 双写），历史页稳定读取，不受公共目录权限影响。
+- 历史页：列表（时间/大小）→ 点开查看全文 → 复制全文；公共 `下载/LiveTranslate/` 仍保留供文件管理器分享。
+
+**4. 前端文案与风格**
+
+- 每页顶部加一句“这页是干嘛的”说明；输入框提示词重写得更口语、更准确。
+- 新增 `styles.xml` 统一 PageTitle / PageDesc / CardTitle / FieldLabel / Field，全 App 风格一致。
+
+**版本**：versionCode 14 / versionName 1.4。APK：`LiveTranslate-v1.4.apk`。
+
+**验证**：`../tools/gradle-8.9/bin/gradle assembleDebug` → BUILD SUCCESSFUL。
+
+---
+
 ## 2026-07-09 · v1.3 App 壳子 + P1 后端第一版（编译通过）
 
 响应用户反馈：一页平铺太简陋，先做正常 App 风格；同时 P1 优先“后端逻辑固定”，前端只做够用入口。

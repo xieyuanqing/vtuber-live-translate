@@ -11,6 +11,7 @@ data class StreamerProfile(
     val nameJp: String,
     val nameZh: String,
     val affiliation: String,
+    val category: String,
     val aliases: List<String>,
     val terms: List<String>,
     val misheard: List<String>,
@@ -31,6 +32,7 @@ object StreamerProfileJson {
         .put("nameJp", p.nameJp)
         .put("nameZh", p.nameZh)
         .put("affiliation", p.affiliation)
+        .put("category", p.category)
         .put("aliases", JSONArray(p.aliases))
         .put("terms", JSONArray(p.terms))
         .put("misheard", JSONArray(p.misheard))
@@ -41,6 +43,7 @@ object StreamerProfileJson {
         nameJp = o.optString("nameJp"),
         nameZh = o.optString("nameZh"),
         affiliation = o.optString("affiliation"),
+        category = o.optString("category"),
         aliases = o.optJSONArray("aliases").toStringList(),
         terms = o.optJSONArray("terms").toStringList(),
         misheard = o.optJSONArray("misheard").toStringList(),

@@ -90,8 +90,21 @@ object SettingsStore {
         prefs(c).edit().putString("promptSelected", name).apply()
     }
 
-    /** 当前会话实际使用的提示词。 */
+    /** 当前会话实际使用的提示词（旧预设机制，作为兜底）。 */
     fun activePrompt(c: Context): String = presetText(c, selectedPreset(c))
+
+    // ---------- 会话实际生效的提示词（固定资料 + 临时上下文，开播时组装） ----------
+
+    /** 开播时由 MainActivity 组装并写入；服务直接读它作为 systemInstruction。 */
+    fun saveComposedPrompt(c: Context, text: String) {
+        prefs(c).edit().putString("composedPrompt", text).apply()
+    }
+
+    /** 组装后的会话提示词；为空时退回旧预设，保证服务永远拿得到一份提示词。 */
+    fun composedPrompt(c: Context): String {
+        val v = prefs(c).getString("composedPrompt", "") ?: ""
+        return v.ifBlank { activePrompt(c) }
+    }
 
     private fun presetsJson(c: Context): JSONObject {
         migrate(c)

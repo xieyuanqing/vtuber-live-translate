@@ -13,18 +13,20 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="wrap_content"
             android:background="?attr/colorPrimary"
+            android:minHeight="?attr/actionBarSize"
             android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar"
             app:navigationIcon="@drawable/ic_menu_24"
             app:title="实时翻译" />
 
         <FrameLayout
+            android:id="@+id/pageContainer"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- 页面：实时翻译 -->
+            <!-- ============ 页面：实时翻译 ============ -->
             <ScrollView
                 android:id="@+id/pageLive"
                 android:layout_width="match_parent"
@@ -40,26 +42,19 @@
                     android:paddingBottom="24dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="直播翻译"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
+                        style="@style/PageTitle"
+                        android:text="实时翻译" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="VTuber 直播实时字幕 · v1.3"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textSize="13sp" />
+                        style="@style/PageDesc"
+                        android:text="捕获手机正在播放的直播声音，实时翻译成中文并用悬浮窗盖在视频上。开始前先在“主播资料”里选好主播、在“设置”里填好 Key。" />
 
+                    <!-- 运行控制台 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="14dp"
                         app:cardCornerRadius="20dp">
 
                         <LinearLayout
@@ -94,7 +89,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_marginTop="4dp"
-                                        android:text="填 Key、选预设，然后开始翻译"
+                                        android:text="尚未开始翻译"
                                         android:textColor="?android:attr/textColorSecondary"
                                         android:textSize="12sp" />
                                 </LinearLayout>
@@ -114,7 +109,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="14dp"
-                                android:text="输入音量"
+                                android:text="输入音量（有数字跳动说明已经捕到声音）"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
 
@@ -137,9 +132,19 @@
                                 android:paddingVertical="14dp"
                                 android:text="开始翻译"
                                 android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/tvCurrentProfile"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="当前主播：通用VTuber"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- 当前会话字幕 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Outlined"
                         android:layout_width="match_parent"
@@ -154,19 +159,12 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="当前会话"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/CardTitle"
+                                android:text="当前字幕" />
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="中文字幕（稳定后）"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="12sp" />
+                                style="@style/FieldLabel"
+                                android:text="中文（悬浮窗同步显示）" />
 
                             <TextView
                                 android:id="@+id/tvLiveZh"
@@ -179,12 +177,8 @@
                                 android:textStyle="bold" />
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="日文听写（最近）"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="12sp" />
+                                style="@style/FieldLabel"
+                                android:text="日文听写（原文，供对照）" />
 
                             <TextView
                                 android:id="@+id/tvLiveJa"
@@ -201,7 +195,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="记录：开始后自动保存到 下载/LiveTranslate/"
+                                android:text="本场记录会自动存到 下载/LiveTranslate/，也能在“历史记录”页查看。"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -209,7 +203,7 @@
                 </LinearLayout>
             </ScrollView>
 
-            <!-- 页面：主播资料 -->
+            <!-- ============ 页面：主播资料 ============ -->
             <ScrollView
                 android:id="@+id/pageStreamer"
                 android:layout_width="match_parent"
@@ -226,26 +220,19 @@
                     android:paddingBottom="24dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="主播资料"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
+                        style="@style/PageTitle"
+                        android:text="主播资料" />
 
                     <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="本页先把后端逻辑固定：主播资料库 + YouTube 标题频道获取 + prompt 生成。界面先够用。"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:textSize="13sp" />
+                        style="@style/PageDesc"
+                        android:text="这里是“固定提示词”——描述主播是谁、术语怎么翻。保存后长期复用。下面还能填“临时提示词”，只对本场直播生效，不会保存。" />
 
+                    <!-- 资料库选择 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="14dp"
                         app:cardCornerRadius="16dp">
 
                         <LinearLayout
@@ -255,18 +242,15 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="资料库"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/CardTitle"
+                                android:text="选择主播" />
 
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:hint="当前主播资料">
+                                android:layout_marginTop="10dp"
+                                android:hint="已保存的主播资料">
 
                                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                                     android:id="@+id/acStreamerProfile"
@@ -286,7 +270,7 @@
                                     style="@style/Widget.Material3.Button.TextButton"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="新建" />
+                                    android:text="新建主播" />
 
                                 <Button
                                     android:id="@+id/btnSaveStreamer"
@@ -298,6 +282,7 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- 固定资料 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
@@ -312,18 +297,16 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="基本资料"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/CardTitle"
+                                android:text="固定提示词 · 主播资料" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:text="资料名是列表里的显示名，必填。其它字段可留空。" />
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:hint="资料名 / key（如：風真いろは）">
+                                style="@style/Field"
+                                android:hint="资料名（如：風真いろは）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerKey"
@@ -335,11 +318,8 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="日文名">
+                                style="@style/Field"
+                                android:hint="日文名（可选）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerNameJp"
@@ -351,11 +331,8 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="中文名">
+                                style="@style/Field"
+                                android:hint="中文名（可选）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerNameZh"
@@ -367,11 +344,24 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
-                                android:hint="所属 / 设定">
+                                android:hint="分类（可选，可直接输入）">
+
+                                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                    android:id="@+id/acStreamerCategory"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="text"
+                                    android:maxLines="1"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                style="@style/Field"
+                                android:hint="所属 / 人设（如：hololive 6期生 / 侍）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerAffiliation"
@@ -383,11 +373,8 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="别名 / 口癖（逗号或换行分隔）">
+                                style="@style/Field"
+                                android:hint="别名 / 口癖（每行一个）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerAliases"
@@ -400,11 +387,8 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="术语与固定译法（每行一个，如 holoX = holoX）">
+                                style="@style/Field"
+                                android:hint="术语固定译法（每行一个，如 holoX = holoX）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerTerms"
@@ -417,11 +401,8 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="常见错听修正（每行一个）">
+                                style="@style/Field"
+                                android:hint="常见错听修正（每行一个，如 風間→風真）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerMisheard"
@@ -429,16 +410,13 @@
                                     android:layout_height="wrap_content"
                                     android:gravity="top"
                                     android:inputType="textMultiLine"
-                                    android:minLines="3"
+                                    android:minLines="2"
                                     android:textSize="13sp" />
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="中文风格">
+                                style="@style/Field"
+                                android:hint="翻译风格（可选，一句话）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etStreamerStyle"
@@ -452,6 +430,7 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- 临时提示词 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
@@ -466,18 +445,16 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="直播场次"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/CardTitle"
+                                android:text="临时提示词 · 仅本场" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:text="只影响接下来这一场直播，不会保存进主播资料。可以贴 YouTube 链接自动带出标题/频道，或手动补一句本场内容。" />
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:hint="YouTube URL">
+                                style="@style/Field"
+                                android:hint="YouTube 链接（可选）">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etYoutubeUrl"
@@ -494,7 +471,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
-                                android:text="获取标题和频道（oEmbed）" />
+                                android:text="从链接获取标题和频道" />
 
                             <TextView
                                 android:id="@+id/tvYoutubeInfo"
@@ -506,59 +483,158 @@
                                 android:textSize="12sp" />
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="本场补充上下文（可选）">
+                                style="@style/Field"
+                                android:hint="本场内容补充（可选，如：睡前杂谈、聊新专辑）">
 
                                 <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etVideoContext"
+                                    android:id="@+id/etTempContext"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:gravity="top"
                                     android:inputType="textMultiLine"
-                                    android:minLines="3"
+                                    android:minLines="2"
                                     android:textSize="13sp" />
                             </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 提示词预览 -->
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="提示词预览" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:text="点“预览”看看开播时实际发给模型的完整内容（固定资料 + 临时提示词）。开始翻译时会自动用这套，无需手动应用。" />
 
                             <Button
-                                android:id="@+id/btnGeneratePrompt"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
-                                android:text="生成 prompt" />
-
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="生成结果">
-
-                                <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etGeneratedPrompt"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:gravity="top"
-                                    android:inputType="textMultiLine"
-                                    android:minLines="8"
-                                    android:textSize="13sp" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <Button
-                                android:id="@+id/btnApplyPrompt"
+                                android:id="@+id/btnPreviewPrompt"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
-                                android:text="应用到提示词预设" />
+                                android:text="预览完整提示词" />
+
+                            <TextView
+                                android:id="@+id/tvPromptPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:fontFamily="monospace"
+                                android:text="（点上面按钮生成预览）"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textIsSelectable="true"
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
             </ScrollView>
 
-            <!-- 页面：设置 -->
+            <!-- ============ 页面：历史记录 ============ -->
+            <ScrollView
+                android:id="@+id/pageHistory"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp">
+
+                    <TextView
+                        style="@style/PageTitle"
+                        android:text="历史记录" />
+
+                    <TextView
+                        style="@style/PageDesc"
+                        android:text="每场翻译都会自动存一份（日文原文 + 中文），在这里点开就能回看。同一份也在 下载/LiveTranslate/ 里，可用文件管理器分享。" />
+
+                    <Button
+                        android:id="@+id/btnRefreshHistory"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="刷新列表" />
+
+                    <TextView
+                        android:id="@+id/tvHistoryEmpty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="还没有历史记录。翻译一场之后再回来看看。"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/historyList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardHistoryDetail"
+                        style="@style/Widget.Material3.CardView.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:id="@+id/tvHistoryTitle"
+                                style="@style/CardTitle"
+                                android:text="记录内容" />
+
+                            <Button
+                                android:id="@+id/btnCopyHistory"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end"
+                                android:text="复制全文" />
+
+                            <TextView
+                                android:id="@+id/tvHistoryDetail"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="monospace"
+                                android:text=""
+                                android:textIsSelectable="true"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ============ 页面：设置 ============ -->
             <ScrollView
                 android:id="@+id/pageSettings"
                 android:layout_width="match_parent"
@@ -575,18 +651,19 @@
                     android:paddingBottom="24dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="设置"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
+                        style="@style/PageTitle"
+                        android:text="设置" />
 
+                    <TextView
+                        style="@style/PageDesc"
+                        android:text="连接 Gemini 用的 Key 和悬浮窗外观。改完直接返回“实时翻译”开始即可。" />
+
+                    <!-- 连接 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="14dp"
                         app:cardCornerRadius="16dp">
 
                         <LinearLayout
@@ -596,19 +673,16 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="连接"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/CardTitle"
+                                android:text="连接" />
 
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="10dp"
                                 android:hint="Gemini API Key"
-                                app:helperText="可填多个，英文逗号分隔，会话随机选一个">
+                                app:helperText="可填多个，用英文逗号分隔，每次开播随机用一个分摊配额">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etApiKeys"
@@ -626,7 +700,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:hint="API Base URL"
-                                app:helperText="默认官方地址，走代理不用改">
+                                app:helperText="默认是官方地址，用反代时才需要改">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etBaseUrl"
@@ -640,6 +714,7 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- 悬浮窗样式 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
@@ -654,118 +729,18 @@
                             android:padding="14dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="提示词预设"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
-
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:hint="当前预设（按主播选）">
-
-                                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                                    android:id="@+id/acPreset"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:inputType="none"
-                                    android:textSize="14sp" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="预设名（如：風真いろは）">
-
-                                <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etPresetName"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:importantForAutofill="no"
-                                    android:inputType="text"
-                                    android:maxLines="1"
-                                    android:textSize="14sp" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="提示词内容">
-
-                                <com.google.android.material.textfield.TextInputEditText
-                                    android:id="@+id/etPrompt"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:gravity="top"
-                                    android:importantForAutofill="no"
-                                    android:inputType="textMultiLine"
-                                    android:minLines="4"
-                                    android:textSize="13sp" />
-                            </com.google.android.material.textfield.TextInputLayout>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="end"
-                                android:orientation="horizontal">
-
-                                <Button
-                                    android:id="@+id/btnNewPreset"
-                                    style="@style/Widget.Material3.Button.TextButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="新建" />
-
-                                <Button
-                                    android:id="@+id/btnDeletePreset"
-                                    style="@style/Widget.Material3.Button.TextButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="删除" />
-
-                                <Button
-                                    android:id="@+id/btnSavePreset"
-                                    style="@style/Widget.Material3.Button.TextButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="保存" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/Widget.Material3.CardView.Filled"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        app:cardCornerRadius="16dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:paddingHorizontal="14dp"
-                            android:paddingVertical="14dp">
+                                style="@style/CardTitle"
+                                android:text="悬浮窗样式" />
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="悬浮窗样式（改完立即生效）"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/FieldLabel"
+                                android:text="翻译进行时拖动调整都会即时生效。" />
 
                             <TextView
                                 android:id="@+id/tvFontVal"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
+                                android:layout_marginTop="8dp"
                                 android:text="字号 16sp"
                                 android:textSize="13sp" />
 
@@ -811,7 +786,7 @@
                 </LinearLayout>
             </ScrollView>
 
-            <!-- 页面：诊断 -->
+            <!-- ============ 页面：诊断 ============ -->
             <ScrollView
                 android:id="@+id/pageDiagnostics"
                 android:layout_width="match_parent"
@@ -828,26 +803,26 @@
                     android:paddingBottom="24dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="诊断"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
+                        style="@style/PageTitle"
+                        android:text="诊断" />
+
+                    <TextView
+                        style="@style/PageDesc"
+                        android:text="出问题时看这里：连接状态、发送块数、最近字幕。也可以把本 App 加进电池白名单，降低被系统杀后台的概率。" />
 
                     <Button
                         android:id="@+id/btnBattery"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="加入电池白名单（可选兜底）" />
+                        android:layout_marginTop="14dp"
+                        android:text="加入电池白名单" />
 
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Outlined"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="12dp"
                         app:cardCornerRadius="16dp">
 
                         <TextView
@@ -865,7 +840,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="使用：设置 Key → 主播资料生成 prompt → 实时翻译页点开始 → 同意权限和系统录制确认 → 切到 YouTube。\n悬浮窗：拖动换位置；点一下收成小圆点，再点展开。圆点：绿=已连接 黄=连接中 红=出错。\n翻译记录自动存到 下载/LiveTranslate/。"
+                        android:text="流程：设置填 Key → 主播资料选主播 → 实时翻译点开始 → 同意录音/通知/屏幕录制 → 切到 YouTube。\n悬浮窗：可拖动；点一下收成小圆点，再点展开。圆点绿=已连接、黄=连接中、红=出错。"
                         android:textColor="?android:attr/textColorSecondary"
                         android:textSize="12sp" />
                 </LinearLayout>

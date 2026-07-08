@@ -19,6 +19,7 @@ import java.util.Locale
 class TranscriptLogger(context: Context) {
 
     private var writer: OutputStreamWriter? = null
+    private var historyWriter: OutputStreamWriter? = null
     var pathHint: String = ""
         private set
 
@@ -56,6 +57,10 @@ class TranscriptLogger(context: Context) {
             pathHint = f.absolutePath
         }
         writer = w
+        historyWriter = OutputStreamWriter(
+            FileOutputStream(HistoryStore.createHistoryFile(context, name), true),
+            Charsets.UTF_8,
+        )
         writeLine(
             "# 直播翻译 transcript · " +
                 SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
@@ -86,13 +91,21 @@ class TranscriptLogger(context: Context) {
         if (jaBuf.isNotEmpty()) writeLine("- ${ts.format(Date())} ja: $jaBuf")
         if (zhBuf.isNotEmpty()) writeLine("- ${ts.format(Date())} zh: $zhBuf")
         runCatching { writer?.close() }
+        runCatching { historyWriter?.close() }
         writer = null
+        historyWriter = null
     }
 
     @Synchronized
     private fun writeLine(l: String) {
         runCatching {
             writer?.apply {
+                write(l + "\n")
+                flush()
+            }
+        }
+        runCatching {
+            historyWriter?.apply {
                 write(l + "\n")
                 flush()
             }
