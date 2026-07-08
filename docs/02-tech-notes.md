@@ -78,7 +78,7 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 | 悬浮窗 | SYSTEM_ALERT_WINDOW + WindowManager | 窗口类型 TYPE_APPLICATION_OVERLAY |
 | 后台常驻 | ForegroundService | Android 14（API 34）起需声明 `foregroundServiceType="mediaProjection"` |
 | 网络 | OkHttp WebSocket | Base URL 做成可配置 |
-| 配置存储 | DataStore + 加密存储（Keystore） | API key 不落明文 |
+| 配置存储 | SharedPreferences + 加密存储（Keystore） | API key 不落明文；自用版足够简单可靠 |
 
 可被捕获的音频 usage：`USAGE_MEDIA` / `USAGE_GAME` / `USAGE_UNKNOWN`。YouTube 属于媒体播放。
 
