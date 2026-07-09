@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etStreamerStyle: EditText
     private lateinit var etYoutubeUrl: EditText
     private lateinit var btnFetchYoutube: Button
+    private lateinit var btnAiAnalyze: Button
+    private lateinit var tvAiStatus: TextView
     private lateinit var tvYoutubeInfo: TextView
     private lateinit var etTempContext: EditText
     private lateinit var btnPreviewPrompt: Button
@@ -99,6 +101,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvFontVal: TextView
     private lateinit var tvOpacityVal: TextView
     private lateinit var tvLinesVal: TextView
+    private lateinit var etSecondAiKey: EditText
+    private lateinit var etSecondAiUrl: EditText
+    private lateinit var etSecondAiModel: EditText
+    private lateinit var btnSecondAiFormat: Button
 
     // 诊断页
     private lateinit var btnBattery: Button
@@ -218,6 +224,8 @@ class MainActivity : AppCompatActivity() {
         etStreamerStyle = findViewById(R.id.etStreamerStyle)
         etYoutubeUrl = findViewById(R.id.etYoutubeUrl)
         btnFetchYoutube = findViewById(R.id.btnFetchYoutube)
+        btnAiAnalyze = findViewById(R.id.btnAiAnalyze)
+        tvAiStatus = findViewById(R.id.tvAiStatus)
         tvYoutubeInfo = findViewById(R.id.tvYoutubeInfo)
         etTempContext = findViewById(R.id.etTempContext)
         btnPreviewPrompt = findViewById(R.id.btnPreviewPrompt)
@@ -239,6 +247,10 @@ class MainActivity : AppCompatActivity() {
         tvFontVal = findViewById(R.id.tvFontVal)
         tvOpacityVal = findViewById(R.id.tvOpacityVal)
         tvLinesVal = findViewById(R.id.tvLinesVal)
+        etSecondAiKey = findViewById(R.id.etSecondAiKey)
+        etSecondAiUrl = findViewById(R.id.etSecondAiUrl)
+        etSecondAiModel = findViewById(R.id.etSecondAiModel)
+        btnSecondAiFormat = findViewById(R.id.btnSecondAiFormat)
 
         btnBattery = findViewById(R.id.btnBattery)
         tvStatus = findViewById(R.id.tvStatus)
@@ -306,7 +318,7 @@ class MainActivity : AppCompatActivity() {
             renderStreamerProfile(StreamerProfileStore.DEFAULT_PROFILE.copy(key = "", nameZh = "", category = ""))
             acStreamerProfile.setText("", false)
             etStreamerKey.requestFocus()
-            toast("填好资料名后点“保存资料”")
+            toast("填好资料名后点\"保存资料\"")
         }
 
         btnSaveStreamer.setOnClickListener {
@@ -322,6 +334,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnFetchYoutube.setOnClickListener { fetchYoutubeInfo() }
+        btnAiAnalyze.setOnClickListener { onAiAnalyze() }
         btnPreviewPrompt.setOnClickListener {
             tvPromptPreview.text = composeSessionPrompt()
         }
@@ -400,21 +413,94 @@ class MainActivity : AppCompatActivity() {
         }
         btnFetchYoutube.isEnabled = false
         btnFetchYoutube.text = "获取中…"
-        tvYoutubeInfo.text = "正在请求 YouTube…"
+        tvYoutubeInfo.text = "正在请求…"
         Thread({
             val result = runCatching { YouTubeOEmbedClient.fetch(url) }
             runOnUiThread {
                 btnFetchYoutube.isEnabled = true
-                btnFetchYoutube.text = "从链接获取标题和频道"
+                btnFetchYoutube.text = "获取视频信息"
                 result.onSuccess { info ->
                     currentVideoInfo = info
-                    tvYoutubeInfo.text = "已获取：\n标题：${info.title}\n频道：${info.authorName}"
+                    tvYoutubeInfo.text = "${info.authorName} · ${info.title}"
                 }.onFailure { e ->
-                    tvYoutubeInfo.text = "获取失败：${e.message}（可手动在下面补一句）"
+                    tvYoutubeInfo.text = "获取失败：${e.message}"
                     toast("获取 YouTube 信息失败：${e.message}")
                 }
             }
         }, "youtube-oembed").start()
+    }
+
+    private fun onAiAnalyze() {
+        // 先确保第二 AI 设置已保存
+        saveSecondAiSettings()
+
+        val apiKey = SettingsStore.secondAiApiKey(this)
+        if (apiKey.isEmpty()) {
+            toast("请先到\"设置\"页配置资料 AI 的 Key")
+            return
+        }
+
+        val url = etYoutubeUrl.text.toString().trim()
+        if (url.isEmpty()) {
+            toast("请先粘贴 YouTube 链接")
+            return
+        }
+
+        // 如果还没获取 YouTube 信息，先获取
+        val video = currentVideoInfo
+        if (video == null || video.title.isEmpty()) {
+            toast("请先点\"从链接获取标题和频道\"拿到视频信息再 AI 分析")
+            return
+        }
+
+        btnAiAnalyze.isEnabled = false
+        btnAiAnalyze.text = "分析中…"
+        tvAiStatus.text = "正在分析 ${video.authorName}…"
+
+        val baseUrl = SettingsStore.secondAiBaseUrl(this)
+        val model = SettingsStore.secondAiModel(this)
+        val format = secondAiFormat()
+
+        Thread({
+            val result = runCatching {
+                ProfileGenerator.generate(
+                    videoInfo = video,
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    model = model,
+                    format = format,
+                )
+            }
+            runOnUiThread {
+                btnAiAnalyze.isEnabled = true
+                btnAiAnalyze.text = "AI 自动分析生成"
+
+                result.onSuccess { gen ->
+                    tvAiStatus.text = gen.note.ifBlank { "已生成" }
+
+                    // 把 AI 生成的主播资料回填到表单
+                    gen.profile?.let { profile ->
+                        renderStreamerProfile(profile)
+                        acStreamerProfile.setText(profile.key, false)
+                        toast("已生成主播资料：${profile.key}，请检查后保存")
+                    } ?: run {
+                        tvAiStatus.text = "资料解析失败，请重试或手动填写"
+                        toast("AI 未能生成主播资料，请手动填写")
+                    }
+
+                    // 把 AI 生成的本场提示词自动填入临时上下文
+                    if (gen.temporaryContext.isNotBlank()) {
+                        etTempContext.setText(gen.temporaryContext)
+                    }
+
+                    // 自动预览
+                    tvPromptPreview.text = composeSessionPrompt()
+                }.onFailure { e ->
+                    tvAiStatus.text = "分析失败：${e.message}"
+                    toast("AI 分析失败：${e.message}")
+                }
+            }
+        }, "ai-analyze").start()
     }
 
     // ---------- 历史记录 ----------
@@ -460,6 +546,39 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettings() {
         etApiKeys.setText(SettingsStore.apiKeysRaw(this))
         etBaseUrl.setText(SettingsStore.baseUrl(this))
+        etSecondAiKey.setText(SettingsStore.secondAiApiKey(this))
+        etSecondAiUrl.setText(SettingsStore.secondAiBaseUrl(this))
+        etSecondAiModel.setText(SettingsStore.secondAiModel(this))
+        updateSecondAiFormatLabel()
+        btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
+    }
+
+    private fun secondAiFormat(): AiTextClient.Format =
+        AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(this))
+
+    private fun updateSecondAiFormatLabel() {
+        btnSecondAiFormat.text = when (secondAiFormat()) {
+            AiTextClient.Format.GEMINI -> "Gemini 原生"
+            AiTextClient.Format.OPENAI -> "OpenAI 兼容"
+        }
+    }
+
+    private fun toggleSecondAiFormat() {
+        val next = when (secondAiFormat()) {
+            AiTextClient.Format.GEMINI -> AiTextClient.Format.OPENAI
+            AiTextClient.Format.OPENAI -> AiTextClient.Format.GEMINI
+        }
+        SettingsStore.saveSecondAiFormat(this, next.key)
+        updateSecondAiFormatLabel()
+        toast("已切换到 ${next.key} 格式")
+    }
+
+    private fun saveSecondAiSettings() {
+        SettingsStore.saveSecondAiApiKey(this, etSecondAiKey.text.toString())
+        SettingsStore.saveSecondAiBaseUrl(this, etSecondAiUrl.text.toString().trim()
+            .ifEmpty { SettingsStore.DEFAULT_BASE_URL })
+        SettingsStore.saveSecondAiModel(this, etSecondAiModel.text.toString().trim()
+            .ifEmpty { SettingsStore.secondAiModel(this) })
     }
 
     private fun setupStyleSliders() {
@@ -521,6 +640,7 @@ class MainActivity : AppCompatActivity() {
             this,
             etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
         )
+        saveSecondAiSettings()
         // 固定资料若在表单里编辑过就顺手保存，避免开播用到没保存的内容时下次丢失
         val formProfile = collectStreamerProfile()
         if (formProfile.key.isNotBlank()) {
@@ -530,7 +650,7 @@ class MainActivity : AppCompatActivity() {
         SettingsStore.saveComposedPrompt(this, composeSessionPrompt())
 
         if (SettingsStore.apiKeyList(this).isEmpty()) {
-            toast("请先到“设置”里填 Gemini API Key")
+            toast("请先到\"设置\"里填 Gemini API Key")
             showPage(R.id.nav_settings)
             return
         }
