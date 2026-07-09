@@ -134,6 +134,45 @@ object SettingsStore {
 
     // ---------- 旧版迁移 ----------
 
+    // ---------- 第二 AI（资料自动分析） ----------
+
+    fun secondAiEnabled(c: Context): Boolean =
+        prefs(c).getBoolean("secondAiEnabled", false)
+
+    fun setSecondAiEnabled(c: Context, enabled: Boolean) {
+        prefs(c).edit().putBoolean("secondAiEnabled", enabled).apply()
+    }
+
+    fun secondAiBaseUrl(c: Context): String =
+        prefs(c).getString("secondAiBaseUrl", DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
+
+    fun saveSecondAiBaseUrl(c: Context, url: String) {
+        prefs(c).edit().putString("secondAiBaseUrl", url.ifBlank { DEFAULT_BASE_URL }).apply()
+    }
+
+    fun secondAiApiKey(c: Context): String {
+        val enc = prefs(c).getString("secondAiApiKeyEnc", "") ?: ""
+        return if (enc.isEmpty()) "" else KeystoreCrypto.decrypt(enc)
+    }
+
+    fun saveSecondAiApiKey(c: Context, raw: String) {
+        prefs(c).edit().putString("secondAiApiKeyEnc", KeystoreCrypto.encrypt(raw.trim())).apply()
+    }
+
+    fun secondAiFormat(c: Context): String =
+        prefs(c).getString("secondAiFormat", "gemini") ?: "gemini"
+
+    fun saveSecondAiFormat(c: Context, format: String) {
+        prefs(c).edit().putString("secondAiFormat", format.ifBlank { "gemini" }).apply()
+    }
+
+    fun secondAiModel(c: Context): String =
+        prefs(c).getString("secondAiModel", "models/gemini-3-flash-001") ?: "models/gemini-3-flash-001"
+
+    fun saveSecondAiModel(c: Context, model: String) {
+        prefs(c).edit().putString("secondAiModel", model.ifBlank { "models/gemini-3-flash-001" }).apply()
+    }
+
     private fun migrate(c: Context) {
         if (migrated) return
         migrated = true
