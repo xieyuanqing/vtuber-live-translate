@@ -4,6 +4,49 @@
 
 ---
 
+## 2026-07-10 · v1.5 资料 AI + UI 精简（编译通过）
+
+用户需求：把主播资料和提示词改成傻瓜式自动化——贴 YouTube 链接 → AI 自动生成资料和临时提示词。
+
+**1. 第二 AI 接口 (`AiTextClient`)**
+
+- 独立于翻译 WebSocket 的文本 AI 通道，走 REST `generateContent` / OpenAI `chat/completions`
+- 支持两种 API 格式，设置页可一键切换（Gemini 原生 / OpenAI 兼容）
+- Gemini 格式自动开启 `google_search` grounding（模型实时搜索 web 获取 VTuber 最新信息）
+- 输出强制 JSON Mode，带 markdown code fence 剥离和容错解析
+- Key、URL、模型名均独立配置，可与翻译 API 共用或分开
+
+**2. AI 资料生成器 (`ProfileGenerator`)**
+
+- system prompt 详细描述 `StreamerProfile` 各字段含义，要求模型基于 VTuber 圈子知识 + Google Search 联网搜索
+- 一次 API 调用产出：主播资料 JSON + 本场临时提示词文本 + 备注
+- 不认识的主播会诚实标注，不编造
+
+**3. 设置页新增"资料 AI"卡片**
+
+- AI Key / Base URL / 模型名 + Gemini/OpenAI 格式切换按钮
+- 默认模型 `gemini-3-flash-001`（够用且快）
+
+**4. 主播资料页 UI 重构**
+
+- "获取视频信息" + "AI 自动分析生成" 改为并排 TextButton，更紧凑
+- AI 完成自动回填主播资料表单 + 临时上下文 + 触发预览
+- 提示词预览卡片改为标题行+小刷新按钮，默认空白
+
+**5. 全界面文案精简**
+
+- 删除各页 PageDesc 长说明、FieldLabel 小提示、hint 括号注释、helperText 冗文、诊断页流程说明
+- 卡片标题缩短；表单 hint 只留字段名
+- 整体从"自言自语说明"调整为"大厂成品"风格
+
+**版本**：versionCode 15 / versionName 1.5。
+
+**新增文件**：`AiTextClient.kt`（~230 行）、`ProfileGenerator.kt`（~90 行）。
+
+**验证**：`./gradlew assembleDebug` → BUILD SUCCESSFUL。
+
+---
+
 ## 2026-07-09 · v1.4 状态栏修复 + 提示词分层 + 历史页 + 前端文案重做（编译通过）
 
 按用户三点反馈一次做完，核心翻译链路不动。
