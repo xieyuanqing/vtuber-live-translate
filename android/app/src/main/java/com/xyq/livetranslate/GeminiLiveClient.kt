@@ -27,6 +27,9 @@ class GeminiLiveClient(
     private val keyProvider: () -> String,
     private val baseUrl: String,
     private val prompt: String,
+    private val targetLang: String = SettingsStore.DEFAULT_TARGET_LANG,
+    private val echoTargetLanguage: Boolean = true,
+    private val rotateAfterMs: Long = SettingsStore.DEFAULT_ROTATE_SECONDS * 1000L,
     private val listener: Listener,
 ) {
     interface Listener {
@@ -40,7 +43,6 @@ class GeminiLiveClient(
         private const val MODEL = "models/gemini-3.5-live-translate-preview"
         private const val WS_PATH =
             "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
-        private const val ROTATE_AFTER_MS = 505_000L
         private const val MAX_QUEUE = 200      // 约 20 秒积压上限，超出丢最旧
         private const val OVERLAP_CHUNKS = 10  // 异常断线重发最近 1 秒
     }
@@ -175,7 +177,7 @@ class GeminiLiveClient(
             rotateTask?.cancel(false)
             if (running.get()) {
                 runCatching {
-                    rotateTask = scheduler.schedule({ rotate() }, ROTATE_AFTER_MS, TimeUnit.MILLISECONDS)
+                    rotateTask = scheduler.schedule({ rotate() }, rotateAfterMs, TimeUnit.MILLISECONDS)
                 }
             }
             return
@@ -201,8 +203,8 @@ class GeminiLiveClient(
                     .put("responseModalities", JSONArray().put("AUDIO"))
                     .put(
                         "translationConfig", JSONObject()
-                            .put("targetLanguageCode", "zh")
-                            .put("echoTargetLanguage", true)
+                            .put("targetLanguageCode", targetLang)
+                            .put("echoTargetLanguage", echoTargetLanguage)
                     )
             )
             .put("inputAudioTranscription", JSONObject())

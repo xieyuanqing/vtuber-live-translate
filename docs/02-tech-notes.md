@@ -52,6 +52,15 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 - `inputAudioTranscription` / `outputAudioTranscription` 必须在 setup 顶层；放进 generationConfig → close 1007
 - `systemInstruction` 放 setup 顶层，可用，对专名识别有实测改善
 
+### 官方文档核对（2026-07-10，[live-translate 专页](https://ai.google.dev/gemini-api/docs/live-api/live-translate) + [模型页](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-live-translate-preview)）
+
+- **云端可调参数就这么多**：`translationConfig` 只有 `targetLanguageCode`（BCP-47，默认 `en`）和 `echoTargetLanguage`（默认 `false`；true=输入已是目标语言时照常复述输出，false=保持沉默）两个字段，外加 `inputAudioTranscription` / `outputAudioTranscription` 两个转写开关。没有 VAD、voice、temperature 等常规 Live API 配置
+- **官方示例把转写开关放 generationConfig 里**，与我们实测的"必须放 setup 顶层"不一致；我们的结构实测可用，不改。若某天升级报 1007，先试官方结构
+- **官方声称翻译模式"不支持 tools 和 instructions"**，但 `systemInstruction` 实测可用且对专名有效——依赖的是未文档化行为，模型更新后可能失效，届时主播资料注入需要另想出路（如靠 transcript 后处理替换专名）
+- 语言代码表：中文官方写法是 `zh-Hans`（简体）/ `zh-Hant`（繁体）；我们用的 `zh` 实测可用
+- 模型能力表：函数调用 / Search grounding / 结构化输出 / 思考均不支持；输入仅音频（文本输入不支持）；翻译语音输出为 24kHz PCM（本 App 丢弃不播）
+- token 限制：输入 131,072 / 输出 65,536（直播场景配合 8 分半轮换用不满）
+
 ### 音频推送
 
 - 格式：PCM16 little-endian / mono / 16kHz，每 100ms 一块（= 3200 字节）

@@ -123,7 +123,11 @@ class CaptureService : Service() {
         StatusBus.transcriptPath = logger?.pathHint ?: ""
 
         overlay = SubtitleOverlay(this)
-        stabilizer = SubtitleStabilizer(mainHandler) { confirmed, current ->
+        stabilizer = SubtitleStabilizer(
+            mainHandler,
+            idleCommitMs = SettingsStore.stabIdleMs(this).toLong(),
+            maxCurrentChars = SettingsStore.stabMaxChars(this),
+        ) { confirmed, current ->
             overlay?.maybeReapplyStyle()
             overlay?.setLines(confirmed, current)
             updateZhPanel(confirmed, current)
@@ -139,6 +143,9 @@ class CaptureService : Service() {
             },
             baseUrl = SettingsStore.baseUrl(this),
             prompt = SettingsStore.composedPrompt(this),
+            targetLang = SettingsStore.targetLang(this),
+            echoTargetLanguage = SettingsStore.echoTargetLanguage(this),
+            rotateAfterMs = SettingsStore.rotateSeconds(this) * 1000L,
             listener = object : GeminiLiveClient.Listener {
                 override fun onState(state: String) {
                     StatusBus.connState = state

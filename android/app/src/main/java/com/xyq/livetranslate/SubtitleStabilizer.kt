@@ -6,17 +6,17 @@ import android.os.Handler
  * 字幕稳定器：把 Live Translate 的碎片输出整理成「确认行 + 当前行」。
  * - 碎片边界重叠合并（服务端偶尔把结尾几个字重发一遍）
  * - 句末标点切句；与上一句相同/被包含的句子直接丢弃（治复读）
- * - 2.5s 无新碎片、或当前行攒得过长时，强制把当前行转正
+ * - idleCommitMs 无新碎片、或当前行超 maxCurrentChars 时，强制把当前行转正（高级设置可调）
  * 所有方法必须在主线程调用（handler 即主线程 Handler）。
  */
 class SubtitleStabilizer(
     private val handler: Handler,
+    private val idleCommitMs: Long = SettingsStore.DEFAULT_STAB_IDLE_MS.toLong(),
+    private val maxCurrentChars: Int = SettingsStore.DEFAULT_STAB_MAX_CHARS,
     private val onRender: (confirmed: String, current: String) -> Unit,
 ) {
     companion object {
         private val TERMINATORS = charArrayOf('。', '！', '？', '…', '～', '!', '?')
-        private const val IDLE_COMMIT_MS = 2500L
-        private const val MAX_CURRENT = 42
     }
 
     private val current = StringBuilder()
@@ -29,9 +29,9 @@ class SubtitleStabilizer(
     fun onFragment(t: String) {
         if (t.isEmpty()) return
         appendWithOverlap(t)
-        commit(force = current.length >= MAX_CURRENT)
+        commit(force = current.length >= maxCurrentChars)
         handler.removeCallbacks(idleCommit)
-        if (current.isNotEmpty()) handler.postDelayed(idleCommit, IDLE_COMMIT_MS)
+        if (current.isNotEmpty()) handler.postDelayed(idleCommit, idleCommitMs)
         render()
     }
 

@@ -33,6 +33,7 @@ import androidx.core.view.updatePadding
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -106,6 +107,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etSecondAiModel: EditText
     private lateinit var btnSecondAiFormat: Button
 
+    // 设置页 · 高级设置（默认收起）
+    private lateinit var rowAdvancedHeader: View
+    private lateinit var tvAdvancedArrow: TextView
+    private lateinit var advancedContent: View
+    private lateinit var acTargetLang: MaterialAutoCompleteTextView
+    private lateinit var swEchoTarget: MaterialSwitch
+    private lateinit var slRotate: Slider
+    private lateinit var slIdle: Slider
+    private lateinit var slMaxChars: Slider
+    private lateinit var tvRotateVal: TextView
+    private lateinit var tvIdleVal: TextView
+    private lateinit var tvMaxCharsVal: TextView
+    private lateinit var btnResetAdvanced: Button
+
     // 诊断页
     private lateinit var btnBattery: Button
     private lateinit var tvStatus: TextView
@@ -153,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         setupHistoryPage()
         setupSettings()
         setupStyleSliders()
+        setupAdvancedSettings()
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener {
@@ -251,6 +267,19 @@ class MainActivity : AppCompatActivity() {
         etSecondAiUrl = findViewById(R.id.etSecondAiUrl)
         etSecondAiModel = findViewById(R.id.etSecondAiModel)
         btnSecondAiFormat = findViewById(R.id.btnSecondAiFormat)
+
+        rowAdvancedHeader = findViewById(R.id.rowAdvancedHeader)
+        tvAdvancedArrow = findViewById(R.id.tvAdvancedArrow)
+        advancedContent = findViewById(R.id.advancedContent)
+        acTargetLang = findViewById(R.id.acTargetLang)
+        swEchoTarget = findViewById(R.id.swEchoTarget)
+        slRotate = findViewById(R.id.slRotate)
+        slIdle = findViewById(R.id.slIdle)
+        slMaxChars = findViewById(R.id.slMaxChars)
+        tvRotateVal = findViewById(R.id.tvRotateVal)
+        tvIdleVal = findViewById(R.id.tvIdleVal)
+        tvMaxCharsVal = findViewById(R.id.tvMaxCharsVal)
+        btnResetAdvanced = findViewById(R.id.btnResetAdvanced)
 
         btnBattery = findViewById(R.id.btnBattery)
         tvStatus = findViewById(R.id.tvStatus)
@@ -611,6 +640,65 @@ class MainActivity : AppCompatActivity() {
         tvLinesVal.text = "最多行数 ${slLines.value.toInt()}"
     }
 
+    // ---------- 高级设置（翻译接口 / 连接 / 断句） ----------
+
+    private val targetLangSuggestions = arrayOf("zh", "zh-Hans", "zh-Hant", "en", "ja", "ko")
+
+    private fun setupAdvancedSettings() {
+        rowAdvancedHeader.setOnClickListener {
+            val expand = advancedContent.visibility != View.VISIBLE
+            advancedContent.visibility = if (expand) View.VISIBLE else View.GONE
+            tvAdvancedArrow.text = if (expand) "▴" else "▾"
+        }
+
+        acTargetLang.setSimpleItems(targetLangSuggestions)
+        renderAdvancedValues()
+
+        acTargetLang.setOnItemClickListener { _, _, _, _ ->
+            SettingsStore.saveTargetLang(this, acTargetLang.text.toString())
+        }
+        swEchoTarget.setOnCheckedChangeListener { _, checked ->
+            SettingsStore.saveEchoTargetLanguage(this, checked)
+        }
+
+        val change = Slider.OnChangeListener { _, _, _ -> updateAdvancedLabels() }
+        val touch = object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {}
+            override fun onStopTrackingTouch(slider: Slider) {
+                SettingsStore.saveRotateSeconds(this@MainActivity, slRotate.value.toInt())
+                SettingsStore.saveStabIdleMs(this@MainActivity, slIdle.value.toInt())
+                SettingsStore.saveStabMaxChars(this@MainActivity, slMaxChars.value.toInt())
+            }
+        }
+        listOf(slRotate, slIdle, slMaxChars).forEach {
+            it.addOnChangeListener(change)
+            it.addOnSliderTouchListener(touch)
+        }
+
+        btnResetAdvanced.setOnClickListener {
+            SettingsStore.resetAdvanced(this)
+            renderAdvancedValues()
+            toast("高级设置已恢复默认，下次开始翻译时生效")
+        }
+    }
+
+    private fun renderAdvancedValues() {
+        acTargetLang.setText(SettingsStore.targetLang(this), false)
+        swEchoTarget.isChecked = SettingsStore.echoTargetLanguage(this)
+        slRotate.value = SettingsStore.rotateSeconds(this).toFloat()
+        slIdle.value = SettingsStore.stabIdleMs(this).toFloat()
+        slMaxChars.value = SettingsStore.stabMaxChars(this).toFloat()
+        updateAdvancedLabels()
+    }
+
+    private fun updateAdvancedLabels() {
+        tvRotateVal.text = "连接主动轮换 ${slRotate.value.toInt()} 秒"
+        val secs = slIdle.value.toInt() / 1000.0
+        val secsText = if (secs % 1.0 == 0.0) secs.toInt().toString() else secs.toString()
+        tvIdleVal.text = "断句：静默 $secsText 秒转正"
+        tvMaxCharsVal.text = "断句：当前行最长 ${slMaxChars.value.toInt()} 字"
+    }
+
     // ---------- 电池白名单 ----------
 
     @SuppressLint("BatteryLife")
@@ -641,6 +729,7 @@ class MainActivity : AppCompatActivity() {
             etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
         )
         saveSecondAiSettings()
+        SettingsStore.saveTargetLang(this, acTargetLang.text.toString())
         // 固定资料若在表单里编辑过就顺手保存，避免开播用到没保存的内容时下次丢失
         val formProfile = collectStreamerProfile()
         if (formProfile.key.isNotBlank()) {

@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-07-10 · v1.6 高级设置（云端参数摸底 + 本地断句可调）
+
+用户需求：把 `gemini-3.5-live-translate-preview` 能设置的选项查清楚，做成设置页里默认隐藏、点开可见的高级设置。
+
+**1. 云端参数摸底（官方文档核对，结论记入 tech-notes）**
+
+- 这个模型的云端配置是刻意做减法的：`translationConfig` 只有 `targetLanguageCode` / `echoTargetLanguage` 两个字段 + 两个转写开关，没有 VAD/voice/temperature
+- 官方声称翻译模式不支持 systemInstruction，但实测可用——记为"依赖未文档化行为"风险
+- 中文官方语言代码是 `zh-Hans` / `zh-Hant`，我们用的 `zh` 实测可用，保持默认
+
+**2. 高级设置卡片（设置页，默认收起，点标题展开）**
+
+- **目标语言**：可编辑下拉（zh / zh-Hans / zh-Hant / en / ja / ko + 自由输入），默认 zh
+- **同语言回显**（echoTargetLanguage）开关，默认开（维持旧行为）
+- **连接主动轮换间隔**：120–580 秒滑条，默认 505（服务端约 590s GoAway）
+- **断句·静默转正**：1–6 秒滑条（步进 0.25s），默认 2.5s
+- **断句·当前行最长**：20–80 字滑条，默认 42
+- "恢复默认"按钮；所有改动下次开始翻译时生效
+
+**3. 实现方式**
+
+- `SettingsStore` 新增 adv* 字段（带范围钳制 + resetAdvanced）
+- `GeminiLiveClient` 的 targetLang / echoTargetLanguage / rotateAfterMs 从硬编码常量改为构造参数
+- `SubtitleStabilizer` 的 idleCommitMs / maxCurrentChars 同样参数化；`CaptureService` 开播时从设置读取传入
+- 老用户无感：所有默认值 = 原硬编码值，不填就是原行为
+
+**版本**：versionCode 16 / versionName 1.6。
+
+**验证**：GitHub Actions assembleDebug（本次开发环境无法直连 dl.google.com，无本地 SDK）。
+
+---
+
 ## 2026-07-10 · v1.5 资料 AI + UI 精简（编译通过）
 
 用户需求：把主播资料和提示词改成傻瓜式自动化——贴 YouTube 链接 → AI 自动生成资料和临时提示词。

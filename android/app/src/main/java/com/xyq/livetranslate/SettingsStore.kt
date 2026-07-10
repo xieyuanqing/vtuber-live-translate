@@ -132,7 +132,59 @@ object SettingsStore {
         StatusBus.styleVersion.incrementAndGet() // 运行中的悬浮窗下一帧应用
     }
 
-    // ---------- 旧版迁移 ----------
+    // ---------- 高级设置（翻译接口 / 连接 / 断句），改动下次开始翻译时生效 ----------
+
+    const val DEFAULT_TARGET_LANG = "zh"           // 实测可用；官方文档写法是 zh-Hans / zh-Hant
+    const val DEFAULT_ROTATE_SECONDS = 505         // 服务端约 590s GoAway，提前主动轮换
+    const val DEFAULT_STAB_IDLE_MS = 2500
+    const val DEFAULT_STAB_MAX_CHARS = 42
+
+    fun targetLang(c: Context): String =
+        (prefs(c).getString("advTargetLang", DEFAULT_TARGET_LANG) ?: DEFAULT_TARGET_LANG)
+            .ifBlank { DEFAULT_TARGET_LANG }
+
+    fun saveTargetLang(c: Context, v: String) {
+        prefs(c).edit().putString("advTargetLang", v.trim().ifBlank { DEFAULT_TARGET_LANG }).apply()
+    }
+
+    fun echoTargetLanguage(c: Context): Boolean =
+        prefs(c).getBoolean("advEchoTarget", true)
+
+    fun saveEchoTargetLanguage(c: Context, v: Boolean) {
+        prefs(c).edit().putBoolean("advEchoTarget", v).apply()
+    }
+
+    fun rotateSeconds(c: Context): Int =
+        prefs(c).getInt("advRotateSeconds", DEFAULT_ROTATE_SECONDS).coerceIn(120, 580)
+
+    fun saveRotateSeconds(c: Context, v: Int) {
+        prefs(c).edit().putInt("advRotateSeconds", v.coerceIn(120, 580)).apply()
+    }
+
+    fun stabIdleMs(c: Context): Int =
+        prefs(c).getInt("advStabIdleMs", DEFAULT_STAB_IDLE_MS).coerceIn(1000, 6000)
+
+    fun saveStabIdleMs(c: Context, v: Int) {
+        prefs(c).edit().putInt("advStabIdleMs", v.coerceIn(1000, 6000)).apply()
+    }
+
+    fun stabMaxChars(c: Context): Int =
+        prefs(c).getInt("advStabMaxChars", DEFAULT_STAB_MAX_CHARS).coerceIn(20, 80)
+
+    fun saveStabMaxChars(c: Context, v: Int) {
+        prefs(c).edit().putInt("advStabMaxChars", v.coerceIn(20, 80)).apply()
+    }
+
+    /** 恢复全部高级设置为默认值。 */
+    fun resetAdvanced(c: Context) {
+        prefs(c).edit()
+            .remove("advTargetLang")
+            .remove("advEchoTarget")
+            .remove("advRotateSeconds")
+            .remove("advStabIdleMs")
+            .remove("advStabMaxChars")
+            .apply()
+    }
 
     // ---------- 第二 AI（资料自动分析） ----------
 
