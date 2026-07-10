@@ -647,7 +647,7 @@
                 </LinearLayout>
             </ScrollView>
 
-            <!-- ============ 页面：设置 ============ -->
+            <!-- ============ 页面：设置（分类入口） ============ -->
             <ScrollView
                 android:id="@+id/pageSettings"
                 android:layout_width="match_parent"
@@ -667,12 +667,148 @@
                         style="@style/PageTitle"
                         android:text="设置" />
 
-                    <!-- 连接 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:id="@+id/rowSetTranslate"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="翻译服务" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="API Key、目标语言、连接轮换" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetSubtitle"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="字幕与悬浮窗" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="悬浮窗样式、断句节奏" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetProfileAi"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="资料 AI" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="自动生成主播资料的第二 AI" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetDiagnostics"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="诊断" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="运行状态、电池白名单" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetAbout"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="关于" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="版本与项目信息" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ============ 设置子页：翻译服务 ============ -->
+            <ScrollView
+                android:id="@+id/pageSettingsTranslate"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Filled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         app:cardCornerRadius="16dp">
 
                         <LinearLayout
@@ -684,6 +820,11 @@
                             <TextView
                                 style="@style/CardTitle"
                                 android:text="翻译 API" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="当前接入 Gemini Live Translate" />
 
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
@@ -722,12 +863,97 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- 悬浮窗样式 -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="翻译参数" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="改动在下次开始翻译时生效" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                style="@style/Field"
+                                android:hint="目标语言（targetLanguageCode）">
+
+                                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                    android:id="@+id/acTargetLang"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="text"
+                                    android:maxLines="1"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/swEchoTarget"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="源音频已是目标语言时照常出字幕"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/tvRotateVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="连接主动轮换 505 秒"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slRotate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="5"
+                                android:valueFrom="120"
+                                android:valueTo="580" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnResetTranslate"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="恢复默认"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ============ 设置子页：字幕与悬浮窗 ============ -->
+            <ScrollView
+                android:id="@+id/pageSettingsSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Filled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         app:cardCornerRadius="16dp">
 
                         <LinearLayout
@@ -788,7 +1014,6 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- 第二 AI（资料自动分析） -->
                     <com.google.android.material.card.MaterialCardView
                         style="@style/Widget.Material3.CardView.Filled"
                         android:layout_width="match_parent"
@@ -804,7 +1029,92 @@
 
                             <TextView
                                 style="@style/CardTitle"
+                                android:text="断句节奏" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="改动在下次开始翻译时生效" />
+
+                            <TextView
+                                android:id="@+id/tvIdleVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="静默 2.5 秒转正"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slIdle"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="250"
+                                android:valueFrom="1000"
+                                android:valueTo="6000" />
+
+                            <TextView
+                                android:id="@+id/tvMaxCharsVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="当前行最长 42 字"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slMaxChars"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="2"
+                                android:valueFrom="20"
+                                android:valueTo="80" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnResetSubtitle"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="恢复默认"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ============ 设置子页：资料 AI ============ -->
+            <ScrollView
+                android:id="@+id/pageSettingsProfileAi"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Filled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
                                 android:text="资料 AI" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="给「主播资料」页的 AI 自动分析用，与翻译通道相互独立" />
 
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
@@ -882,138 +1192,12 @@
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
-
-                    <!-- 高级设置（默认收起，点标题展开） -->
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/Widget.Material3.CardView.Filled"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        app:cardCornerRadius="16dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="14dp">
-
-                            <LinearLayout
-                                android:id="@+id/rowAdvancedHeader"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:background="?attr/selectableItemBackground"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    style="@style/CardTitle"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:text="高级设置" />
-
-                                <TextView
-                                    android:id="@+id/tvAdvancedArrow"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▾"
-                                    android:textColor="?android:attr/textColorSecondary"
-                                    android:textSize="15sp" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/advancedContent"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:visibility="gone">
-
-                                <TextView
-                                    style="@style/FieldLabel"
-                                    android:text="改动在下次开始翻译时生效" />
-
-                                <com.google.android.material.textfield.TextInputLayout
-                                    style="@style/Field"
-                                    android:hint="目标语言（targetLanguageCode）">
-
-                                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                                        android:id="@+id/acTargetLang"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:inputType="text"
-                                        android:maxLines="1"
-                                        android:textSize="14sp" />
-                                </com.google.android.material.textfield.TextInputLayout>
-
-                                <com.google.android.material.materialswitch.MaterialSwitch
-                                    android:id="@+id/swEchoTarget"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="源音频已是目标语言时照常出字幕"
-                                    android:textSize="13sp" />
-
-                                <TextView
-                                    android:id="@+id/tvRotateVal"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="10dp"
-                                    android:text="连接主动轮换 505 秒"
-                                    android:textSize="13sp" />
-
-                                <com.google.android.material.slider.Slider
-                                    android:id="@+id/slRotate"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:stepSize="5"
-                                    android:valueFrom="120"
-                                    android:valueTo="580" />
-
-                                <TextView
-                                    android:id="@+id/tvIdleVal"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="断句：静默 2.5 秒转正"
-                                    android:textSize="13sp" />
-
-                                <com.google.android.material.slider.Slider
-                                    android:id="@+id/slIdle"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:stepSize="250"
-                                    android:valueFrom="1000"
-                                    android:valueTo="6000" />
-
-                                <TextView
-                                    android:id="@+id/tvMaxCharsVal"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="断句：当前行最长 42 字"
-                                    android:textSize="13sp" />
-
-                                <com.google.android.material.slider.Slider
-                                    android:id="@+id/slMaxChars"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:stepSize="2"
-                                    android:valueFrom="20"
-                                    android:valueTo="80" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnResetAdvanced"
-                                    style="@style/Widget.Material3.Button.TextButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="恢复默认"
-                                    android:textSize="13sp" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
             </ScrollView>
 
-            <!-- ============ 页面：诊断 ============ -->
+            <!-- ============ 设置子页：诊断 ============ -->
             <ScrollView
-                android:id="@+id/pageDiagnostics"
+                android:id="@+id/pageSettingsDiagnostics"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:fillViewport="true"
@@ -1027,20 +1211,11 @@
                     android:paddingTop="16dp"
                     android:paddingBottom="24dp">
 
-                    <TextView
-                        style="@style/PageTitle"
-                        android:text="诊断" />
-
-                    <TextView
-                        style="@style/PageDesc"
-                        android:text="连接状态、电池白名单。" />
-
                     <Button
                         android:id="@+id/btnBattery"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
                         android:text="加入电池白名单" />
 
                     <com.google.android.material.card.MaterialCardView
@@ -1059,7 +1234,76 @@
                             android:text="○ 未运行"
                             android:textSize="12sp" />
                     </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
 
+            <!-- ============ 设置子页：关于 ============ -->
+            <ScrollView
+                android:id="@+id/pageSettingsAbout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Filled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="VTuber 直播实时翻译" />
+
+                            <TextView
+                                android:id="@+id/tvAboutVersion"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="版本 —"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:lineSpacingExtra="2dp"
+                                android:text="捕获手机上正在播放的直播音频，经 Gemini Live Translate 实时翻译，用悬浮窗显示中文字幕。自用辅助工具，字幕以看懂大意为目标。"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="翻译模型：gemini-3.5-live-translate-preview"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAboutRepo"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="GitHub 项目主页"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
             </ScrollView>
         </FrameLayout>

@@ -119,9 +119,13 @@ object SettingsStore {
 
     // ---------- 悬浮窗样式 ----------
 
-    fun fontSizeSp(c: Context): Int = prefs(c).getInt("fontSp", 16)
-    fun bgOpacityPct(c: Context): Int = prefs(c).getInt("bgOpacity", 66)
-    fun overlayMaxLines(c: Context): Int = prefs(c).getInt("overlayMaxLines", 3)
+    const val DEFAULT_FONT_SP = 16
+    const val DEFAULT_BG_OPACITY = 66
+    const val DEFAULT_OVERLAY_LINES = 3
+
+    fun fontSizeSp(c: Context): Int = prefs(c).getInt("fontSp", DEFAULT_FONT_SP)
+    fun bgOpacityPct(c: Context): Int = prefs(c).getInt("bgOpacity", DEFAULT_BG_OPACITY)
+    fun overlayMaxLines(c: Context): Int = prefs(c).getInt("overlayMaxLines", DEFAULT_OVERLAY_LINES)
 
     fun saveStyle(c: Context, fontSp: Int, bgOpacity: Int, maxLines: Int) {
         prefs(c).edit()
@@ -132,7 +136,7 @@ object SettingsStore {
         StatusBus.styleVersion.incrementAndGet() // 运行中的悬浮窗下一帧应用
     }
 
-    // ---------- 高级设置（翻译接口 / 连接 / 断句），改动下次开始翻译时生效 ----------
+    // ---------- 翻译参数 / 断句参数，改动下次开始翻译时生效 ----------
 
     const val DEFAULT_TARGET_LANG = "zh"           // 实测可用；官方文档写法是 zh-Hans / zh-Hant
     const val DEFAULT_ROTATE_SECONDS = 505         // 服务端约 590s GoAway，提前主动轮换
@@ -173,17 +177,6 @@ object SettingsStore {
 
     fun saveStabMaxChars(c: Context, v: Int) {
         prefs(c).edit().putInt("advStabMaxChars", v.coerceIn(20, 80)).apply()
-    }
-
-    /** 恢复全部高级设置为默认值。 */
-    fun resetAdvanced(c: Context) {
-        prefs(c).edit()
-            .remove("advTargetLang")
-            .remove("advEchoTarget")
-            .remove("advRotateSeconds")
-            .remove("advStabIdleMs")
-            .remove("advStabMaxChars")
-            .apply()
     }
 
     // ---------- 第二 AI（资料自动分析） ----------

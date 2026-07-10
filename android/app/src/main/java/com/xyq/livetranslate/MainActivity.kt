@@ -49,7 +49,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pageStreamer: View
     private lateinit var pageHistory: View
     private lateinit var pageSettings: View
-    private lateinit var pageDiagnostics: View
+
+    // 设置二级页（0 = 设置首页）
+    private var settingsSubId = 0
+    private lateinit var pageSettingsTranslate: View
+    private lateinit var pageSettingsSubtitle: View
+    private lateinit var pageSettingsProfileAi: View
+    private lateinit var pageSettingsDiagnostics: View
+    private lateinit var pageSettingsAbout: View
+    private lateinit var settingsSubViews: List<View>
+    private lateinit var rowSetTranslate: View
+    private lateinit var rowSetSubtitle: View
+    private lateinit var rowSetProfileAi: View
+    private lateinit var rowSetDiagnostics: View
+    private lateinit var rowSetAbout: View
 
     // 实时翻译页
     private lateinit var tvHeroStatus: TextView
@@ -107,10 +120,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etSecondAiModel: EditText
     private lateinit var btnSecondAiFormat: Button
 
-    // 设置页 · 高级设置（默认收起）
-    private lateinit var rowAdvancedHeader: View
-    private lateinit var tvAdvancedArrow: TextView
-    private lateinit var advancedContent: View
+    // 翻译参数 / 断句参数（分属翻译服务、字幕与悬浮窗两个子页）
     private lateinit var acTargetLang: MaterialAutoCompleteTextView
     private lateinit var swEchoTarget: MaterialSwitch
     private lateinit var slRotate: Slider
@@ -119,11 +129,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvRotateVal: TextView
     private lateinit var tvIdleVal: TextView
     private lateinit var tvMaxCharsVal: TextView
-    private lateinit var btnResetAdvanced: Button
+    private lateinit var btnResetTranslate: Button
+    private lateinit var btnResetSubtitle: Button
 
-    // 诊断页
+    // 诊断 / 关于子页
     private lateinit var btnBattery: Button
     private lateinit var tvStatus: TextView
+    private lateinit var tvAboutVersion: TextView
+    private lateinit var btnAboutRepo: Button
 
     private var streamerProfiles: List<StreamerProfile> = emptyList()
     private var currentVideoInfo: YouTubeVideoInfo? = null
@@ -168,7 +181,7 @@ class MainActivity : AppCompatActivity() {
         setupHistoryPage()
         setupSettings()
         setupStyleSliders()
-        setupAdvancedSettings()
+        setupParamControls()
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener {
@@ -195,11 +208,13 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawers()
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
+        when {
+            drawerLayout.isDrawerOpen(GravityCompat.START) -> drawerLayout.closeDrawers()
+            settingsSubId != 0 -> closeSettingsSub()
+            else -> {
+                @Suppress("DEPRECATION")
+                super.onBackPressed()
+            }
         }
     }
 
@@ -214,7 +229,20 @@ class MainActivity : AppCompatActivity() {
         pageStreamer = findViewById(R.id.pageStreamer)
         pageHistory = findViewById(R.id.pageHistory)
         pageSettings = findViewById(R.id.pageSettings)
-        pageDiagnostics = findViewById(R.id.pageDiagnostics)
+        pageSettingsTranslate = findViewById(R.id.pageSettingsTranslate)
+        pageSettingsSubtitle = findViewById(R.id.pageSettingsSubtitle)
+        pageSettingsProfileAi = findViewById(R.id.pageSettingsProfileAi)
+        pageSettingsDiagnostics = findViewById(R.id.pageSettingsDiagnostics)
+        pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
+        settingsSubViews = listOf(
+            pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
+            pageSettingsDiagnostics, pageSettingsAbout,
+        )
+        rowSetTranslate = findViewById(R.id.rowSetTranslate)
+        rowSetSubtitle = findViewById(R.id.rowSetSubtitle)
+        rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
+        rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
+        rowSetAbout = findViewById(R.id.rowSetAbout)
 
         tvHeroStatus = findViewById(R.id.tvHeroStatus)
         tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
@@ -268,9 +296,6 @@ class MainActivity : AppCompatActivity() {
         etSecondAiModel = findViewById(R.id.etSecondAiModel)
         btnSecondAiFormat = findViewById(R.id.btnSecondAiFormat)
 
-        rowAdvancedHeader = findViewById(R.id.rowAdvancedHeader)
-        tvAdvancedArrow = findViewById(R.id.tvAdvancedArrow)
-        advancedContent = findViewById(R.id.advancedContent)
         acTargetLang = findViewById(R.id.acTargetLang)
         swEchoTarget = findViewById(R.id.swEchoTarget)
         slRotate = findViewById(R.id.slRotate)
@@ -279,10 +304,13 @@ class MainActivity : AppCompatActivity() {
         tvRotateVal = findViewById(R.id.tvRotateVal)
         tvIdleVal = findViewById(R.id.tvIdleVal)
         tvMaxCharsVal = findViewById(R.id.tvMaxCharsVal)
-        btnResetAdvanced = findViewById(R.id.btnResetAdvanced)
+        btnResetTranslate = findViewById(R.id.btnResetTranslate)
+        btnResetSubtitle = findViewById(R.id.btnResetSubtitle)
 
         btnBattery = findViewById(R.id.btnBattery)
         tvStatus = findViewById(R.id.tvStatus)
+        tvAboutVersion = findViewById(R.id.tvAboutVersion)
+        btnAboutRepo = findViewById(R.id.btnAboutRepo)
     }
 
     /** targetSdk 35 起默认 edge-to-edge，需要手动把状态栏/导航栏的高度让出来。 */
@@ -305,7 +333,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupDrawer() {
-        toolbar.setNavigationOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+        toolbar.setNavigationOnClickListener {
+            if (settingsSubId != 0) closeSettingsSub() else drawerLayout.openDrawer(GravityCompat.START)
+        }
         navView.setNavigationItemSelectedListener { item ->
             showPage(item.itemId)
             drawerLayout.closeDrawers()
@@ -314,20 +344,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPage(itemId: Int) {
+        settingsSubId = 0
+        settingsSubViews.forEach { it.visibility = View.GONE }
         pageLive.visibility = if (itemId == R.id.nav_live) View.VISIBLE else View.GONE
         pageStreamer.visibility = if (itemId == R.id.nav_streamer) View.VISIBLE else View.GONE
         pageHistory.visibility = if (itemId == R.id.nav_history) View.VISIBLE else View.GONE
         pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
-        pageDiagnostics.visibility = if (itemId == R.id.nav_diagnostics) View.VISIBLE else View.GONE
         toolbar.title = when (itemId) {
             R.id.nav_streamer -> "主播资料"
             R.id.nav_history -> "历史记录"
             R.id.nav_settings -> "设置"
-            R.id.nav_diagnostics -> "诊断"
             else -> "实时翻译"
         }
+        toolbar.setNavigationIcon(R.drawable.ic_menu_24)
         navView.setCheckedItem(itemId)
         if (itemId == R.id.nav_history) reloadHistory()
+    }
+
+    /** 打开设置二级页：工具栏变返回箭头，标题换成子页名。 */
+    private fun openSettingsSub(pageId: Int, title: String) {
+        settingsSubId = pageId
+        pageSettings.visibility = View.GONE
+        settingsSubViews.forEach { it.visibility = if (it.id == pageId) View.VISIBLE else View.GONE }
+        toolbar.title = title
+        toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
+    }
+
+    private fun closeSettingsSub() {
+        settingsSubId = 0
+        settingsSubViews.forEach { it.visibility = View.GONE }
+        pageSettings.visibility = View.VISIBLE
+        toolbar.title = "设置"
+        toolbar.setNavigationIcon(R.drawable.ic_menu_24)
     }
 
     // ---------- 主播资料 + 提示词后端 ----------
@@ -465,7 +513,7 @@ class MainActivity : AppCompatActivity() {
 
         val apiKey = SettingsStore.secondAiApiKey(this)
         if (apiKey.isEmpty()) {
-            toast("请先到\"设置\"页配置资料 AI 的 Key")
+            toast("请先到\"设置 → 资料 AI\"配置 Key")
             return
         }
 
@@ -573,6 +621,12 @@ class MainActivity : AppCompatActivity() {
     // ---------- 设置 ----------
 
     private fun setupSettings() {
+        rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
+        rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
+        rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "资料 AI") }
+        rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
+        rowSetAbout.setOnClickListener { openSettingsSub(R.id.pageSettingsAbout, "关于") }
+
         etApiKeys.setText(SettingsStore.apiKeysRaw(this))
         etBaseUrl.setText(SettingsStore.baseUrl(this))
         etSecondAiKey.setText(SettingsStore.secondAiApiKey(this))
@@ -580,6 +634,20 @@ class MainActivity : AppCompatActivity() {
         etSecondAiModel.setText(SettingsStore.secondAiModel(this))
         updateSecondAiFormatLabel()
         btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
+
+        val info = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
+        tvAboutVersion.text = if (info != null) {
+            "版本 ${info.versionName}（${info.longVersionCode}）"
+        } else {
+            "版本未知"
+        }
+        btnAboutRepo.setOnClickListener {
+            runCatching {
+                startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xieyuanqing/vtuber-live-translate")),
+                )
+            }.onFailure { toast("没有可用的浏览器") }
+        }
     }
 
     private fun secondAiFormat(): AiTextClient.Format =
@@ -640,19 +708,13 @@ class MainActivity : AppCompatActivity() {
         tvLinesVal.text = "最多行数 ${slLines.value.toInt()}"
     }
 
-    // ---------- 高级设置（翻译接口 / 连接 / 断句） ----------
+    // ---------- 翻译参数 / 断句参数 ----------
 
     private val targetLangSuggestions = arrayOf("zh", "zh-Hans", "zh-Hant", "en", "ja", "ko")
 
-    private fun setupAdvancedSettings() {
-        rowAdvancedHeader.setOnClickListener {
-            val expand = advancedContent.visibility != View.VISIBLE
-            advancedContent.visibility = if (expand) View.VISIBLE else View.GONE
-            tvAdvancedArrow.text = if (expand) "▴" else "▾"
-        }
-
+    private fun setupParamControls() {
         acTargetLang.setSimpleItems(targetLangSuggestions)
-        renderAdvancedValues()
+        renderParamValues()
 
         acTargetLang.setOnItemClickListener { _, _, _, _ ->
             SettingsStore.saveTargetLang(this, acTargetLang.text.toString())
@@ -661,7 +723,7 @@ class MainActivity : AppCompatActivity() {
             SettingsStore.saveEchoTargetLanguage(this, checked)
         }
 
-        val change = Slider.OnChangeListener { _, _, _ -> updateAdvancedLabels() }
+        val change = Slider.OnChangeListener { _, _, _ -> updateParamLabels() }
         val touch = object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {}
             override fun onStopTrackingTouch(slider: Slider) {
@@ -675,28 +737,46 @@ class MainActivity : AppCompatActivity() {
             it.addOnSliderTouchListener(touch)
         }
 
-        btnResetAdvanced.setOnClickListener {
-            SettingsStore.resetAdvanced(this)
-            renderAdvancedValues()
-            toast("高级设置已恢复默认，下次开始翻译时生效")
+        btnResetTranslate.setOnClickListener {
+            SettingsStore.saveTargetLang(this, SettingsStore.DEFAULT_TARGET_LANG)
+            SettingsStore.saveEchoTargetLanguage(this, true)
+            SettingsStore.saveRotateSeconds(this, SettingsStore.DEFAULT_ROTATE_SECONDS)
+            renderParamValues()
+            toast("翻译参数已恢复默认，下次开始翻译时生效")
+        }
+        btnResetSubtitle.setOnClickListener {
+            SettingsStore.saveStabIdleMs(this, SettingsStore.DEFAULT_STAB_IDLE_MS)
+            SettingsStore.saveStabMaxChars(this, SettingsStore.DEFAULT_STAB_MAX_CHARS)
+            SettingsStore.saveStyle(
+                this,
+                SettingsStore.DEFAULT_FONT_SP,
+                SettingsStore.DEFAULT_BG_OPACITY,
+                SettingsStore.DEFAULT_OVERLAY_LINES,
+            )
+            slFont.value = SettingsStore.DEFAULT_FONT_SP.toFloat()
+            slOpacity.value = SettingsStore.DEFAULT_BG_OPACITY.toFloat()
+            slLines.value = SettingsStore.DEFAULT_OVERLAY_LINES.toFloat()
+            updateStyleLabels()
+            renderParamValues()
+            toast("字幕设置已恢复默认")
         }
     }
 
-    private fun renderAdvancedValues() {
+    private fun renderParamValues() {
         acTargetLang.setText(SettingsStore.targetLang(this), false)
         swEchoTarget.isChecked = SettingsStore.echoTargetLanguage(this)
         slRotate.value = SettingsStore.rotateSeconds(this).toFloat()
         slIdle.value = SettingsStore.stabIdleMs(this).toFloat()
         slMaxChars.value = SettingsStore.stabMaxChars(this).toFloat()
-        updateAdvancedLabels()
+        updateParamLabels()
     }
 
-    private fun updateAdvancedLabels() {
+    private fun updateParamLabels() {
         tvRotateVal.text = "连接主动轮换 ${slRotate.value.toInt()} 秒"
         val secs = slIdle.value.toInt() / 1000.0
         val secsText = if (secs % 1.0 == 0.0) secs.toInt().toString() else secs.toString()
-        tvIdleVal.text = "断句：静默 $secsText 秒转正"
-        tvMaxCharsVal.text = "断句：当前行最长 ${slMaxChars.value.toInt()} 字"
+        tvIdleVal.text = "静默 $secsText 秒转正"
+        tvMaxCharsVal.text = "当前行最长 ${slMaxChars.value.toInt()} 字"
     }
 
     // ---------- 电池白名单 ----------
@@ -739,8 +819,9 @@ class MainActivity : AppCompatActivity() {
         SettingsStore.saveComposedPrompt(this, composeSessionPrompt())
 
         if (SettingsStore.apiKeyList(this).isEmpty()) {
-            toast("请先到\"设置\"里填 Gemini API Key")
+            toast("请先填 Gemini API Key")
             showPage(R.id.nav_settings)
+            openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
             return
         }
 
