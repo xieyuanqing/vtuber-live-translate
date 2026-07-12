@@ -15,6 +15,7 @@ import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Gemini Live Translate WebSocket 客户端。
@@ -22,6 +23,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - 单连接约 590s 被服务端 GoAway 断开：505s 主动轮换 + goAway 消息即时轮换
  * - 异常断线：指数退避重连，并把最近 1 秒已发送音频塞回队首弥补断点
  * - 音频块进有界队列，断线期间自动积压、恢复后追发
+ *
+ * 并发约定：所有连接生命周期操作（connect / rotate / scheduleReconnect / 看门狗）
+ * 一律串行在 scheduler 单线程上执行——WebSocket 读线程（goAway / setupComplete）
+ * 只往 scheduler 投递任务，绝不直接改 generation/ws/rotateTask。这样避免定时轮换与
+ * goAway 即时轮换跨线程同时进 connect() 造成 generation 竞态、连接分叉、ready 卡死。
+ * 另加握手看门狗：连上后 HANDSHAKE_TIMEOUT_MS 内拿不到 setupComplete 就强制重连自愈。
  */
 class GeminiLiveClient(
     private val keyProvider: () -> String,
@@ -45,6 +52,7 @@ class GeminiLiveClient(
             "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
         private const val MAX_QUEUE = 200      // 约 20 秒积压上限，超出丢最旧
         private const val OVERLAP_CHUNKS = 10  // 异常断线重发最近 1 秒
+        private const val HANDSHAKE_TIMEOUT_MS = 12_000L // 连上后多久没 setupComplete 就判握手卡死
     }
 
     private val http = OkHttpClient.Builder()
@@ -59,27 +67,36 @@ class GeminiLiveClient(
 
     @Volatile private var ws: WebSocket? = null
     @Volatile private var ready = false
-    @Volatile private var generation = 0
+    private val generation = AtomicInteger(0)
     @Volatile private var reconnectDelayMs = 1000L
-    private var rotateTask: ScheduledFuture<*>? = null
+    // rotateTask / watchdogTask 只在 scheduler 线程与 stop() 里改，volatile 保证可见性
+    @Volatile private var rotateTask: ScheduledFuture<*>? = null
+    @Volatile private var watchdogTask: ScheduledFuture<*>? = null
     private var senderThread: Thread? = null
 
     fun start() {
         if (!running.compareAndSet(false, true)) return
         senderThread = Thread(::senderLoop, "gemini-sender").also { it.start() }
-        connect()
+        runOnScheduler { connect() }
     }
 
     fun stop() {
         if (!running.compareAndSet(true, false)) return
-        generation++
+        generation.incrementAndGet()
         rotateTask?.cancel(false)
+        watchdogTask?.cancel(false)
         scheduler.shutdownNow()
         runCatching { ws?.close(1000, "bye") }
         ws = null
         ready = false
         senderThread?.interrupt()
         listener.onState("stopped")
+    }
+
+    /** 把连接生命周期操作投递到 scheduler 单线程串行执行；停机或已关闭则安静丢弃。 */
+    private fun runOnScheduler(block: () -> Unit) {
+        if (!running.get()) return
+        runCatching { scheduler.execute { if (running.get()) block() } }
     }
 
     /** 捕获线程调用：塞入一块 100ms/16k/mono 的 PCM。 */
@@ -91,11 +108,12 @@ class GeminiLiveClient(
 
     // ---------- 连接管理 ----------
 
+    /** 只在 scheduler 线程调用。 */
     private fun connect() {
         if (!running.get()) return
         ready = false
-        generation++
-        val gen = generation
+        rotateTask?.cancel(false) // 取消可能残留的旧轮换任务，防止过期任务乱触发
+        val gen = generation.incrementAndGet()
         listener.onState(if (gen == 1) "connecting" else "reconnecting")
         val key = keyProvider()
         if (key.isEmpty()) {
@@ -105,24 +123,48 @@ class GeminiLiveClient(
         val url = baseUrl.trimEnd('/') + WS_PATH + "?key=" + key
         val req = Request.Builder().url(url).build()
         ws = http.newWebSocket(req, WsListener(gen))
+        armWatchdog(gen)
     }
 
-    private fun rotate() {
+    /** 握手看门狗：到点仍是这一代且没 ready，说明连上却卡在握手，强制重连自愈。 */
+    private fun armWatchdog(gen: Int) {
+        watchdogTask?.cancel(false)
+        watchdogTask = runCatching {
+            scheduler.schedule({
+                if (running.get() && generation.get() == gen && !ready) {
+                    Log.w(TAG, "handshake watchdog fired gen=$gen, forcing reconnect")
+                    val old = ws
+                    generation.incrementAndGet() // 作废旧连接回调，避免其 onFailure 再触发一次重连
+                    runCatching { old?.cancel() }
+                    scheduleReconnect(abrupt = true)
+                }
+            }, HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        }.getOrNull()
+    }
+
+    /**
+     * 轮换。fromGen 是触发时的代际：定时任务与 goAway 可能同时排队，
+     * 谁先在 scheduler 上跑谁生效，后到的看到代际已推进就跳过，避免重复轮换。
+     */
+    private fun rotate(fromGen: Int) {
         if (!running.get()) return
-        Log.i(TAG, "planned rotation")
+        if (generation.get() != fromGen) return
+        Log.i(TAG, "rotation from gen=$fromGen")
         listener.onState("rotating")
         val old = ws
-        connect() // generation++ 之后旧连接的回调全部作废
+        connect() // generation++ 之后旧连接的回调全部作废，并取消旧 rotateTask
         runCatching { old?.close(1000, "rotate") }
     }
 
+    /** 从 WebSocket 回调线程调用；实际重连排到 scheduler 线程串行执行。 */
     private fun scheduleReconnect(abrupt: Boolean) {
         if (!running.get()) return
         ready = false
+        watchdogTask?.cancel(false)
         if (abrupt) prependOverlap()
         val d = reconnectDelayMs
         reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(15_000L)
-        runCatching { scheduler.schedule({ connect() }, d, TimeUnit.MILLISECONDS) }
+        runCatching { scheduler.schedule({ if (running.get()) connect() }, d, TimeUnit.MILLISECONDS) }
     }
 
     private fun prependOverlap() {
@@ -136,7 +178,7 @@ class GeminiLiveClient(
 
     private inner class WsListener(private val gen: Int) : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            if (gen != generation) return
+            if (gen != generation.get()) return
             webSocket.send(buildSetupJson())
         }
 
@@ -149,13 +191,13 @@ class GeminiLiveClient(
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            if (gen != generation || !running.get()) return
+            if (gen != generation.get() || !running.get()) return
             Log.w(TAG, "closed by server: $code $reason")
             scheduleReconnect(abrupt = false)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            if (gen != generation || !running.get()) return
+            if (gen != generation.get() || !running.get()) return
             Log.w(TAG, "ws failure: ${t.message}")
             listener.onState("error:${t.message ?: "unknown"}")
             scheduleReconnect(abrupt = true)
@@ -163,7 +205,7 @@ class GeminiLiveClient(
     }
 
     private fun handle(gen: Int, text: String) {
-        if (gen != generation || !running.get()) return
+        if (gen != generation.get() || !running.get()) return
         val o = try {
             JSONObject(text)
         } catch (e: Exception) {
@@ -174,17 +216,20 @@ class GeminiLiveClient(
             ready = true
             reconnectDelayMs = 1000L
             listener.onState("ready")
-            rotateTask?.cancel(false)
-            if (running.get()) {
-                runCatching {
-                    rotateTask = scheduler.schedule({ rotate() }, rotateAfterMs, TimeUnit.MILLISECONDS)
-                }
+            // 轮换/看门狗任务的重排统一挪到 scheduler 线程，避免与 connect() 抢 rotateTask
+            runOnScheduler {
+                if (generation.get() != gen) return@runOnScheduler
+                watchdogTask?.cancel(false)
+                rotateTask?.cancel(false)
+                rotateTask = runCatching {
+                    scheduler.schedule({ rotate(gen) }, rotateAfterMs, TimeUnit.MILLISECONDS)
+                }.getOrNull()
             }
             return
         }
         if (o.has("goAway")) {
             Log.i(TAG, "server goAway")
-            rotate()
+            runOnScheduler { rotate(gen) }
             return
         }
         val sc = o.optJSONObject("serverContent") ?: return

@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-12 · 修复：连接轮换后偶发不识别、字幕卡死
+
+用户实测反馈：断线轮换之后有时不再识别，字幕就卡在那里，后台一直卡着。
+
+**根因（`GeminiLiveClient`）**：轮换有两条触发路径——定时 `rotateTask`（scheduler 线程）和 `goAway` 即时轮换（WebSocket 读线程）。两者会**跨线程同时进 `connect()`**，而 `generation++` 是 `@Volatile Int` 的非原子读-改-写，`ws` 赋值也没串行化。竞态下会建出两条连接、两个 WsListener 的 `gen` 都等于当前 `generation`，`ws` 只指向其一；另一条拿不到音频被服务端闲置关闭，其 `onClosed` 又因 `gen==generation` 触发重连，级联下去 `ws` 很容易指向一条永远走不到 `setupComplete` 的连接。`ready` 永久卡 false → `senderLoop` 把音频块无限退回队列 → 服务端收不到输入 → 没有转写 → 字幕永久冻结。且原本**没有握手看门狗**，一旦卡死无法自愈。
+
+**修复**：
+
+- 连接生命周期操作（connect / rotate / scheduleReconnect / 看门狗）全部**串行到 scheduler 单线程**；WebSocket 读线程的 `goAway` / `setupComplete` 只用 `runOnScheduler` 投递任务，不再直接改 `generation` / `ws` / `rotateTask`
+- `generation` 改 `AtomicInteger`；`rotate(fromGen)` 加代际守卫，定时任务与 goAway 谁先跑谁生效，后到的看到代际推进就跳过，杜绝重复轮换
+- `connect()` 开头始终取消残留 `rotateTask`，避免过期轮换任务乱触发
+- 新增**握手看门狗** `HANDSHAKE_TIMEOUT_MS`（12s）：连上后到点仍没 `setupComplete` 就作废旧连接并强制重连，管线不再可能永久冻结
+
+**验证**：改动集中在 `GeminiLiveClient.kt` 单文件（本地无 Android SDK / AGP 缓存，完整构建走 GitHub Actions assembleDebug）。
+
+---
+
 ## 2026-07-10 · v1.8 提示词优化：注入提示词瘦身 + 资料 AI 输出对齐用途
 
 用户反馈：预览提示词里居然带着 YouTube 链接——翻译模型根本用不上。
