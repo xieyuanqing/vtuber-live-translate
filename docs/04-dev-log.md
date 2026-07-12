@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-07-12 · 修复：CI 构建每次签名不同、无法覆盖安装
+
+用户反馈：不同次构建出来的安装包签名好像都不一样。
+
+**根因**：`app/build.gradle.kts` 没配 `signingConfig`，`assembleDebug` 走默认 debug 签名，用的是 `~/.android/debug.keystore`——该文件每台机器首次构建时随机生成。GitHub Actions runner 用完即弃，每次都是全新机器 → 每次现生成不同的 debug.keystore → 每个 APK 签名证书都不同 → 新包无法覆盖旧包（签名不一致），只能卸载重装、丢失设置。
+
+**修复**：仓库内放固定 `app/debug.keystore`（标准公开口令 `android` / `androiddebugkey`，非机密），`signingConfigs.getByName("debug")` 指向它。此后所有机器、所有 CI 构建签名一致，可直接覆盖安装保留数据。一次性代价：换固定签名后首次安装仍与手机上现有随机签名旧版不匹配，需再卸载重装一次，之后永久稳定。
+
+---
+
 ## 2026-07-12 · 修复：连接轮换后偶发不识别、字幕卡死
 
 用户实测反馈：断线轮换之后有时不再识别，字幕就卡在那里，后台一直卡着。
