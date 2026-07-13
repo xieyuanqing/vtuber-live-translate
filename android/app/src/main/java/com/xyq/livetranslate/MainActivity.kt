@@ -381,9 +381,8 @@ class MainActivity : AppCompatActivity() {
         }
         toolbar.navigationIcon = null
         bottomNav.visibility = View.VISIBLE
-        if (bottomNav.selectedItemId != itemId) {
-            bottomNav.selectedItemId = itemId
-        }
+        // 这里不能再写 bottomNav.selectedItemId：showPage 本身就在选中回调里，
+        // Material 会在回调返回后才更新 selectedItemId；回调内重设会无限重入并栈溢出。
         currentMainTabId = itemId
         if (itemId == R.id.nav_history) reloadHistory()
     }

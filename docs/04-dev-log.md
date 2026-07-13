@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-07-13 · v1.9.1 修复：切换底部 Tab 闪退
+
+**现象**：App 默认打开「同传」正常，点击「视频 / 历史 / 设置」立即闪退。
+
+**根本原因**：`BottomNavigationView.setOnItemSelectedListener` 回调调用 `showPage(itemId)`；`showPage()` 又在 `selectedItemId` 尚未由 Material 更新时写回同一个 itemId，导致选中回调无限重入，最终 `StackOverflowError`。
+
+**修复**：`showPage()` 只负责页面显示，不再修改 `bottomNav.selectedItemId`。程序化切换只在回调外的明确入口进行。版本升到 `1.9.1`（versionCode 20）。
+
+**回归检查**：静态探针确认 `showPage()` 函数体内没有 `selectedItemId =`；完整构建走 GitHub Actions。
+
+---
+
 ## 2026-07-13 · v1.9 通用实时翻译：底部 4 Tab + 麦克风同传
 
 目标：从「VTuber 专用视频字幕」扩成「同传 + 视频」双入口，共用同一翻译引擎。
