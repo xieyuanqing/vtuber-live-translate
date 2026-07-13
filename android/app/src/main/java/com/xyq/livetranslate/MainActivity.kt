@@ -26,29 +26,29 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.navigation.NavigationView
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
 class MainActivity : AppCompatActivity() {
 
-    // 壳子
-    private lateinit var drawerLayout: DrawerLayout
-    private lateinit var navView: NavigationView
+    // 壳子：底部 4 Tab
+    private lateinit var rootLayout: View
+    private lateinit var bottomNav: BottomNavigationView
     private lateinit var toolbar: MaterialToolbar
     private lateinit var pageContainer: View
-    private lateinit var pageLive: View
+    private lateinit var pageInterp: View
+    private lateinit var pageVideo: View
     private lateinit var pageStreamer: View
     private lateinit var pageHistory: View
     private lateinit var pageSettings: View
+    private var currentMainTabId = R.id.nav_interp
 
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
@@ -60,11 +60,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsSubViews: List<View>
     private lateinit var rowSetTranslate: View
     private lateinit var rowSetSubtitle: View
+    private lateinit var rowSetScenes: View
     private lateinit var rowSetProfileAi: View
     private lateinit var rowSetDiagnostics: View
     private lateinit var rowSetAbout: View
 
-    // 实时翻译页
+    // 同传页（麦克风）
+    private lateinit var tvInterpStatus: TextView
+    private lateinit var tvInterpSubStatus: TextView
+    private lateinit var tvInterpAudioLevel: TextView
+    private lateinit var pbInterpAudio: ProgressBar
+    private lateinit var btnInterpToggle: Button
+    private lateinit var tvInterpProfile: TextView
+    private lateinit var tvInterpZh: TextView
+    private lateinit var tvInterpJa: TextView
+    private lateinit var tvInterpTranscriptPath: TextView
+
+    // 视频页（原实时翻译：系统内录 + 悬浮字幕）
     private lateinit var tvHeroStatus: TextView
     private lateinit var tvHeroSubStatus: TextView
     private lateinit var tvAudioLevel: TextView
@@ -141,6 +153,8 @@ class MainActivity : AppCompatActivity() {
     private var streamerProfiles: List<StreamerProfile> = emptyList()
     private var currentVideoInfo: YouTubeVideoInfo? = null
     private var permRequested = false
+    /** 权限回调后要启动的模式：video / mic */
+    private var pendingStartMode: String = StatusBus.MODE_VIDEO
 
     private val categorySuggestions = arrayOf("hololive", "Nijisanji / 彩虹社", "个人勢", "VSPO", "其他")
 
@@ -154,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            onStartClicked()
+            startCapture(pendingStartMode)
         }
 
     private val projLauncher =
@@ -162,6 +176,7 @@ class MainActivity : AppCompatActivity() {
             if (res.resultCode == Activity.RESULT_OK && res.data != null) {
                 val i = Intent(this, CaptureService::class.java)
                     .setAction(CaptureService.ACTION_START)
+                    .putExtra(CaptureService.EXTRA_MODE, StatusBus.MODE_VIDEO)
                     .putExtra(CaptureService.EXTRA_RESULT_CODE, res.resultCode)
                     .putExtra(CaptureService.EXTRA_RESULT_DATA, res.data)
                 startForegroundService(i)
@@ -176,7 +191,7 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         applyWindowInsets()
-        setupDrawer()
+        setupBottomNav()
         setupStreamerPage()
         setupHistoryPage()
         setupSettings()
@@ -184,15 +199,10 @@ class MainActivity : AppCompatActivity() {
         setupParamControls()
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
-        btnToggle.setOnClickListener {
-            if (StatusBus.serviceRunning) {
-                startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP))
-            } else {
-                onStartClicked()
-            }
-        }
+        btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
+        btnInterpToggle.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
 
-        showPage(R.id.nav_live)
+        showPage(R.id.nav_interp)
     }
 
     override fun onResume() {
@@ -209,7 +219,6 @@ class MainActivity : AppCompatActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         when {
-            drawerLayout.isDrawerOpen(GravityCompat.START) -> drawerLayout.closeDrawers()
             settingsSubId != 0 -> closeSettingsSub()
             else -> {
                 @Suppress("DEPRECATION")
@@ -221,11 +230,12 @@ class MainActivity : AppCompatActivity() {
     // ---------- 绑定 / 壳子 ----------
 
     private fun bindViews() {
-        drawerLayout = findViewById(R.id.drawerLayout)
-        navView = findViewById(R.id.navView)
+        rootLayout = findViewById(R.id.rootLayout)
+        bottomNav = findViewById(R.id.bottomNav)
         toolbar = findViewById(R.id.toolbar)
         pageContainer = findViewById(R.id.pageContainer)
-        pageLive = findViewById(R.id.pageLive)
+        pageInterp = findViewById(R.id.pageInterp)
+        pageVideo = findViewById(R.id.pageVideo)
         pageStreamer = findViewById(R.id.pageStreamer)
         pageHistory = findViewById(R.id.pageHistory)
         pageSettings = findViewById(R.id.pageSettings)
@@ -235,14 +245,26 @@ class MainActivity : AppCompatActivity() {
         pageSettingsDiagnostics = findViewById(R.id.pageSettingsDiagnostics)
         pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
         settingsSubViews = listOf(
+            pageStreamer,
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
         )
         rowSetTranslate = findViewById(R.id.rowSetTranslate)
         rowSetSubtitle = findViewById(R.id.rowSetSubtitle)
+        rowSetScenes = findViewById(R.id.rowSetScenes)
         rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
         rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
         rowSetAbout = findViewById(R.id.rowSetAbout)
+
+        tvInterpStatus = findViewById(R.id.tvInterpStatus)
+        tvInterpSubStatus = findViewById(R.id.tvInterpSubStatus)
+        tvInterpAudioLevel = findViewById(R.id.tvInterpAudioLevel)
+        pbInterpAudio = findViewById(R.id.pbInterpAudio)
+        btnInterpToggle = findViewById(R.id.btnInterpToggle)
+        tvInterpProfile = findViewById(R.id.tvInterpProfile)
+        tvInterpZh = findViewById(R.id.tvInterpZh)
+        tvInterpJa = findViewById(R.id.tvInterpJa)
+        tvInterpTranscriptPath = findViewById(R.id.tvInterpTranscriptPath)
 
         tvHeroStatus = findViewById(R.id.tvHeroStatus)
         tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
@@ -320,25 +342,22 @@ class MainActivity : AppCompatActivity() {
             v.updatePadding(top = bars.top)
             insets
         }
-        ViewCompat.setOnApplyWindowInsetsListener(pageContainer) { v, insets ->
+        // 底部导航自己吃系统导航栏高度；内容区不再额外加 bottom padding，避免双重留白
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(bottom = bars.bottom)
             insets
         }
-        ViewCompat.setOnApplyWindowInsetsListener(navView) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(top = bars.top, bottom = bars.bottom)
-            insets
-        }
     }
 
-    private fun setupDrawer() {
+    private fun setupBottomNav() {
         toolbar.setNavigationOnClickListener {
-            if (settingsSubId != 0) closeSettingsSub() else drawerLayout.openDrawer(GravityCompat.START)
+            if (settingsSubId != 0) closeSettingsSub()
         }
-        navView.setNavigationItemSelectedListener { item ->
+        // 主 Tab 不显示返回箭头
+        toolbar.navigationIcon = null
+        bottomNav.setOnItemSelectedListener { item ->
             showPage(item.itemId)
-            drawerLayout.closeDrawers()
             true
         }
     }
@@ -346,36 +365,58 @@ class MainActivity : AppCompatActivity() {
     private fun showPage(itemId: Int) {
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
-        pageLive.visibility = if (itemId == R.id.nav_live) View.VISIBLE else View.GONE
-        pageStreamer.visibility = if (itemId == R.id.nav_streamer) View.VISIBLE else View.GONE
+        // 主播/场景页不再是底部 Tab，统一作为设置二级页隐藏
+        pageInterp.visibility = if (itemId == R.id.nav_interp) View.VISIBLE else View.GONE
+        pageVideo.visibility = if (itemId == R.id.nav_video) View.VISIBLE else View.GONE
         pageHistory.visibility = if (itemId == R.id.nav_history) View.VISIBLE else View.GONE
         pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
+        pageStreamer.visibility = View.GONE
+
         toolbar.title = when (itemId) {
-            R.id.nav_streamer -> "主播资料"
-            R.id.nav_history -> "历史记录"
+            R.id.nav_interp -> "同传"
+            R.id.nav_video -> "视频"
+            R.id.nav_history -> "历史"
             R.id.nav_settings -> "设置"
-            else -> "实时翻译"
+            else -> "同传"
         }
-        toolbar.setNavigationIcon(R.drawable.ic_menu_24)
-        navView.setCheckedItem(itemId)
+        toolbar.navigationIcon = null
+        bottomNav.visibility = View.VISIBLE
+        if (bottomNav.selectedItemId != itemId) {
+            bottomNav.selectedItemId = itemId
+        }
+        currentMainTabId = itemId
         if (itemId == R.id.nav_history) reloadHistory()
     }
 
-    /** 打开设置二级页：工具栏变返回箭头，标题换成子页名。 */
+    /** 打开设置二级页：工具栏变返回箭头，标题换成子页名；隐藏底部导航。 */
     private fun openSettingsSub(pageId: Int, title: String) {
         settingsSubId = pageId
+        pageInterp.visibility = View.GONE
+        pageVideo.visibility = View.GONE
+        pageHistory.visibility = View.GONE
         pageSettings.visibility = View.GONE
         settingsSubViews.forEach { it.visibility = if (it.id == pageId) View.VISIBLE else View.GONE }
         toolbar.title = title
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
+        bottomNav.visibility = View.GONE
     }
 
     private fun closeSettingsSub() {
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
+        // 回到设置 Tab 首页
         pageSettings.visibility = View.VISIBLE
+        pageInterp.visibility = View.GONE
+        pageVideo.visibility = View.GONE
+        pageHistory.visibility = View.GONE
+        pageStreamer.visibility = View.GONE
         toolbar.title = "设置"
-        toolbar.setNavigationIcon(R.drawable.ic_menu_24)
+        toolbar.navigationIcon = null
+        bottomNav.visibility = View.VISIBLE
+        if (bottomNav.selectedItemId != R.id.nav_settings) {
+            bottomNav.selectedItemId = R.id.nav_settings
+        }
+        currentMainTabId = R.id.nav_settings
     }
 
     // ---------- 主播资料 + 提示词后端 ----------
@@ -479,8 +520,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateCurrentProfileLabel() {
         val name = currentSessionProfile().let { it.key.ifBlank { it.displayName() } }
-        tvCurrentProfile.text = "当前主播：$name"
+        val text = "当前场景：$name"
+        tvCurrentProfile.text = text
+        tvInterpProfile.text = text
     }
+
 
     private fun fetchYoutubeInfo() {
         val url = etYoutubeUrl.text.toString().trim()
@@ -623,6 +667,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettings() {
         rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
         rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
+        rowSetScenes.setOnClickListener { openSettingsSub(R.id.pageStreamer, "场景 / 术语库") }
         rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "资料 AI") }
         rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
         rowSetAbout.setOnClickListener { openSettingsSub(R.id.pageSettingsAbout, "关于") }
@@ -802,7 +847,21 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- 启动流程 ----------
 
-    private fun onStartClicked() {
+    /** 同传 / 视频 共用开停入口：已在跑则停止；否则按 mode 启动。 */
+    private fun onModeToggle(mode: String) {
+        if (StatusBus.serviceRunning) {
+            if (StatusBus.captureMode.isNotEmpty() && StatusBus.captureMode != mode) {
+                val other = if (StatusBus.captureMode == StatusBus.MODE_MIC) "同传" else "视频字幕"
+                toast("当前正在运行「$other」，请先停止后再切换")
+                return
+            }
+            startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP))
+            return
+        }
+        startCapture(mode)
+    }
+
+    private fun prepareSessionSettings(): Boolean {
         SettingsStore.saveApiKeys(this, etApiKeys.text.toString())
         SettingsStore.saveBaseUrl(
             this,
@@ -820,10 +879,16 @@ class MainActivity : AppCompatActivity() {
 
         if (SettingsStore.apiKeyList(this).isEmpty()) {
             toast("请先填 Gemini API Key")
-            showPage(R.id.nav_settings)
+            bottomNav.selectedItemId = R.id.nav_settings
             openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
-            return
+            return false
         }
+        return true
+    }
+
+    private fun startCapture(mode: String) {
+        pendingStartMode = mode
+        if (!prepareSessionSettings()) return
 
         val need = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -846,30 +911,42 @@ class MainActivity : AppCompatActivity() {
         }
         permRequested = false
 
-        if (!Settings.canDrawOverlays(this)) {
-            toast("请开启悬浮窗权限，开启后回到本页再点开始")
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        if (mode == StatusBus.MODE_VIDEO) {
+            if (!Settings.canDrawOverlays(this)) {
+                toast("请开启悬浮窗权限，开启后回到本页再点开始")
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                return
+            }
+            val mpm = getSystemService(MediaProjectionManager::class.java)
+            projLauncher.launch(mpm.createScreenCaptureIntent())
             return
         }
 
-        val mpm = getSystemService(MediaProjectionManager::class.java)
-        projLauncher.launch(mpm.createScreenCaptureIntent())
+        // 麦克风同传：不强制悬浮窗；有权限就顺带挂，没有就只在 App 内看字幕
+        val i = Intent(this, CaptureService::class.java)
+            .setAction(CaptureService.ACTION_START)
+            .putExtra(CaptureService.EXTRA_MODE, StatusBus.MODE_MIC)
+        startForegroundService(i)
     }
 
     private fun renderStatus() {
         val s = StatusBus
         val running = s.serviceRunning
+        val mode = s.captureMode
         val conn = s.connState
         val level = s.audioLevelPct.coerceIn(0, 100)
+        val micActive = running && mode == StatusBus.MODE_MIC
+        val videoActive = running && mode == StatusBus.MODE_VIDEO
 
-        tvHeroStatus.text = when {
-            !running -> "○ 待开始"
+        fun heroText(active: Boolean): String = when {
+            !active -> "○ 待开始"
             conn == "ready" -> "● 翻译中"
             conn.startsWith("error") -> "● 出错"
             else -> "● 准备连接"
         }
-        tvHeroSubStatus.text = if (!running) {
-            "尚未开始翻译"
+
+        fun subText(active: Boolean, idle: String): String = if (!active) {
+            idle
         } else {
             buildString {
                 append("连接 ").append(conn)
@@ -877,17 +954,60 @@ class MainActivity : AppCompatActivity() {
                 append(" · 已发送 ").append(s.chunksSent.get()).append(" 块")
             }
         }
-        tvAudioLevel.text = "$level%"
-        pbAudio.progress = level
 
-        tvLiveZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
-        tvLiveJa.text = s.jaTail.ifBlank { "等待日文输入…" }
-        if (s.transcriptPath.isNotEmpty()) {
-            tvTranscriptPath.text = "本场记录：${s.transcriptPath}"
+        // 同传页
+        tvInterpStatus.text = heroText(micActive)
+        tvInterpSubStatus.text = when {
+            running && !micActive -> "当前正在运行视频字幕，请先停止后再开同传"
+            else -> subText(micActive, "麦克风实时同传")
         }
+        tvInterpAudioLevel.text = if (micActive) "$level%" else "0%"
+        pbInterpAudio.progress = if (micActive) level else 0
+        if (micActive) {
+            tvInterpZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
+            tvInterpJa.text = s.jaTail.ifBlank { "等待原文输入…" }
+            if (s.transcriptPath.isNotEmpty()) {
+                tvInterpTranscriptPath.text = "本场记录：${s.transcriptPath}"
+            }
+        } else if (!running) {
+            // 空闲时保留上次路径提示也可以，但字幕回到占位
+            if (s.zhTail.isBlank()) tvInterpZh.text = "等待中文字幕…"
+            if (s.jaTail.isBlank()) tvInterpJa.text = "等待原文输入…"
+        }
+        btnInterpToggle.text = when {
+            micActive -> "停止同传"
+            running -> "开始同传"
+            else -> "开始同传"
+        }
+        btnInterpToggle.isEnabled = !running || micActive
+
+        // 视频页
+        tvHeroStatus.text = heroText(videoActive)
+        tvHeroSubStatus.text = when {
+            running && !videoActive -> "当前正在运行同传，请先停止后再开视频字幕"
+            else -> subText(videoActive, "尚未开始翻译")
+        }
+        tvAudioLevel.text = if (videoActive) "$level%" else "0%"
+        pbAudio.progress = if (videoActive) level else 0
+        if (videoActive) {
+            tvLiveZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
+            tvLiveJa.text = s.jaTail.ifBlank { "等待日文输入…" }
+            if (s.transcriptPath.isNotEmpty()) {
+                tvTranscriptPath.text = "本场记录：${s.transcriptPath}"
+            }
+        } else if (!running) {
+            if (s.zhTail.isBlank()) tvLiveZh.text = "等待中文字幕…"
+            if (s.jaTail.isBlank()) tvLiveJa.text = "等待日文输入…"
+        }
+        btnToggle.text = when {
+            videoActive -> "停止视频字幕"
+            else -> "开始视频字幕"
+        }
+        btnToggle.isEnabled = !running || videoActive
 
         tvStatus.text = buildString {
             append(if (running) "● 运行中" else "○ 未运行")
+            if (mode.isNotEmpty()) append("  模式: ").append(if (mode == StatusBus.MODE_MIC) "同传" else "视频")
             append("  连接: ").append(conn)
             if (s.currentKeyLabel.isNotEmpty()) append("  ").append(s.currentKeyLabel)
             append("  音量: ").append(level).append("%")
@@ -896,7 +1016,6 @@ class MainActivity : AppCompatActivity() {
             if (s.jaTail.isNotEmpty()) append("ja: …").append(s.jaTail).append("\n")
             if (s.zhTail.isNotEmpty()) append("zh: …").append(s.zhTail)
         }
-        btnToggle.text = if (running) "停止翻译" else "开始翻译"
     }
 
     private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_LONG).show()

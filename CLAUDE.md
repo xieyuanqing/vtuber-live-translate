@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-自用安卓 App：内录手机正在播放的 YouTube 直播音频 → 送 Gemini Live Translate 实时翻译 → 悬浮窗把中文字幕盖在 YouTube 上层。定位是「看懂大意的辅助字幕」，不追求发布级质量，不做后端/账号/商店分发。
+自用安卓 App：内录手机正在播放的直播音频 **或麦克风** → 送 Gemini Live Translate 实时翻译 → App 内字幕 / 悬浮窗。定位是「看懂大意的辅助字幕」，不追求发布级质量，不做后端/账号/商店分发。
 
 ## 代码结构
 
@@ -12,11 +12,16 @@
 
 ```
 CaptureService（前台服务，管线宿主）
-  AudioPlaybackCapture 内录 → PcmProcessor（重采样成 PCM16/16k/mono/100ms 块）
+  音频源二选一：
+    video → AudioPlaybackCapture 内录
+    mic   → 麦克风 AudioRecord
+  → PcmProcessor（重采样成 PCM16/16k/mono/100ms 块）
   → GeminiLiveClient（WebSocket 到 gemini-3.5-live-translate-preview）
   → SubtitleStabilizer（切句/去重/两级显示）
-  → SubtitleOverlay（悬浮窗） + TranscriptLogger（落盘）
+  → SubtitleOverlay（悬浮窗，视频强制 / 同传可选） + TranscriptLogger（落盘）
 ```
+
+主导航：底部 4 Tab（同传 / 视频 / 历史 / 设置）。场景术语库在设置二级页。
 
 关键文件：
 

@@ -4,6 +4,53 @@
 
 ---
 
+## 2026-07-13 · v1.9 通用实时翻译：底部 4 Tab + 麦克风同传
+
+目标：从「VTuber 专用视频字幕」扩成「同传 + 视频」双入口，共用同一翻译引擎。
+
+### A. 导航壳
+
+- 去掉侧边栏 `DrawerLayout` + `NavigationView`
+- 底部 4 Tab：
+  1. **同传**：麦克风实时同传
+  2. **视频**：系统内录 + 悬浮字幕（原实时翻译）
+  3. **历史**
+  4. **设置**
+- 原「主播资料」→ 设置内 **场景 / 术语库** 二级页（复用 `pageStreamer`）
+- 设置二级页打开时隐藏底部导航，工具栏返回箭头
+
+### B. 麦克风同传后端
+
+- `CaptureService` 支持 `EXTRA_MODE=mic|video`
+  - video：MediaProjection 内录（原逻辑）
+  - mic：`AudioRecord`（优先 `VOICE_RECOGNITION` → `VOICE_COMMUNICATION` → `MIC`），16k/48k mono 优先
+- 共用：`PcmProcessor` → `GeminiLiveClient` → `SubtitleStabilizer` → transcript 落盘
+- 悬浮窗：视频模式强制；同传模式有悬浮窗权限才挂，否则只在 App 内看字幕
+- 前台服务类型：`mediaProjection|microphone`；Manifest 增加 `FOREGROUND_SERVICE_MICROPHONE`
+- `StatusBus.captureMode` 标记当前模式；两模式互斥（先停再开）
+- 同传页：音量条、中/原文字幕、开停按钮、场景标签
+
+### 涉及文件
+
+- `CaptureService.kt` / `StatusBus.kt` / `MainActivity.kt` / `AndroidManifest.xml`
+- `activity_main.xml` / `menu/bottom_nav.xml` + tab 图标
+- 去掉 `drawerlayout` 依赖；版本 `1.8` → `1.9`（versionCode 19）
+
+### 未做（刻意）
+
+- 视觉重设计（暗色霓虹等）
+- 文案全面去 VTuber 化
+- 同传专用 TTS 播报 / 双向对话
+- 历史列表标注来源模式
+
+### 验证
+
+- 本地无完整 Android SDK；Kotlin 括号平衡 / XML 解析 / `R.id` 引用自检通过
+- 完整 `assembleDebug` 待确认后走 GitHub Actions
+- 真机待测：同传开停、音量电平、日→中字幕、与视频模式互斥
+
+---
+
 ## 2026-07-12 · 修复：CI 构建每次签名不同、无法覆盖安装
 
 用户反馈：不同次构建出来的安装包签名好像都不一样。
