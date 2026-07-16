@@ -495,6 +495,8 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             val saved = GlossaryStore.upsert(this, collectGlossaryProfile())
             selectedGlossaryId = saved.id
             reloadGlossaryProfiles(saved.id)
+            updatePlanSummary(TranslationMode.INTERPRETATION)
+            updatePlanSummary(TranslationMode.VIDEO)
             toast("已保存术语库：${saved.name}")
         }
         btnDeleteGlossary.setOnClickListener {
@@ -798,13 +800,28 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     private fun updatePlanSummary(mode: TranslationMode) {
         val plan = TranslationPlanStore.loadDraft(this, mode)
-        val summary = "${plan.scene.label} · ${plan.directionLabel}"
-        val viewId = if (mode == TranslationMode.INTERPRETATION) {
-            R.id.tvInterpPlanSummary
-        } else {
-            R.id.tvVideoPlanSummary
+        val glossary = GlossaryStore.find(this, plan.glossaryKey)
+        val summary = buildString {
+            append(plan.scene.label)
+            append(" · ")
+            append(plan.directionLabel)
+            if (glossary != null) {
+                append(" · ")
+                append(glossary.name)
+            }
         }
-        findViewById<TextView>(viewId)?.text = summary
+        val detail = if (glossary != null) {
+            "已绑定术语库：${glossary.name}"
+        } else {
+            "点击编辑场景、术语与本场背景"
+        }
+        if (mode == TranslationMode.INTERPRETATION) {
+            findViewById<TextView>(R.id.tvInterpPlanSummary)?.text = summary
+            findViewById<TextView>(R.id.tvInterpProfile)?.text = detail
+        } else {
+            findViewById<TextView>(R.id.tvVideoPlanSummary)?.text = summary
+            findViewById<TextView>(R.id.tvCurrentProfile)?.text = detail
+        }
     }
 
     // ---------- 翻译参数 / 断句参数 ----------

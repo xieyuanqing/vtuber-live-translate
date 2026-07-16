@@ -1,294 +1,283 @@
 <?xml version="1.0" encoding="utf-8"?>
-            <ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-                android:id="@+id/pageInterp"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true">
+    android:id="@+id/pageInterp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
-                <LinearLayout
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/page_margin"
+        android:paddingTop="@dimen/space_16"
+        android:paddingBottom="@dimen/page_bottom_padding">
+
+        <!-- 语言胶囊：保留原下拉绑定，观感更接近 iOS 基线 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_language_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/space_12"
+            android:paddingVertical="@dimen/space_8">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="源语言"
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/acInterpSourceLang"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="@dimen/page_margin"
-                    android:paddingTop="@dimen/space_24"
-                    android:paddingBottom="@dimen/page_bottom_padding">
+                    android:background="@android:color/transparent"
+                    android:gravity="center"
+                    android:inputType="none"
+                    android:padding="0dp"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/space_8"
+                android:text="→"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="目标语言"
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/acInterpTargetLang"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:gravity="center"
+                    android:inputType="none"
+                    android:padding="0dp"
+                    android:textColor="@color/brand"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- 中央主操作 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInterpToggle"
+                style="@style/LuminousPrimaryButton"
+                android:layout_width="136dp"
+                android:layout_height="136dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="开始同传"
+                app:cornerRadius="68dp"
+                app:icon="@drawable/ic_mic_white_24"
+                app:iconGravity="textTop"
+                app:iconPadding="8dp"
+                app:iconSize="36dp" />
+
+            <TextView
+                android:id="@+id/tvInterpStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:background="@drawable/bg_status_pill"
+                android:paddingHorizontal="@dimen/space_16"
+                android:paddingVertical="@dimen/space_8"
+                android:text="○ 待开始"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvInterpSubStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:text="麦克风实时同传"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="麦克风音量"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvInterpAudioLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:fontFamily="monospace"
+                    android:text="0%"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/pbInterpAudio"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="@dimen/space_8"
+                android:max="100"
+                android:progress="0"
+                android:progressBackgroundTint="#2A000000"
+                android:progressTint="?attr/colorPrimary" />
+        </LinearLayout>
+
+        <!-- 当前方案（场景 + 术语库合并入口） -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardInterpPlan"
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:clickable="true"
+            android:focusable="true"
+            android:minHeight="72dp"
+            app:cardCornerRadius="@dimen/card_radius">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_16">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
                     <TextView
-                        style="@style/PageTitle"
-                        android:text="实时同传" />
+                        style="@style/CardTitle"
+                        android:text="当前方案" />
 
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/LuminousCard"
+                    <TextView
+                        android:id="@+id/tvInterpPlanSummary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        app:cardCornerRadius="@dimen/card_radius">
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="通用 · 自动 → 中文"
+                        android:textColor="@color/text_muted"
+                        android:textSize="13sp" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="@dimen/space_16">
-
-                            <TextView
-                                style="@style/CardTitle"
-                                android:text="翻译语言" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_12"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.textfield.TextInputLayout
-                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:hint="源语言">
-
-                                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                                        android:id="@+id/acInterpSourceLang"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:inputType="none"
-                                        android:textSize="15sp"
-                                        android:textStyle="bold" />
-                                </com.google.android.material.textfield.TextInputLayout>
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginHorizontal="@dimen/space_8"
-                                    android:text="→"
-                                    android:textColor="?attr/colorPrimary"
-                                    android:textSize="24sp"
-                                    android:textStyle="bold" />
-
-                                <com.google.android.material.textfield.TextInputLayout
-                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:hint="目标语言">
-
-                                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                                        android:id="@+id/acInterpTargetLang"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:inputType="none"
-                                        android:textSize="15sp"
-                                        android:textStyle="bold" />
-                                </com.google.android.material.textfield.TextInputLayout>
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cardInterpPlan"
-                        style="@style/LuminousOutlinedCard"
+                    <TextView
+                        android:id="@+id/tvInterpProfile"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:minHeight="72dp"
-                        app:cardCornerRadius="@dimen/card_radius">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="@dimen/space_16">
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    style="@style/CardTitle"
-                                    android:text="同传方案" />
-
-                                <TextView
-                                    android:id="@+id/tvInterpPlanSummary"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="@dimen/grid_4"
-                                    android:text="通用同传 · 自动 → 中文"
-                                    android:textColor="@color/text_muted"
-                                    android:textSize="13sp" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="@dimen/space_8"
-                                android:text="›"
-                                android:textColor="@color/brand"
-                                android:textSize="28sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/LuminousCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        app:cardCornerRadius="@dimen/card_radius">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="@dimen/space_16">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:id="@+id/tvInterpStatus"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="○ 待开始"
-                                        android:textColor="?attr/colorPrimary"
-                                        android:textSize="20sp"
-                                        android:textStyle="bold" />
-
-                                    <TextView
-                                        android:id="@+id/tvInterpSubStatus"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="@dimen/grid_4"
-                                        android:text="麦克风实时同传"
-                                        android:textColor="?android:attr/textColorSecondary"
-                                        android:textSize="12sp" />
-                                </LinearLayout>
-
-                                <TextView
-                                    android:id="@+id/tvInterpAudioLevel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="monospace"
-                                    android:text="0%"
-                                    android:textColor="?attr/colorPrimary"
-                                    android:textSize="18sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_16"
-                                android:text="麦克风音量"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="12sp" />
-
-                            <ProgressBar
-                                android:id="@+id/pbInterpAudio"
-                                style="?android:attr/progressBarStyleHorizontal"
-                                android:layout_width="match_parent"
-                                android:layout_height="10dp"
-                                android:layout_marginTop="@dimen/space_8"
-                                android:max="100"
-                                android:progress="0"
-                                android:progressBackgroundTint="#2A000000"
-                                android:progressTint="?attr/colorPrimary" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnInterpToggle"
-                                style="@style/LuminousPrimaryButton"
-                                android:layout_width="136dp"
-                                android:layout_height="136dp"
-                                android:layout_gravity="center_horizontal"
-                                android:layout_marginTop="@dimen/space_16"
-                                android:text="开始同传"
-                                app:cornerRadius="68dp"
-                                app:icon="@drawable/ic_mic_white_24"
-                                app:iconGravity="textTop"
-                                app:iconPadding="8dp"
-                                app:iconSize="32dp" />
-
-                            <TextView
-                                android:id="@+id/tvInterpProfile"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_12"
-                                android:text="场景：通用"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/LuminousOutlinedCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        app:cardCornerRadius="@dimen/card_radius">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="@dimen/space_16">
-
-                            <TextView
-                                style="@style/CardTitle"
-                                android:text="当前字幕" />
-
-                            <TextView
-                                android:id="@+id/tvInterpTargetLanguageLabel"
-                                style="@style/FieldLabel"
-                                android:text="中文" />
-
-                            <TextView
-                                android:id="@+id/tvInterpZh"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/grid_4"
-                                android:minHeight="52dp"
-                                android:text="等待译文…"
-                                android:textSize="18sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                style="@style/FieldLabel"
-                                android:text="原文" />
-
-                            <TextView
-                                android:id="@+id/tvInterpJa"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/grid_4"
-                                android:minHeight="40dp"
-                                android:text="等待原文输入…"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:id="@+id/tvInterpTranscriptPath"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_12"
-                                android:text="自动保存到应用内历史"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="点击编辑场景、术语与本场背景"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
                 </LinearLayout>
-            </ScrollView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_8"
+                    android:text="编辑"
+                    android:textColor="@color/brand"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 当前字幕 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousOutlinedCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            app:cardCornerRadius="@dimen/card_radius">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:text="当前字幕" />
+
+                <TextView
+                    android:id="@+id/tvInterpTargetLanguageLabel"
+                    style="@style/FieldLabel"
+                    android:text="中文" />
+
+                <TextView
+                    android:id="@+id/tvInterpZh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/grid_4"
+                    android:minHeight="52dp"
+                    android:text="等待译文…"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="原文" />
+
+                <TextView
+                    android:id="@+id/tvInterpJa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/grid_4"
+                    android:minHeight="40dp"
+                    android:text="等待原文输入…"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvInterpTranscriptPath"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:text="自动保存到应用内历史"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>
