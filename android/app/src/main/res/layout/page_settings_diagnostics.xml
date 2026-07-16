@@ -27,7 +27,7 @@
                         style="@style/LuminousOutlinedCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space_12"
                         app:cardCornerRadius="@dimen/card_radius">
 
                         <TextView
@@ -35,7 +35,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="monospace"
-                            android:padding="14dp"
+                            android:padding="@dimen/space_16"
                             android:text="○ 未运行"
                             android:textSize="12sp" />
                     </com.google.android.material.card.MaterialCardView>

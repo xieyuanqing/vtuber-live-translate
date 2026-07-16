@@ -19,22 +19,18 @@
                         style="@style/PageTitle"
                         android:text="实时同传" />
 
-                    <TextView
-                        style="@style/PageDesc"
-                        android:text="对着麦克风说话，实时获得清晰译文。" />
-
                     <com.google.android.material.card.MaterialCardView
                         style="@style/LuminousCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="@dimen/space_16"
                         app:cardCornerRadius="@dimen/card_radius">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="14dp">
+                            android:padding="@dimen/space_16">
 
                             <TextView
                                 style="@style/CardTitle"
@@ -43,7 +39,7 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
+                                android:layout_marginTop="@dimen/space_12"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal">
 
@@ -66,7 +62,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_marginHorizontal="@dimen/space_8"
                                     android:text="→"
                                     android:textColor="?attr/colorPrimary"
                                     android:textSize="24sp"
@@ -96,7 +92,7 @@
                         style="@style/LuminousOutlinedCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="@dimen/space_16"
                         android:clickable="true"
                         android:focusable="true"
                         android:minHeight="72dp"
@@ -107,7 +103,7 @@
                             android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
-                            android:padding="16dp">
+                            android:padding="@dimen/space_16">
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -123,7 +119,7 @@
                                     android:id="@+id/tvInterpPlanSummary"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="4dp"
+                                    android:layout_marginTop="@dimen/grid_4"
                                     android:text="通用同传 · 自动 → 中文"
                                     android:textColor="@color/text_muted"
                                     android:textSize="13sp" />
@@ -132,7 +128,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:padding="8dp"
+                                android:padding="@dimen/space_8"
                                 android:text="›"
                                 android:textColor="@color/brand"
                                 android:textSize="28sp" />
@@ -143,14 +139,14 @@
                         style="@style/LuminousCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="@dimen/space_16"
                         app:cardCornerRadius="@dimen/card_radius">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="16dp">
+                            android:padding="@dimen/space_16">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -177,7 +173,7 @@
                                         android:id="@+id/tvInterpSubStatus"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginTop="4dp"
+                                        android:layout_marginTop="@dimen/grid_4"
                                         android:text="麦克风实时同传"
                                         android:textColor="?android:attr/textColorSecondary"
                                         android:textSize="12sp" />
@@ -197,7 +193,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="14dp"
+                                android:layout_marginTop="@dimen/space_16"
                                 android:text="麦克风音量"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
@@ -207,7 +203,7 @@
                                 style="?android:attr/progressBarStyleHorizontal"
                                 android:layout_width="match_parent"
                                 android:layout_height="10dp"
-                                android:layout_marginTop="6dp"
+                                android:layout_marginTop="@dimen/space_8"
                                 android:max="100"
                                 android:progress="0"
                                 android:progressBackgroundTint="#2A000000"
@@ -219,7 +215,7 @@
                                 android:layout_width="136dp"
                                 android:layout_height="136dp"
                                 android:layout_gravity="center_horizontal"
-                                android:layout_marginTop="16dp"
+                                android:layout_marginTop="@dimen/space_16"
                                 android:text="开始同传"
                                 app:cornerRadius="68dp"
                                 app:icon="@drawable/ic_mic_white_24"
@@ -231,7 +227,7 @@
                                 android:id="@+id/tvInterpProfile"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
+                                android:layout_marginTop="@dimen/space_12"
                                 android:text="场景：通用"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
@@ -242,14 +238,14 @@
                         style="@style/LuminousOutlinedCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space_16"
                         app:cardCornerRadius="@dimen/card_radius">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="14dp">
+                            android:padding="@dimen/space_16">
 
                             <TextView
                                 style="@style/CardTitle"
@@ -264,7 +260,7 @@
                                 android:id="@+id/tvInterpZh"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/grid_4"
                                 android:minHeight="52dp"
                                 android:text="等待译文…"
                                 android:textSize="18sp"
@@ -278,7 +274,7 @@
                                 android:id="@+id/tvInterpJa"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/grid_4"
                                 android:minHeight="40dp"
                                 android:text="等待原文输入…"
                                 android:textColor="?android:attr/textColorSecondary"
@@ -288,7 +284,7 @@
                                 android:id="@+id/tvInterpTranscriptPath"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="@dimen/space_12"
                                 android:text="自动保存到应用内历史"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />

@@ -26,7 +26,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="14dp">
+                            android:padding="@dimen/space_16">
 
                             <TextView
                                 style="@style/CardTitle"
@@ -34,14 +34,14 @@
 
                             <TextView
                                 style="@style/FieldLabel"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/grid_4"
                                 android:text="当前接入 Gemini Live Translate" />
 
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
+                                android:layout_marginTop="@dimen/space_12"
                                 android:hint="Gemini API Key"
                                 app:helperText="多个 Key 用英文逗号分隔">
 
@@ -59,7 +59,7 @@
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="@dimen/space_8"
                                 android:hint="API Base URL">
 
                                 <com.google.android.material.textfield.TextInputEditText
@@ -78,14 +78,14 @@
                         style="@style/LuminousCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space_12"
                         app:cardCornerRadius="@dimen/card_radius">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="14dp">
+                            android:padding="@dimen/space_16">
 
                             <TextView
                                 style="@style/CardTitle"
@@ -93,14 +93,14 @@
 
                             <TextView
                                 style="@style/FieldLabel"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/grid_4"
                                 android:text="改动在下次开始翻译时生效" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/swEchoTarget"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
+                                android:layout_marginTop="@dimen/space_8"
                                 android:text="源音频已是目标语言时照常出字幕"
                                 android:textSize="13sp" />
 
@@ -108,7 +108,7 @@
                                 android:id="@+id/tvRotateVal"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
+                                android:layout_marginTop="@dimen/space_12"
                                 android:text="连接主动轮换 505 秒"
                                 android:textSize="13sp" />
 

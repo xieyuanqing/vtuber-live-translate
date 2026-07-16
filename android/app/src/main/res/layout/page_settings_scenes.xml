@@ -19,22 +19,18 @@
             style="@style/PageTitle"
             android:text="术语库" />
 
-        <TextView
-            style="@style/PageDesc"
-            android:text="保存专名、固定译法和常见误识别修正，在同传或视频的翻译方案中按需选择。" />
-
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="@dimen/space_16"
             app:cardCornerRadius="@dimen/card_radius">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="14dp">
+                android:padding="@dimen/space_16">
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
@@ -84,14 +80,14 @@
             style="@style/LuminousOutlinedCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space_12"
             app:cardCornerRadius="@dimen/card_radius">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="14dp">
+                android:padding="@dimen/space_16">
 
                 <TextView
                     style="@style/CardTitle"
@@ -113,7 +109,7 @@
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_8"
                     android:hint="分类">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView

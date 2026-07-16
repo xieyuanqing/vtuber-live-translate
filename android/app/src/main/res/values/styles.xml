@@ -70,7 +70,7 @@
     <style name="PageDesc">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginTop">@dimen/grid_4</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineSpacingExtra">3dp</item>
         <item name="android:textColor">@color/text_secondary</item>
@@ -89,7 +89,7 @@
     <style name="FieldLabel">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:layout_marginTop">@dimen/space_12</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineSpacingExtra">2dp</item>
         <item name="android:textColor">@color/text_muted</item>
@@ -100,7 +100,7 @@
     <style name="Field" parent="Widget.Material3.TextInputLayout.OutlinedBox.Dense">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginTop">@dimen/space_8</item>
         <item name="boxBackgroundColor">@color/surface_white</item>
         <item name="boxCornerRadiusTopStart">@dimen/field_radius</item>
         <item name="boxCornerRadiusTopEnd">@dimen/field_radius</item>
@@ -117,10 +117,10 @@
         <item name="android:orientation">horizontal</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:background">?attr/selectableItemBackground</item>
-        <item name="android:paddingLeft">16dp</item>
-        <item name="android:paddingRight">16dp</item>
-        <item name="android:paddingTop">14dp</item>
-        <item name="android:paddingBottom">14dp</item>
+        <item name="android:paddingLeft">@dimen/space_16</item>
+        <item name="android:paddingRight">@dimen/space_16</item>
+        <item name="android:paddingTop">@dimen/space_16</item>
+        <item name="android:paddingBottom">@dimen/space_16</item>
     </style>
 
     <style name="SettingsRowText">
@@ -141,7 +141,7 @@
     <style name="SettingsRowDesc">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">3dp</item>
+        <item name="android:layout_marginTop">@dimen/grid_4</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/text_secondary</item>
     </style>
@@ -149,7 +149,7 @@
     <style name="SettingsRowChevron">
         <item name="android:layout_width">@dimen/touch_target</item>
         <item name="android:layout_height">@dimen/touch_target</item>
-        <item name="android:layout_marginLeft">8dp</item>
+        <item name="android:layout_marginLeft">@dimen/space_8</item>
         <item name="android:gravity">center</item>
         <item name="android:text">›</item>
         <item name="android:textSize">24sp</item>
