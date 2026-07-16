@@ -167,7 +167,7 @@
                 android:progressTint="?attr/colorPrimary" />
         </LinearLayout>
 
-        <!-- 当前方案（场景 + 术语库合并入口） -->
+        <!-- 当前方案 -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardInterpPlan"
             style="@style/LuminousCard"
@@ -210,7 +210,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="点击编辑场景、术语与本场背景"
+                        android:text="点击编辑场景与方案提示词"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>

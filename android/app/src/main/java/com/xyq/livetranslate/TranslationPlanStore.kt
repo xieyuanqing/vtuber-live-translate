@@ -89,7 +89,7 @@ object TranslationPlanStore {
         put("scenePresetId", plan.scenePresetId)
         put("customSceneInstruction", plan.customSceneInstruction)
         put("advancedInstruction", plan.advancedInstruction)
-        put("glossaryKey", plan.glossaryKey)
+        put("glossaryKey", "")
     }
 
     internal fun decodePlan(json: JSONObject, expectedMode: TranslationMode): TranslationPlan {
@@ -113,7 +113,7 @@ object TranslationPlanStore {
             ),
             customSceneInstruction = json.optString("customSceneInstruction", ""),
             advancedInstruction = json.optString("advancedInstruction", ""),
-            glossaryKey = json.optString("glossaryKey", ""),
+            glossaryKey = "",
         ).normalized()
     }
 

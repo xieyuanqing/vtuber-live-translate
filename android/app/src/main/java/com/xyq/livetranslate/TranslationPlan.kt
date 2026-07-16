@@ -1,8 +1,8 @@
 package com.xyq.livetranslate
 
 /**
- * 可复用的翻译方案。当前场次的背景资料不属于长期方案，必须通过 [SessionPromptContext]
- * 在启动服务时单独传入，停止后清除。
+ * 可复用的翻译方案。提示词（场景 + 自定义说明 + 方案提示词）全部保存在方案内。
+ * 本版本不再使用独立术语库或临时本场上下文。
  */
 data class TranslationPlan(
     val mode: TranslationMode,
@@ -11,6 +11,7 @@ data class TranslationPlan(
     val scenePresetId: String = defaultSceneId(mode),
     val customSceneInstruction: String = "",
     val advancedInstruction: String = "",
+    /** 历史字段，本版本始终置空，读取时忽略。 */
     val glossaryKey: String = "",
 ) {
     fun normalized(): TranslationPlan {
@@ -28,7 +29,7 @@ data class TranslationPlan(
             scenePresetId = preset.id,
             customSceneInstruction = customSceneInstruction.trim(),
             advancedInstruction = advancedInstruction.trim(),
-            glossaryKey = glossaryKey.trim(),
+            glossaryKey = "",
         )
     }
 
@@ -51,7 +52,7 @@ data class TranslationPlan(
     }
 }
 
-/** 用户保存的长期方案；不包含本场临时背景。 */
+/** 用户保存的长期方案。 */
 data class SavedTranslationPlan(
     val id: String,
     val name: String,

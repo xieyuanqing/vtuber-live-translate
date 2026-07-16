@@ -51,12 +51,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         const val STATE_PENDING_SOURCE = "pending_source"
         const val STATE_PENDING_TARGET = "pending_target"
         const val STATE_PENDING_SCENE = "pending_scene"
-        const val STATE_PENDING_GLOSSARY = "pending_glossary"
         const val STATE_PENDING_TITLE = "pending_title"
-        const val STATE_PENDING_CONTEXT = "pending_context"
-        const val STATE_INTERPRETATION_CONTEXT = "interpretation_context"
-        const val STATE_VIDEO_CONTEXT = "video_context"
-        const val STATE_VIDEO_URL = "video_url"
     }
 
     // 壳子：底部 4 Tab
@@ -66,7 +61,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var pageContainer: View
     private lateinit var pageInterp: View
     private lateinit var pageVideo: View
-    private lateinit var pageGlossary: View
     private lateinit var pageHistory: View
     private lateinit var pageSettings: View
     private var currentMainTabId = R.id.nav_interp
@@ -84,7 +78,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var rowSetTranslate: View
     private lateinit var rowSetSubtitle: View
     private lateinit var rowSetPlanLibrary: View
-    private lateinit var rowSetScenes: View
     private lateinit var rowSetProfileAi: View
     private lateinit var rowSetDiagnostics: View
     private lateinit var rowSetAbout: View
@@ -123,19 +116,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var tvTranscriptPath: TextView
     private lateinit var acVideoSourceLang: MaterialAutoCompleteTextView
     private lateinit var acVideoTargetLang: MaterialAutoCompleteTextView
-
-    // 通用术语库
-    private lateinit var acGlossaryProfile: MaterialAutoCompleteTextView
-    private lateinit var btnNewGlossary: Button
-    private lateinit var btnDeleteGlossary: Button
-    private lateinit var btnSaveGlossary: Button
-    private lateinit var etGlossaryName: EditText
-    private lateinit var acGlossaryCategory: MaterialAutoCompleteTextView
-    private lateinit var etGlossaryDescription: EditText
-    private lateinit var etGlossaryAliases: EditText
-    private lateinit var etGlossaryTerms: EditText
-    private lateinit var etGlossaryCorrections: EditText
-    private lateinit var etGlossaryStyle: EditText
 
     // 历史页
     private lateinit var btnRefreshHistory: Button
@@ -177,18 +157,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var tvAboutVersion: TextView
     private lateinit var btnAboutRepo: Button
 
-    private var glossaryProfiles: List<GlossaryProfile> = emptyList()
-    private var selectedGlossaryId: String = ""
-    private var interpretationSessionContext = ""
-    private var videoSessionContext = ""
-    private var videoSessionUrl = ""
     private var pendingSessionPrompt = ""
     private var pendingSessionSource = ""
     private var pendingSessionTarget = ""
     private var pendingSessionScene = ""
-    private var pendingSessionGlossaryKey = ""
     private var pendingSessionTitle = ""
-    private var pendingSessionContext = ""
     private var permRequested = false
     /** 权限回调后要启动的模式：video / mic */
     private var pendingStartMode: String = StatusBus.MODE_VIDEO
@@ -198,8 +171,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         val sourceView: MaterialAutoCompleteTextView,
         val targetView: MaterialAutoCompleteTextView,
     )
-
-    private val categorySuggestions = arrayOf("通用", "人物 / 专名", "游戏", "动漫", "技术", "其他")
 
     private val ui = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
@@ -238,18 +209,12 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingSessionSource = savedInstanceState?.getString(STATE_PENDING_SOURCE).orEmpty()
         pendingSessionTarget = savedInstanceState?.getString(STATE_PENDING_TARGET).orEmpty()
         pendingSessionScene = savedInstanceState?.getString(STATE_PENDING_SCENE).orEmpty()
-        pendingSessionGlossaryKey = savedInstanceState?.getString(STATE_PENDING_GLOSSARY).orEmpty()
         pendingSessionTitle = savedInstanceState?.getString(STATE_PENDING_TITLE).orEmpty()
-        pendingSessionContext = savedInstanceState?.getString(STATE_PENDING_CONTEXT).orEmpty()
-        interpretationSessionContext = savedInstanceState?.getString(STATE_INTERPRETATION_CONTEXT).orEmpty()
-        videoSessionContext = savedInstanceState?.getString(STATE_VIDEO_CONTEXT).orEmpty()
-        videoSessionUrl = savedInstanceState?.getString(STATE_VIDEO_URL).orEmpty()
         setContentView(R.layout.activity_main)
 
         bindViews()
         applyWindowInsets()
         setupBottomNav()
-        setupGlossaryPage()
         setupHistoryPage()
         setupSettings()
         setupPlanLibraryPage()
@@ -271,12 +236,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         outState.putString(STATE_PENDING_SOURCE, pendingSessionSource)
         outState.putString(STATE_PENDING_TARGET, pendingSessionTarget)
         outState.putString(STATE_PENDING_SCENE, pendingSessionScene)
-        outState.putString(STATE_PENDING_GLOSSARY, pendingSessionGlossaryKey)
         outState.putString(STATE_PENDING_TITLE, pendingSessionTitle)
-        outState.putString(STATE_PENDING_CONTEXT, pendingSessionContext)
-        outState.putString(STATE_INTERPRETATION_CONTEXT, interpretationSessionContext)
-        outState.putString(STATE_VIDEO_CONTEXT, videoSessionContext)
-        outState.putString(STATE_VIDEO_URL, videoSessionUrl)
         super.onSaveInstanceState(outState)
     }
 
@@ -312,7 +272,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pageContainer = findViewById(R.id.pageContainer)
         pageInterp = findViewById(R.id.pageInterp)
         pageVideo = findViewById(R.id.pageVideo)
-        pageGlossary = findViewById(R.id.pageGlossary)
         pageHistory = findViewById(R.id.pageHistory)
         pageSettings = findViewById(R.id.pageSettings)
         pageSettingsTranslate = findViewById(R.id.pageSettingsTranslate)
@@ -322,7 +281,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
         pagePlanLibrary = findViewById(R.id.pagePlanLibrary)
         settingsSubViews = listOf(
-            pageGlossary,
             pagePlanLibrary,
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
@@ -330,7 +288,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         rowSetTranslate = findViewById(R.id.rowSetTranslate)
         rowSetSubtitle = findViewById(R.id.rowSetSubtitle)
         rowSetPlanLibrary = findViewById(R.id.rowSetPlanLibrary)
-        rowSetScenes = findViewById(R.id.rowSetScenes)
         rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
         rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
         rowSetAbout = findViewById(R.id.rowSetAbout)
@@ -365,18 +322,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         tvTranscriptPath = findViewById(R.id.tvTranscriptPath)
         acVideoSourceLang = findViewById(R.id.acVideoSourceLang)
         acVideoTargetLang = findViewById(R.id.acVideoTargetLang)
-
-        acGlossaryProfile = findViewById(R.id.acGlossaryProfile)
-        btnNewGlossary = findViewById(R.id.btnNewGlossary)
-        btnDeleteGlossary = findViewById(R.id.btnDeleteGlossary)
-        btnSaveGlossary = findViewById(R.id.btnSaveGlossary)
-        etGlossaryName = findViewById(R.id.etGlossaryName)
-        acGlossaryCategory = findViewById(R.id.acGlossaryCategory)
-        etGlossaryDescription = findViewById(R.id.etGlossaryDescription)
-        etGlossaryAliases = findViewById(R.id.etGlossaryAliases)
-        etGlossaryTerms = findViewById(R.id.etGlossaryTerms)
-        etGlossaryCorrections = findViewById(R.id.etGlossaryCorrections)
-        etGlossaryStyle = findViewById(R.id.etGlossaryStyle)
 
         btnRefreshHistory = findViewById(R.id.btnRefreshHistory)
         tvHistoryEmpty = findViewById(R.id.tvHistoryEmpty)
@@ -445,12 +390,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private fun showPage(itemId: Int) {
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
-        // 术语库作为设置二级页隐藏
         pageInterp.visibility = if (itemId == R.id.nav_interp) View.VISIBLE else View.GONE
         pageVideo.visibility = if (itemId == R.id.nav_video) View.VISIBLE else View.GONE
         pageHistory.visibility = if (itemId == R.id.nav_history) View.VISIBLE else View.GONE
         pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
-        pageGlossary.visibility = View.GONE
 
         // 主页面标题由内容区承担，顶栏固定显示品牌，避免重复的「同传 / 同传」。
         toolbar.title = "流译"
@@ -502,138 +445,17 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         currentMainTabId = returnTab
     }
 
-    // ---------- 通用术语库 ----------
-
-    private fun setupGlossaryPage() {
-        acGlossaryCategory.setSimpleItems(categorySuggestions)
-        reloadGlossaryProfiles()
-
-        acGlossaryProfile.setOnItemClickListener { _, _, position, _ ->
-            glossaryProfiles.getOrNull(position)?.let(::renderGlossaryProfile)
-        }
-        btnNewGlossary.setOnClickListener {
-            selectedGlossaryId = ""
-            renderGlossaryProfile(
-                GlossaryProfile(id = "", name = "", category = "通用"),
-            )
-            acGlossaryProfile.setText("", false)
-            etGlossaryName.requestFocus()
-        }
-        btnSaveGlossary.setOnClickListener {
-            val name = etGlossaryName.text.toString().trim()
-            if (name.isEmpty()) {
-                toast("术语库名称不能为空")
-                return@setOnClickListener
-            }
-            val saved = GlossaryStore.upsert(this, collectGlossaryProfile())
-            selectedGlossaryId = saved.id
-            reloadGlossaryProfiles(saved.id)
-            updatePlanSummary(TranslationMode.INTERPRETATION)
-            updatePlanSummary(TranslationMode.VIDEO)
-            toast("已保存术语库：${saved.name}")
-        }
-        btnDeleteGlossary.setOnClickListener {
-            val id = selectedGlossaryId
-            if (id.isEmpty()) {
-                toast("当前是未保存的新术语库")
-                return@setOnClickListener
-            }
-            GlossaryStore.delete(this, id)
-            TranslationMode.entries.forEach { mode ->
-                val plan = TranslationPlanStore.loadDraft(this, mode)
-                if (plan.glossaryKey == id) {
-                    TranslationPlanStore.saveDraft(this, plan.copy(glossaryKey = ""))
-                    updatePlanSummary(mode)
-                }
-            }
-            selectedGlossaryId = ""
-            reloadGlossaryProfiles()
-            toast("术语库已删除")
-        }
-    }
-
-    private fun reloadGlossaryProfiles(selectId: String = selectedGlossaryId) {
-        glossaryProfiles = GlossaryStore.list(this)
-        acGlossaryProfile.setAdapter(
-            ArrayAdapter(
-                this,
-                android.R.layout.simple_list_item_1,
-                glossaryProfiles.map { it.name },
-            ),
-        )
-        val selected = glossaryProfiles.firstOrNull { it.id == selectId }
-            ?: glossaryProfiles.firstOrNull()
-        if (selected == null) {
-            selectedGlossaryId = ""
-            acGlossaryProfile.setText("", false)
-            renderGlossaryProfile(GlossaryProfile(id = "", name = "", category = "通用"))
-        } else {
-            acGlossaryProfile.setText(selected.name, false)
-            renderGlossaryProfile(selected)
-        }
-    }
-
-    private fun renderGlossaryProfile(profile: GlossaryProfile) {
-        selectedGlossaryId = profile.id
-        etGlossaryName.setText(profile.name)
-        acGlossaryCategory.setText(profile.category, false)
-        etGlossaryDescription.setText(profile.description)
-        etGlossaryAliases.setText(profile.aliases.joinToString("\n"))
-        etGlossaryTerms.setText(profile.terms.joinToString("\n"))
-        etGlossaryCorrections.setText(profile.corrections.joinToString("\n"))
-        etGlossaryStyle.setText(profile.style)
-        btnDeleteGlossary.isEnabled = profile.id.isNotBlank()
-    }
-
-    private fun collectGlossaryProfile(): GlossaryProfile = GlossaryProfile(
-        id = selectedGlossaryId,
-        name = etGlossaryName.text.toString(),
-        category = acGlossaryCategory.text.toString(),
-        description = etGlossaryDescription.text.toString(),
-        aliases = parseLines(etGlossaryAliases.text.toString()),
-        terms = parseLines(etGlossaryTerms.text.toString()),
-        corrections = parseLines(etGlossaryCorrections.text.toString()),
-        style = etGlossaryStyle.text.toString(),
-    )
-
-    private fun parseLines(raw: String): List<String> = raw
-        .lineSequence()
-        .map(String::trim)
-        .filter(String::isNotEmpty)
-        .distinct()
-        .toList()
-
     private fun consumeStartedSession(captureMode: String) {
-        when (promptMode(captureMode)) {
-            TranslationMode.INTERPRETATION -> interpretationSessionContext = ""
-            TranslationMode.VIDEO -> {
-                videoSessionContext = ""
-                videoSessionUrl = ""
-            }
-        }
         pendingSessionPrompt = ""
         pendingSessionSource = ""
         pendingSessionTarget = ""
         pendingSessionScene = ""
-        pendingSessionGlossaryKey = ""
         pendingSessionTitle = ""
-        pendingSessionContext = ""
     }
-
-    private fun currentSessionContext(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
-        manualContext = when (mode) {
-            TranslationMode.INTERPRETATION -> interpretationSessionContext
-            TranslationMode.VIDEO -> videoSessionContext
-        },
-    )
 
     private fun composeSessionPrompt(mode: TranslationMode): String {
         val plan = TranslationPlanStore.loadDraft(this, mode)
-        return PromptBuilder.build(
-            glossary = GlossaryStore.find(this, plan.glossaryKey),
-            context = currentSessionContext(mode),
-            plan = plan,
-        )
+        return PromptBuilder.build(plan = plan)
     }
 
     // ---------- 历史记录 ----------
@@ -699,7 +521,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             planLibraryMode = TranslationMode.INTERPRETATION
             openSettingsSub(R.id.pagePlanLibrary, "方案库")
         }
-        rowSetScenes.setOnClickListener { openSettingsSub(R.id.pageGlossary, "术语库") }
         rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "内容分析 AI") }
         rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
         rowSetAbout.setOnClickListener { openSettingsSub(R.id.pageSettingsAbout, "关于") }
@@ -818,18 +639,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         }
     }
 
-    private fun openPlanEditor(mode: TranslationMode) {
-        val sessionContext = when (mode) {
-            TranslationMode.INTERPRETATION -> interpretationSessionContext
-            TranslationMode.VIDEO -> videoSessionContext
+    private fun openPlanEditor(mode: TranslationMode, planName: String = "") {
+        TranslationPlanBottomSheet.newInstance(mode, planName = planName).also { sheet ->
+            sheet.listener = this
+            sheet.show(supportFragmentManager, "plan_${mode.storageKey}")
         }
-        val sheet = if (mode == TranslationMode.VIDEO) {
-            TranslationPlanBottomSheet.newInstance(mode, sessionContext, videoSessionUrl)
-        } else {
-            TranslationPlanBottomSheet.newInstance(mode, sessionContext)
-        }
-        sheet.listener = this
-        sheet.show(supportFragmentManager, "plan_${mode.storageKey}")
     }
 
     private fun reloadPlanLibrary() {
@@ -852,7 +666,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private fun buildSavedPlanCard(saved: SavedTranslationPlan): View {
         val card = layoutInflater.inflate(R.layout.item_saved_plan, planLibraryList, false)
         val plan = saved.plan.normalized()
-        val glossary = GlossaryStore.find(this, plan.glossaryKey)
         val icon = card.findViewById<TextView>(R.id.tvPlanIcon)
         val name = card.findViewById<TextView>(R.id.tvPlanName)
         val meta = card.findViewById<TextView>(R.id.tvPlanMeta)
@@ -863,21 +676,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
         icon.text = saved.name.trim().firstOrNull()?.toString() ?: "方"
         name.text = saved.name
-        meta.text = buildString {
-            append(plan.scene.label)
-            append(" · ")
-            append(plan.directionLabel)
-            if (glossary != null) {
-                append(" · ")
-                append(glossary.name)
-            }
-        }
+        meta.text = "${plan.scene.label} · ${plan.directionLabel}"
         tags.removeAllViews()
-        listOfNotNull(
-            plan.scene.label,
-            plan.directionLabel,
-            glossary?.name,
-        ).distinct().forEach { label ->
+        listOf(plan.scene.label, plan.directionLabel).forEach { label ->
             tags.addView(Chip(this).apply {
                 text = label
                 isClickable = false
@@ -897,11 +698,8 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             onTranslationPlanApplied(
                 mode = planLibraryMode,
                 plan = applied,
-                sessionContext = when (planLibraryMode) {
-                    TranslationMode.INTERPRETATION -> interpretationSessionContext
-                    TranslationMode.VIDEO -> videoSessionContext
-                },
-                videoUrl = if (planLibraryMode == TranslationMode.VIDEO) videoSessionUrl else "",
+                sessionContext = "",
+                videoUrl = "",
             )
             toast("已应用：${saved.name}")
         }
@@ -926,15 +724,12 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     ) {
         when (mode) {
             TranslationMode.INTERPRETATION -> {
-                interpretationSessionContext = sessionContext
                 renderModeLanguageControls(
                     mode,
                     LanguageControls(acInterpSourceLang, acInterpTargetLang),
                 )
             }
             TranslationMode.VIDEO -> {
-                videoSessionContext = sessionContext
-                videoSessionUrl = videoUrl
                 renderModeLanguageControls(
                     mode,
                     LanguageControls(acVideoSourceLang, acVideoTargetLang),
@@ -949,20 +744,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     private fun updatePlanSummary(mode: TranslationMode) {
         val plan = TranslationPlanStore.loadDraft(this, mode)
-        val glossary = GlossaryStore.find(this, plan.glossaryKey)
-        val summary = buildString {
-            append(plan.scene.label)
-            append(" · ")
-            append(plan.directionLabel)
-            if (glossary != null) {
-                append(" · ")
-                append(glossary.name)
-            }
-        }
-        val detail = if (glossary != null) {
-            "已绑定术语库：${glossary.name}"
+        val summary = "${plan.scene.label} · ${plan.directionLabel}"
+        val detail = if (plan.advancedInstruction.isNotBlank()) {
+            plan.advancedInstruction.replace('\n', ' ').take(48)
         } else {
-            "点击编辑场景、术语与本场背景"
+            "点击编辑场景与方案提示词"
         }
         if (mode == TranslationMode.INTERPRETATION) {
             findViewById<TextView>(R.id.tvInterpPlanSummary)?.text = summary
@@ -1170,8 +956,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingSessionSource = plan.sourceLanguageCode
         pendingSessionTarget = plan.targetLanguageCode
         pendingSessionScene = plan.scenePresetId
-        pendingSessionGlossaryKey = plan.glossaryKey
-        pendingSessionContext = currentSessionContext(mode).manualContext.trim()
         pendingSessionTitle = when (mode) {
             TranslationMode.INTERPRETATION -> "同传记录"
             TranslationMode.VIDEO -> "视频翻译"
@@ -1187,9 +971,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             .putExtra(CaptureService.EXTRA_SOURCE_LANGUAGE, pendingSessionSource)
             .putExtra(CaptureService.EXTRA_TARGET_LANGUAGE, pendingSessionTarget)
             .putExtra(CaptureService.EXTRA_SCENE_PRESET, pendingSessionScene)
-            .putExtra(CaptureService.EXTRA_GLOSSARY_KEY, pendingSessionGlossaryKey)
+            .putExtra(CaptureService.EXTRA_GLOSSARY_KEY, "")
             .putExtra(CaptureService.EXTRA_SESSION_TITLE, pendingSessionTitle)
-            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, pendingSessionContext)
+            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, "")
 
     private fun startCapture(mode: String) {
         val reusePendingSnapshot = permRequested &&

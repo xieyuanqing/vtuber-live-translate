@@ -36,22 +36,16 @@
             android:paddingTop="@dimen/space_12"
             android:paddingBottom="@dimen/space_12">
 
-            <TextView
-                style="@style/FieldLabel"
-                android:text="已保存方案" />
-
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:hint="载入自定义方案">
+                style="@style/Field"
+                android:hint="方案名称">
 
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/acPlanSaved"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPlanName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="none" />
+                    android:inputType="textCapSentences"
+                    android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
@@ -73,7 +67,8 @@
                 android:id="@+id/tilPlanCustomScene"
                 style="@style/Field"
                 android:hint="自定义场景说明"
-                android:visibility="gone">
+                android:visibility="gone"
+                app:helperText="选择「自定义」时生效，会写入方案">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPlanCustomScene"
@@ -86,69 +81,11 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPlanVideoUrl"
-                style="@style/Field"
-                android:layout_marginTop="@dimen/space_16"
-                android:hint="本场视频链接"
-                android:visibility="gone"
-                app:helperText="支持 YouTube 链接；标题和频道仅用于本场资料整理">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPlanVideoUrl"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textUri"
-                    android:maxLines="2" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPlanSessionContext"
-                style="@style/Field"
-                android:layout_marginTop="@dimen/space_12"
-                android:hint="本场背景与资料"
-                app:helperText="只在本场生效，停止后清除">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPlanSessionContext"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textCapSentences|textMultiLine"
-                    android:minLines="3"
-                    android:maxLines="7" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAnalyzeContext"
-                style="@style/LuminousSecondaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="@dimen/space_8"
-                android:text="AI 整理资料与术语" />
-
-            <TextView
-                android:id="@+id/tvAnalyzeStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:text="AI 结果会写入本场背景，并保存为可选术语库"
-                android:textColor="@color/text_muted"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnToggleAdvanced"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_marginTop="@dimen/space_12"
-                android:text="高级自定义  ›" />
-
-            <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPlanCustom"
                 style="@style/Field"
-                android:hint="额外翻译要求"
-                android:visibility="gone"
-                app:helperText="只补充本模式提示词，不会覆盖内置安全与实时规则">
+                android:layout_marginTop="@dimen/space_12"
+                android:hint="方案提示词"
+                app:helperText="长期保存在方案里：术语、口吻、专名译法、风格要求都写这里">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPlanCustom"
@@ -156,21 +93,8 @@
                     android:layout_height="wrap_content"
                     android:gravity="top"
                     android:inputType="textMultiLine"
-                    android:minLines="3"
-                    android:maxLines="7" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPlanName"
-                style="@style/Field"
-                android:hint="另存方案名称（可选）"
-                android:visibility="gone">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPlanName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapSentences" />
+                    android:minLines="5"
+                    android:maxLines="12" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -181,5 +105,5 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginHorizontal="20dp"
-        android:text="应用本场方案" />
+        android:text="保存并应用" />
 </LinearLayout>

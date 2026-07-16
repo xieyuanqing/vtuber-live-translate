@@ -99,28 +99,6 @@
                                 android:layout_height="wrap_content" />
 
                             <LinearLayout
-                                android:id="@+id/rowSetScenes"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="术语库" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="专名、固定译法与误识别修正" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
                                 android:id="@+id/rowSetProfileAi"
                                 style="@style/SettingsRow">
 
