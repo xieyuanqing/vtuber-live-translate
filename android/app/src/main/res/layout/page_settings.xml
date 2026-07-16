@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+            <ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/pageSettings"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/page_margin"
+                    android:paddingTop="@dimen/space_24"
+                    android:paddingBottom="@dimen/page_bottom_padding">
+
+                    <TextView
+                        style="@style/PageTitle"
+                        android:text="设置" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:id="@+id/rowSetTranslate"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="翻译服务" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="Gemini Live、默认语言、连接轮换" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetSubtitle"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="字幕与悬浮窗" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="悬浮窗样式、断句节奏" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetScenes"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="术语库" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="专名、固定译法与误识别修正" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetProfileAi"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="内容分析 AI" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="业务页资料整理使用的独立 AI" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetDiagnostics"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="诊断" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="运行状态、电池白名单" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
+                                android:id="@+id/rowSetAbout"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="关于" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="版本与项目信息" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>

@@ -29,14 +29,28 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputLayout
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
+
+    private companion object {
+        const val STATE_PENDING_START_MODE = "pending_start_mode"
+        const val STATE_PERMISSION_REQUESTED = "permission_requested"
+        const val STATE_PENDING_PROMPT = "pending_prompt"
+        const val STATE_PENDING_SOURCE = "pending_source"
+        const val STATE_PENDING_TARGET = "pending_target"
+        const val STATE_PENDING_SCENE = "pending_scene"
+        const val STATE_PENDING_GLOSSARY = "pending_glossary"
+        const val STATE_PENDING_TITLE = "pending_title"
+        const val STATE_PENDING_CONTEXT = "pending_context"
+    }
 
     // 壳子：底部 4 Tab
     private lateinit var rootLayout: View
@@ -45,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pageContainer: View
     private lateinit var pageInterp: View
     private lateinit var pageVideo: View
-    private lateinit var pageStreamer: View
+    private lateinit var pageGlossary: View
     private lateinit var pageHistory: View
     private lateinit var pageSettings: View
     private var currentMainTabId = R.id.nav_interp
@@ -71,10 +85,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvInterpAudioLevel: TextView
     private lateinit var pbInterpAudio: ProgressBar
     private lateinit var btnInterpToggle: Button
-    private lateinit var tvInterpProfile: TextView
+    private lateinit var tvInterpTargetLanguageLabel: TextView
     private lateinit var tvInterpZh: TextView
     private lateinit var tvInterpJa: TextView
     private lateinit var tvInterpTranscriptPath: TextView
+    private lateinit var acInterpSourceLang: MaterialAutoCompleteTextView
+    private lateinit var acInterpTargetLang: MaterialAutoCompleteTextView
 
     // 视频页（原实时翻译：系统内录 + 悬浮字幕）
     private lateinit var tvHeroStatus: TextView
@@ -82,32 +98,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvAudioLevel: TextView
     private lateinit var pbAudio: ProgressBar
     private lateinit var btnToggle: Button
-    private lateinit var tvCurrentProfile: TextView
+    private lateinit var tvVideoTargetLanguageLabel: TextView
     private lateinit var tvLiveZh: TextView
     private lateinit var tvLiveJa: TextView
     private lateinit var tvTranscriptPath: TextView
+    private lateinit var acVideoSourceLang: MaterialAutoCompleteTextView
+    private lateinit var acVideoTargetLang: MaterialAutoCompleteTextView
 
-    // 主播资料页
-    private lateinit var acStreamerProfile: MaterialAutoCompleteTextView
-    private lateinit var btnNewStreamer: Button
-    private lateinit var btnSaveStreamer: Button
-    private lateinit var etStreamerKey: EditText
-    private lateinit var etStreamerNameJp: EditText
-    private lateinit var etStreamerNameZh: EditText
-    private lateinit var acStreamerCategory: MaterialAutoCompleteTextView
-    private lateinit var etStreamerAffiliation: EditText
-    private lateinit var etStreamerAliases: EditText
-    private lateinit var etStreamerTerms: EditText
-    private lateinit var etStreamerMisheard: EditText
-    private lateinit var etStreamerStyle: EditText
-    private lateinit var etYoutubeUrl: EditText
-    private lateinit var btnFetchYoutube: Button
-    private lateinit var btnAiAnalyze: Button
-    private lateinit var tvAiStatus: TextView
-    private lateinit var tvYoutubeInfo: TextView
-    private lateinit var etTempContext: EditText
-    private lateinit var btnPreviewPrompt: Button
-    private lateinit var tvPromptPreview: TextView
+    // 通用术语库
+    private lateinit var acGlossaryProfile: MaterialAutoCompleteTextView
+    private lateinit var btnNewGlossary: Button
+    private lateinit var btnDeleteGlossary: Button
+    private lateinit var btnSaveGlossary: Button
+    private lateinit var etGlossaryName: EditText
+    private lateinit var acGlossaryCategory: MaterialAutoCompleteTextView
+    private lateinit var etGlossaryDescription: EditText
+    private lateinit var etGlossaryAliases: EditText
+    private lateinit var etGlossaryTerms: EditText
+    private lateinit var etGlossaryCorrections: EditText
+    private lateinit var etGlossaryStyle: EditText
 
     // 历史页
     private lateinit var btnRefreshHistory: Button
@@ -133,7 +142,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnSecondAiFormat: Button
 
     // 翻译参数 / 断句参数（分属翻译服务、字幕与悬浮窗两个子页）
-    private lateinit var acTargetLang: MaterialAutoCompleteTextView
     private lateinit var swEchoTarget: MaterialSwitch
     private lateinit var slRotate: Slider
     private lateinit var slIdle: Slider
@@ -150,13 +158,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvAboutVersion: TextView
     private lateinit var btnAboutRepo: Button
 
-    private var streamerProfiles: List<StreamerProfile> = emptyList()
-    private var currentVideoInfo: YouTubeVideoInfo? = null
+    private var glossaryProfiles: List<GlossaryProfile> = emptyList()
+    private var selectedGlossaryId: String = ""
+    private var interpretationSessionContext = ""
+    private var videoSessionContext = ""
+    private var videoSessionUrl = ""
+    private var pendingSessionPrompt = ""
+    private var pendingSessionSource = ""
+    private var pendingSessionTarget = ""
+    private var pendingSessionScene = ""
+    private var pendingSessionGlossaryKey = ""
+    private var pendingSessionTitle = ""
+    private var pendingSessionContext = ""
     private var permRequested = false
     /** 权限回调后要启动的模式：video / mic */
     private var pendingStartMode: String = StatusBus.MODE_VIDEO
+    private var lastObservedRunning = false
+    private var lastActiveMode: String = ""
+    private var syncingLanguageControls = false
 
-    private val categorySuggestions = arrayOf("hololive", "Nijisanji / 彩虹社", "个人勢", "VSPO", "其他")
+    private data class LanguageControls(
+        val sourceView: MaterialAutoCompleteTextView,
+        val targetView: MaterialAutoCompleteTextView,
+    )
+
+    private val categorySuggestions = arrayOf("通用", "人物 / 专名", "游戏", "动漫", "技术", "其他")
 
     private val ui = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
@@ -174,9 +200,7 @@ class MainActivity : AppCompatActivity() {
     private val projLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
             if (res.resultCode == Activity.RESULT_OK && res.data != null) {
-                val i = Intent(this, CaptureService::class.java)
-                    .setAction(CaptureService.ACTION_START)
-                    .putExtra(CaptureService.EXTRA_MODE, StatusBus.MODE_VIDEO)
+                val i = captureStartIntent(StatusBus.MODE_VIDEO)
                     .putExtra(CaptureService.EXTRA_RESULT_CODE, res.resultCode)
                     .putExtra(CaptureService.EXTRA_RESULT_DATA, res.data)
                 startForegroundService(i)
@@ -187,16 +211,29 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingStartMode = savedInstanceState
+            ?.getString(STATE_PENDING_START_MODE)
+            ?.takeIf { it == StatusBus.MODE_MIC || it == StatusBus.MODE_VIDEO }
+            ?: StatusBus.MODE_VIDEO
+        permRequested = savedInstanceState?.getBoolean(STATE_PERMISSION_REQUESTED) ?: false
+        pendingSessionPrompt = savedInstanceState?.getString(STATE_PENDING_PROMPT).orEmpty()
+        pendingSessionSource = savedInstanceState?.getString(STATE_PENDING_SOURCE).orEmpty()
+        pendingSessionTarget = savedInstanceState?.getString(STATE_PENDING_TARGET).orEmpty()
+        pendingSessionScene = savedInstanceState?.getString(STATE_PENDING_SCENE).orEmpty()
+        pendingSessionGlossaryKey = savedInstanceState?.getString(STATE_PENDING_GLOSSARY).orEmpty()
+        pendingSessionTitle = savedInstanceState?.getString(STATE_PENDING_TITLE).orEmpty()
+        pendingSessionContext = savedInstanceState?.getString(STATE_PENDING_CONTEXT).orEmpty()
         setContentView(R.layout.activity_main)
 
         bindViews()
         applyWindowInsets()
         setupBottomNav()
-        setupStreamerPage()
+        setupGlossaryPage()
         setupHistoryPage()
         setupSettings()
         setupStyleSliders()
         setupParamControls()
+        setupFinalPlanUi()
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
@@ -205,8 +242,22 @@ class MainActivity : AppCompatActivity() {
         showPage(R.id.nav_interp)
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_PENDING_START_MODE, pendingStartMode)
+        outState.putBoolean(STATE_PERMISSION_REQUESTED, permRequested)
+        outState.putString(STATE_PENDING_PROMPT, pendingSessionPrompt)
+        outState.putString(STATE_PENDING_SOURCE, pendingSessionSource)
+        outState.putString(STATE_PENDING_TARGET, pendingSessionTarget)
+        outState.putString(STATE_PENDING_SCENE, pendingSessionScene)
+        outState.putString(STATE_PENDING_GLOSSARY, pendingSessionGlossaryKey)
+        outState.putString(STATE_PENDING_TITLE, pendingSessionTitle)
+        outState.putString(STATE_PENDING_CONTEXT, pendingSessionContext)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onResume() {
         super.onResume()
+        syncLanguageControlsFromStore()
         ui.removeCallbacks(refresh)
         ui.post(refresh)
     }
@@ -236,7 +287,7 @@ class MainActivity : AppCompatActivity() {
         pageContainer = findViewById(R.id.pageContainer)
         pageInterp = findViewById(R.id.pageInterp)
         pageVideo = findViewById(R.id.pageVideo)
-        pageStreamer = findViewById(R.id.pageStreamer)
+        pageGlossary = findViewById(R.id.pageGlossary)
         pageHistory = findViewById(R.id.pageHistory)
         pageSettings = findViewById(R.id.pageSettings)
         pageSettingsTranslate = findViewById(R.id.pageSettingsTranslate)
@@ -245,7 +296,7 @@ class MainActivity : AppCompatActivity() {
         pageSettingsDiagnostics = findViewById(R.id.pageSettingsDiagnostics)
         pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
         settingsSubViews = listOf(
-            pageStreamer,
+            pageGlossary,
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
         )
@@ -261,41 +312,36 @@ class MainActivity : AppCompatActivity() {
         tvInterpAudioLevel = findViewById(R.id.tvInterpAudioLevel)
         pbInterpAudio = findViewById(R.id.pbInterpAudio)
         btnInterpToggle = findViewById(R.id.btnInterpToggle)
-        tvInterpProfile = findViewById(R.id.tvInterpProfile)
+        tvInterpTargetLanguageLabel = findViewById(R.id.tvInterpTargetLanguageLabel)
         tvInterpZh = findViewById(R.id.tvInterpZh)
         tvInterpJa = findViewById(R.id.tvInterpJa)
         tvInterpTranscriptPath = findViewById(R.id.tvInterpTranscriptPath)
+        acInterpSourceLang = findViewById(R.id.acInterpSourceLang)
+        acInterpTargetLang = findViewById(R.id.acInterpTargetLang)
 
         tvHeroStatus = findViewById(R.id.tvHeroStatus)
         tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
         tvAudioLevel = findViewById(R.id.tvAudioLevel)
         pbAudio = findViewById(R.id.pbAudio)
         btnToggle = findViewById(R.id.btnToggle)
-        tvCurrentProfile = findViewById(R.id.tvCurrentProfile)
+        tvVideoTargetLanguageLabel = findViewById(R.id.tvVideoTargetLanguageLabel)
         tvLiveZh = findViewById(R.id.tvLiveZh)
         tvLiveJa = findViewById(R.id.tvLiveJa)
         tvTranscriptPath = findViewById(R.id.tvTranscriptPath)
+        acVideoSourceLang = findViewById(R.id.acVideoSourceLang)
+        acVideoTargetLang = findViewById(R.id.acVideoTargetLang)
 
-        acStreamerProfile = findViewById(R.id.acStreamerProfile)
-        btnNewStreamer = findViewById(R.id.btnNewStreamer)
-        btnSaveStreamer = findViewById(R.id.btnSaveStreamer)
-        etStreamerKey = findViewById(R.id.etStreamerKey)
-        etStreamerNameJp = findViewById(R.id.etStreamerNameJp)
-        etStreamerNameZh = findViewById(R.id.etStreamerNameZh)
-        acStreamerCategory = findViewById(R.id.acStreamerCategory)
-        etStreamerAffiliation = findViewById(R.id.etStreamerAffiliation)
-        etStreamerAliases = findViewById(R.id.etStreamerAliases)
-        etStreamerTerms = findViewById(R.id.etStreamerTerms)
-        etStreamerMisheard = findViewById(R.id.etStreamerMisheard)
-        etStreamerStyle = findViewById(R.id.etStreamerStyle)
-        etYoutubeUrl = findViewById(R.id.etYoutubeUrl)
-        btnFetchYoutube = findViewById(R.id.btnFetchYoutube)
-        btnAiAnalyze = findViewById(R.id.btnAiAnalyze)
-        tvAiStatus = findViewById(R.id.tvAiStatus)
-        tvYoutubeInfo = findViewById(R.id.tvYoutubeInfo)
-        etTempContext = findViewById(R.id.etTempContext)
-        btnPreviewPrompt = findViewById(R.id.btnPreviewPrompt)
-        tvPromptPreview = findViewById(R.id.tvPromptPreview)
+        acGlossaryProfile = findViewById(R.id.acGlossaryProfile)
+        btnNewGlossary = findViewById(R.id.btnNewGlossary)
+        btnDeleteGlossary = findViewById(R.id.btnDeleteGlossary)
+        btnSaveGlossary = findViewById(R.id.btnSaveGlossary)
+        etGlossaryName = findViewById(R.id.etGlossaryName)
+        acGlossaryCategory = findViewById(R.id.acGlossaryCategory)
+        etGlossaryDescription = findViewById(R.id.etGlossaryDescription)
+        etGlossaryAliases = findViewById(R.id.etGlossaryAliases)
+        etGlossaryTerms = findViewById(R.id.etGlossaryTerms)
+        etGlossaryCorrections = findViewById(R.id.etGlossaryCorrections)
+        etGlossaryStyle = findViewById(R.id.etGlossaryStyle)
 
         btnRefreshHistory = findViewById(R.id.btnRefreshHistory)
         tvHistoryEmpty = findViewById(R.id.tvHistoryEmpty)
@@ -318,7 +364,6 @@ class MainActivity : AppCompatActivity() {
         etSecondAiModel = findViewById(R.id.etSecondAiModel)
         btnSecondAiFormat = findViewById(R.id.btnSecondAiFormat)
 
-        acTargetLang = findViewById(R.id.acTargetLang)
         swEchoTarget = findViewById(R.id.swEchoTarget)
         slRotate = findViewById(R.id.slRotate)
         slIdle = findViewById(R.id.slIdle)
@@ -365,20 +410,16 @@ class MainActivity : AppCompatActivity() {
     private fun showPage(itemId: Int) {
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
-        // 主播/场景页不再是底部 Tab，统一作为设置二级页隐藏
+        // 术语库作为设置二级页隐藏
         pageInterp.visibility = if (itemId == R.id.nav_interp) View.VISIBLE else View.GONE
         pageVideo.visibility = if (itemId == R.id.nav_video) View.VISIBLE else View.GONE
         pageHistory.visibility = if (itemId == R.id.nav_history) View.VISIBLE else View.GONE
         pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
-        pageStreamer.visibility = View.GONE
+        pageGlossary.visibility = View.GONE
 
-        toolbar.title = when (itemId) {
-            R.id.nav_interp -> "同传"
-            R.id.nav_video -> "视频"
-            R.id.nav_history -> "历史"
-            R.id.nav_settings -> "设置"
-            else -> "同传"
-        }
+        // 主页面标题由内容区承担，顶栏固定显示品牌，避免重复的「同传 / 同传」。
+        toolbar.title = "流译"
+        toolbar.setLogo(R.drawable.ic_brand_translate_24)
         toolbar.navigationIcon = null
         bottomNav.visibility = View.VISIBLE
         // 这里不能再写 bottomNav.selectedItemId：showPage 本身就在选中回调里，
@@ -396,6 +437,7 @@ class MainActivity : AppCompatActivity() {
         pageSettings.visibility = View.GONE
         settingsSubViews.forEach { it.visibility = if (it.id == pageId) View.VISIBLE else View.GONE }
         toolbar.title = title
+        toolbar.logo = null
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
         bottomNav.visibility = View.GONE
     }
@@ -408,8 +450,9 @@ class MainActivity : AppCompatActivity() {
         pageInterp.visibility = View.GONE
         pageVideo.visibility = View.GONE
         pageHistory.visibility = View.GONE
-        pageStreamer.visibility = View.GONE
-        toolbar.title = "设置"
+        pageGlossary.visibility = View.GONE
+        toolbar.title = "流译"
+        toolbar.setLogo(R.drawable.ic_brand_translate_24)
         toolbar.navigationIcon = null
         bottomNav.visibility = View.VISIBLE
         if (bottomNav.selectedItemId != R.id.nav_settings) {
@@ -418,209 +461,129 @@ class MainActivity : AppCompatActivity() {
         currentMainTabId = R.id.nav_settings
     }
 
-    // ---------- 主播资料 + 提示词后端 ----------
+    // ---------- 通用术语库 ----------
 
-    private fun setupStreamerPage() {
-        acStreamerCategory.setSimpleItems(categorySuggestions)
-        reloadStreamerProfiles(StreamerProfileStore.selectedKey(this))
+    private fun setupGlossaryPage() {
+        acGlossaryCategory.setSimpleItems(categorySuggestions)
+        reloadGlossaryProfiles()
 
-        acStreamerProfile.setOnItemClickListener { _, _, pos, _ ->
-            val profile = streamerProfiles.getOrNull(pos) ?: return@setOnItemClickListener
-            StreamerProfileStore.setSelected(this, profile.key)
-            renderStreamerProfile(profile)
-            updateCurrentProfileLabel()
+        acGlossaryProfile.setOnItemClickListener { _, _, position, _ ->
+            glossaryProfiles.getOrNull(position)?.let(::renderGlossaryProfile)
         }
-
-        btnNewStreamer.setOnClickListener {
-            renderStreamerProfile(StreamerProfileStore.DEFAULT_PROFILE.copy(key = "", nameZh = "", category = ""))
-            acStreamerProfile.setText("", false)
-            etStreamerKey.requestFocus()
-            toast("填好资料名后点\"保存资料\"")
+        btnNewGlossary.setOnClickListener {
+            selectedGlossaryId = ""
+            renderGlossaryProfile(
+                GlossaryProfile(id = "", name = "", category = "通用"),
+            )
+            acGlossaryProfile.setText("", false)
+            etGlossaryName.requestFocus()
         }
-
-        btnSaveStreamer.setOnClickListener {
-            val profile = collectStreamerProfile()
-            if (profile.key.isBlank()) {
-                toast("资料名不能为空")
+        btnSaveGlossary.setOnClickListener {
+            val name = etGlossaryName.text.toString().trim()
+            if (name.isEmpty()) {
+                toast("术语库名称不能为空")
                 return@setOnClickListener
             }
-            StreamerProfileStore.save(this, profile)
-            reloadStreamerProfiles(profile.key)
-            updateCurrentProfileLabel()
-            toast("已保存主播资料：${profile.key}")
+            val saved = GlossaryStore.upsert(this, collectGlossaryProfile())
+            selectedGlossaryId = saved.id
+            reloadGlossaryProfiles(saved.id)
+            toast("已保存术语库：${saved.name}")
         }
-
-        btnFetchYoutube.setOnClickListener { fetchYoutubeInfo() }
-        btnAiAnalyze.setOnClickListener { onAiAnalyze() }
-        btnPreviewPrompt.setOnClickListener {
-            tvPromptPreview.text = composeSessionPrompt()
+        btnDeleteGlossary.setOnClickListener {
+            val id = selectedGlossaryId
+            if (id.isEmpty()) {
+                toast("当前是未保存的新术语库")
+                return@setOnClickListener
+            }
+            GlossaryStore.delete(this, id)
+            TranslationMode.entries.forEach { mode ->
+                val plan = TranslationPlanStore.loadDraft(this, mode)
+                if (plan.glossaryKey == id) {
+                    TranslationPlanStore.saveDraft(this, plan.copy(glossaryKey = ""))
+                    updatePlanSummary(mode)
+                }
+            }
+            selectedGlossaryId = ""
+            reloadGlossaryProfiles()
+            toast("术语库已删除")
         }
-        updateCurrentProfileLabel()
     }
 
-    private fun reloadStreamerProfiles(selectKey: String) {
-        streamerProfiles = StreamerProfileStore.all(this)
-        val keys = streamerProfiles.map { it.key }
-        acStreamerProfile.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, keys))
-        val key = if (selectKey in keys) selectKey else keys.first()
-        acStreamerProfile.setText(key, false)
-        renderStreamerProfile(StreamerProfileStore.get(this, key))
-    }
-
-    private fun renderStreamerProfile(p: StreamerProfile) {
-        etStreamerKey.setText(p.key)
-        etStreamerNameJp.setText(p.nameJp)
-        etStreamerNameZh.setText(p.nameZh)
-        acStreamerCategory.setText(p.category, false)
-        etStreamerAffiliation.setText(p.affiliation)
-        etStreamerAliases.setText(p.aliases.joinToString("\n"))
-        etStreamerTerms.setText(p.terms.joinToString("\n"))
-        etStreamerMisheard.setText(p.misheard.joinToString("\n"))
-        etStreamerStyle.setText(p.style)
-    }
-
-    private fun collectStreamerProfile(): StreamerProfile {
-        val key = etStreamerKey.text.toString().trim()
-            .ifEmpty { etStreamerNameJp.text.toString().trim() }
-            .ifEmpty { etStreamerNameZh.text.toString().trim() }
-        return StreamerProfile(
-            key = key,
-            nameJp = etStreamerNameJp.text.toString().trim(),
-            nameZh = etStreamerNameZh.text.toString().trim(),
-            affiliation = etStreamerAffiliation.text.toString().trim(),
-            category = acStreamerCategory.text.toString().trim(),
-            aliases = parseLines(etStreamerAliases.text.toString()),
-            terms = parseLines(etStreamerTerms.text.toString()),
-            misheard = parseLines(etStreamerMisheard.text.toString()),
-            style = etStreamerStyle.text.toString().trim(),
+    private fun reloadGlossaryProfiles(selectId: String = selectedGlossaryId) {
+        glossaryProfiles = GlossaryStore.list(this)
+        acGlossaryProfile.setAdapter(
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_list_item_1,
+                glossaryProfiles.map { it.name },
+            ),
         )
+        val selected = glossaryProfiles.firstOrNull { it.id == selectId }
+            ?: glossaryProfiles.firstOrNull()
+        if (selected == null) {
+            selectedGlossaryId = ""
+            acGlossaryProfile.setText("", false)
+            renderGlossaryProfile(GlossaryProfile(id = "", name = "", category = "通用"))
+        } else {
+            acGlossaryProfile.setText(selected.name, false)
+            renderGlossaryProfile(selected)
+        }
     }
 
-    private fun parseLines(raw: String): List<String> = raw
-        .split('\n')
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .distinct()
-
-    /** 会话真正使用的固定资料：优先用表单里的内容（所见即所用），为空退回已保存的选中项。 */
-    private fun currentSessionProfile(): StreamerProfile {
-        val form = collectStreamerProfile()
-        return if (form.key.isNotBlank()) form
-        else StreamerProfileStore.get(this, StreamerProfileStore.selectedKey(this))
+    private fun renderGlossaryProfile(profile: GlossaryProfile) {
+        selectedGlossaryId = profile.id
+        etGlossaryName.setText(profile.name)
+        acGlossaryCategory.setText(profile.category, false)
+        etGlossaryDescription.setText(profile.description)
+        etGlossaryAliases.setText(profile.aliases.joinToString("\n"))
+        etGlossaryTerms.setText(profile.terms.joinToString("\n"))
+        etGlossaryCorrections.setText(profile.corrections.joinToString("\n"))
+        etGlossaryStyle.setText(profile.style)
+        btnDeleteGlossary.isEnabled = profile.id.isNotBlank()
     }
 
-    private fun currentSessionContext(): SessionPromptContext = SessionPromptContext(
-        video = currentVideoInfo,
-        manualContext = etTempContext.text.toString(),
+    private fun collectGlossaryProfile(): GlossaryProfile = GlossaryProfile(
+        id = selectedGlossaryId,
+        name = etGlossaryName.text.toString(),
+        category = acGlossaryCategory.text.toString(),
+        description = etGlossaryDescription.text.toString(),
+        aliases = parseLines(etGlossaryAliases.text.toString()),
+        terms = parseLines(etGlossaryTerms.text.toString()),
+        corrections = parseLines(etGlossaryCorrections.text.toString()),
+        style = etGlossaryStyle.text.toString(),
     )
 
-    private fun composeSessionPrompt(): String =
-        PromptBuilder.build(currentSessionProfile(), currentSessionContext())
+    private fun parseLines(raw: String): List<String> = raw
+        .lineSequence()
+        .map(String::trim)
+        .filter(String::isNotEmpty)
+        .distinct()
+        .toList()
 
-    private fun updateCurrentProfileLabel() {
-        val name = currentSessionProfile().let { it.key.ifBlank { it.displayName() } }
-        val text = "当前场景：$name"
-        tvCurrentProfile.text = text
-        tvInterpProfile.text = text
+    private fun clearFinishedSessionContext(captureMode: String) {
+        when (promptMode(captureMode)) {
+            TranslationMode.INTERPRETATION -> interpretationSessionContext = ""
+            TranslationMode.VIDEO -> {
+                videoSessionContext = ""
+                videoSessionUrl = ""
+            }
+        }
     }
 
+    private fun currentSessionContext(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
+        manualContext = when (mode) {
+            TranslationMode.INTERPRETATION -> interpretationSessionContext
+            TranslationMode.VIDEO -> videoSessionContext
+        },
+    )
 
-    private fun fetchYoutubeInfo() {
-        val url = etYoutubeUrl.text.toString().trim()
-        if (url.isEmpty()) {
-            toast("请先粘贴 YouTube 链接")
-            return
-        }
-        btnFetchYoutube.isEnabled = false
-        btnFetchYoutube.text = "获取中…"
-        tvYoutubeInfo.text = "正在请求…"
-        Thread({
-            val result = runCatching { YouTubeOEmbedClient.fetch(url) }
-            runOnUiThread {
-                btnFetchYoutube.isEnabled = true
-                btnFetchYoutube.text = "获取视频信息"
-                result.onSuccess { info ->
-                    currentVideoInfo = info
-                    tvYoutubeInfo.text = "${info.authorName} · ${info.title}"
-                }.onFailure { e ->
-                    tvYoutubeInfo.text = "获取失败：${e.message}"
-                    toast("获取 YouTube 信息失败：${e.message}")
-                }
-            }
-        }, "youtube-oembed").start()
-    }
-
-    private fun onAiAnalyze() {
-        // 先确保第二 AI 设置已保存
-        saveSecondAiSettings()
-
-        val apiKey = SettingsStore.secondAiApiKey(this)
-        if (apiKey.isEmpty()) {
-            toast("请先到\"设置 → 资料 AI\"配置 Key")
-            return
-        }
-
-        val url = etYoutubeUrl.text.toString().trim()
-        if (url.isEmpty()) {
-            toast("请先粘贴 YouTube 链接")
-            return
-        }
-
-        // 如果还没获取 YouTube 信息，先获取
-        val video = currentVideoInfo
-        if (video == null || video.title.isEmpty()) {
-            toast("请先点\"从链接获取标题和频道\"拿到视频信息再 AI 分析")
-            return
-        }
-
-        btnAiAnalyze.isEnabled = false
-        btnAiAnalyze.text = "分析中…"
-        tvAiStatus.text = "正在分析 ${video.authorName}…"
-
-        val baseUrl = SettingsStore.secondAiBaseUrl(this)
-        val model = SettingsStore.secondAiModel(this)
-        val format = secondAiFormat()
-
-        Thread({
-            val result = runCatching {
-                ProfileGenerator.generate(
-                    videoInfo = video,
-                    baseUrl = baseUrl,
-                    apiKey = apiKey,
-                    model = model,
-                    format = format,
-                )
-            }
-            runOnUiThread {
-                btnAiAnalyze.isEnabled = true
-                btnAiAnalyze.text = "AI 自动分析生成"
-
-                result.onSuccess { gen ->
-                    tvAiStatus.text = gen.note.ifBlank { "已生成" }
-
-                    // 把 AI 生成的主播资料回填到表单
-                    gen.profile?.let { profile ->
-                        renderStreamerProfile(profile)
-                        acStreamerProfile.setText(profile.key, false)
-                        toast("已生成主播资料：${profile.key}，请检查后保存")
-                    } ?: run {
-                        tvAiStatus.text = "资料解析失败，请重试或手动填写"
-                        toast("AI 未能生成主播资料，请手动填写")
-                    }
-
-                    // 把 AI 生成的本场提示词自动填入临时上下文
-                    if (gen.temporaryContext.isNotBlank()) {
-                        etTempContext.setText(gen.temporaryContext)
-                    }
-
-                    // 自动预览
-                    tvPromptPreview.text = composeSessionPrompt()
-                }.onFailure { e ->
-                    tvAiStatus.text = "分析失败：${e.message}"
-                    toast("AI 分析失败：${e.message}")
-                }
-            }
-        }, "ai-analyze").start()
+    private fun composeSessionPrompt(mode: TranslationMode): String {
+        val plan = TranslationPlanStore.loadDraft(this, mode)
+        return PromptBuilder.build(
+            glossary = GlossaryStore.find(this, plan.glossaryKey),
+            context = currentSessionContext(mode),
+            plan = plan,
+        )
     }
 
     // ---------- 历史记录 ----------
@@ -645,9 +608,25 @@ class MainActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
+                ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_8) }
                 isAllCaps = false
-                text = "${item.title}\n${HistoryStore.formatTime(item.updatedAt)} · ${item.sizeBytes / 1024}KB"
+                minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
+                cornerRadius = resources.getDimensionPixelSize(R.dimen.field_radius)
+                insetTop = 0
+                insetBottom = 0
+                backgroundTintList = getColorStateList(R.color.surface_white)
+                setTextColor(getColor(R.color.text_primary))
+                val modeLabel = item.mode.label
+                val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
+                    TranslationLanguageCatalog.target(item.targetLanguageCode).label
+                val summary = item.summary.trim().replace('\n', ' ').take(72)
+                text = buildString {
+                    append(item.title)
+                    append("\n").append(modeLabel).append(" · ").append(direction)
+                    append(" · ").append(HistoryStore.formatDuration(item.durationMs))
+                    append("\n").append(HistoryStore.formatTime(item.updatedAt))
+                    if (summary.isNotEmpty()) append("\n").append(summary)
+                }
                 setOnClickListener { showHistoryDetail(item) }
             }
             historyList.addView(b)
@@ -666,8 +645,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupSettings() {
         rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
         rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
-        rowSetScenes.setOnClickListener { openSettingsSub(R.id.pageStreamer, "场景 / 术语库") }
-        rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "资料 AI") }
+        rowSetScenes.setOnClickListener { openSettingsSub(R.id.pageGlossary, "术语库") }
+        rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "内容分析 AI") }
         rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
         rowSetAbout.setOnClickListener { openSettingsSub(R.id.pageSettingsAbout, "关于") }
 
@@ -752,17 +731,128 @@ class MainActivity : AppCompatActivity() {
         tvLinesVal.text = "最多行数 ${slLines.value.toInt()}"
     }
 
+    private fun setupFinalPlanUi() {
+        findViewById<View>(R.id.cardInterpPlan).setOnClickListener {
+            TranslationPlanBottomSheet.newInstance(
+                TranslationMode.INTERPRETATION,
+                interpretationSessionContext,
+            ).also { sheet ->
+                sheet.listener = this
+                sheet.show(supportFragmentManager, "plan_interpretation")
+            }
+        }
+        findViewById<View>(R.id.cardVideoPlan).setOnClickListener {
+            TranslationPlanBottomSheet.newInstance(
+                TranslationMode.VIDEO,
+                videoSessionContext,
+                videoSessionUrl,
+            ).also { sheet ->
+                sheet.listener = this
+                sheet.show(supportFragmentManager, "plan_video")
+            }
+        }
+        updatePlanSummary(TranslationMode.INTERPRETATION)
+        updatePlanSummary(TranslationMode.VIDEO)
+    }
+
+    override fun onTranslationPlanApplied(
+        mode: TranslationMode,
+        plan: TranslationPlan,
+        sessionContext: String,
+        videoUrl: String,
+    ) {
+        when (mode) {
+            TranslationMode.INTERPRETATION -> {
+                interpretationSessionContext = sessionContext
+                renderModeLanguageControls(
+                    mode,
+                    LanguageControls(acInterpSourceLang, acInterpTargetLang),
+                )
+            }
+            TranslationMode.VIDEO -> {
+                videoSessionContext = sessionContext
+                videoSessionUrl = videoUrl
+                renderModeLanguageControls(
+                    mode,
+                    LanguageControls(acVideoSourceLang, acVideoTargetLang),
+                )
+            }
+        }
+        updatePlanSummary(mode)
+    }
+
+    private fun updatePlanSummary(mode: TranslationMode) {
+        val plan = TranslationPlanStore.loadDraft(this, mode)
+        val summary = "${plan.scene.label} · ${plan.directionLabel}"
+        val viewId = if (mode == TranslationMode.INTERPRETATION) {
+            R.id.tvInterpPlanSummary
+        } else {
+            R.id.tvVideoPlanSummary
+        }
+        findViewById<TextView>(viewId)?.text = summary
+    }
+
     // ---------- 翻译参数 / 断句参数 ----------
 
-    private val targetLangSuggestions = arrayOf("zh", "zh-Hans", "zh-Hant", "en", "ja", "ko")
+    private fun bindModeLanguageControls(
+        mode: TranslationMode,
+        controls: LanguageControls,
+    ) {
+        val sourceLabels = TranslationLanguageCatalog.sources.map { it.label }.toTypedArray()
+        val targetLabels = TranslationLanguageCatalog.targets.map { it.label }.toTypedArray()
+        controls.sourceView.setSimpleItems(sourceLabels)
+        controls.targetView.setSimpleItems(targetLabels)
+        controls.sourceView.setOnItemClickListener { _, _, position, _ ->
+            val code = TranslationLanguageCatalog.sources.getOrNull(position)?.code
+                ?: return@setOnItemClickListener
+            val current = TranslationPlanStore.loadDraft(this, mode)
+            TranslationPlanStore.saveDraft(this, current.copy(sourceLanguageCode = code))
+            renderModeLanguageControls(mode, controls)
+        }
+        controls.targetView.setOnItemClickListener { _, _, position, _ ->
+            val code = TranslationLanguageCatalog.targets.getOrNull(position)?.code
+                ?: return@setOnItemClickListener
+            val current = TranslationPlanStore.loadDraft(this, mode)
+            TranslationPlanStore.saveDraft(this, current.copy(targetLanguageCode = code))
+            renderModeLanguageControls(mode, controls)
+        }
+        renderModeLanguageControls(mode, controls)
+    }
+
+    private fun renderModeLanguageControls(
+        mode: TranslationMode,
+        controls: LanguageControls,
+    ) {
+        val plan = TranslationPlanStore.loadDraft(this, mode)
+        controls.sourceView.setText(
+            TranslationLanguageCatalog.source(plan.sourceLanguageCode).label,
+            false,
+        )
+        controls.targetView.setText(
+            TranslationLanguageCatalog.target(plan.targetLanguageCode).label,
+            false,
+        )
+        val targetLabel = TranslationLanguageCatalog.target(plan.targetLanguageCode).label
+        if (mode == TranslationMode.INTERPRETATION) {
+            tvInterpTargetLanguageLabel.text = "目标译文 · $targetLabel"
+        } else {
+            tvVideoTargetLanguageLabel.text = "目标译文 · $targetLabel"
+        }
+        updatePlanSummary(mode)
+    }
 
     private fun setupParamControls() {
-        acTargetLang.setSimpleItems(targetLangSuggestions)
+        bindModeLanguageControls(
+            TranslationMode.INTERPRETATION,
+            LanguageControls(acInterpSourceLang, acInterpTargetLang),
+        )
+        bindModeLanguageControls(
+            TranslationMode.VIDEO,
+            LanguageControls(acVideoSourceLang, acVideoTargetLang),
+        )
+
         renderParamValues()
 
-        acTargetLang.setOnItemClickListener { _, _, _, _ ->
-            SettingsStore.saveTargetLang(this, acTargetLang.text.toString())
-        }
         swEchoTarget.setOnCheckedChangeListener { _, checked ->
             SettingsStore.saveEchoTargetLanguage(this, checked)
         }
@@ -782,7 +872,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnResetTranslate.setOnClickListener {
-            SettingsStore.saveTargetLang(this, SettingsStore.DEFAULT_TARGET_LANG)
+            TranslationPlanStore.resetDraft(this, TranslationMode.INTERPRETATION)
+            TranslationPlanStore.resetDraft(this, TranslationMode.VIDEO)
             SettingsStore.saveEchoTargetLanguage(this, true)
             SettingsStore.saveRotateSeconds(this, SettingsStore.DEFAULT_ROTATE_SECONDS)
             renderParamValues()
@@ -806,8 +897,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun syncLanguageControlsFromStore() {
+        renderModeLanguageControls(
+            TranslationMode.INTERPRETATION,
+            LanguageControls(acInterpSourceLang, acInterpTargetLang),
+        )
+        renderModeLanguageControls(
+            TranslationMode.VIDEO,
+            LanguageControls(acVideoSourceLang, acVideoTargetLang),
+        )
+    }
+
     private fun renderParamValues() {
-        acTargetLang.setText(SettingsStore.targetLang(this), false)
+        syncLanguageControlsFromStore()
         swEchoTarget.isChecked = SettingsStore.echoTargetLanguage(this)
         slRotate.value = SettingsStore.rotateSeconds(this).toFloat()
         slIdle.value = SettingsStore.stabIdleMs(this).toFloat()
@@ -860,34 +962,60 @@ class MainActivity : AppCompatActivity() {
         startCapture(mode)
     }
 
-    private fun prepareSessionSettings(): Boolean {
+    private fun promptMode(captureMode: String): TranslationMode =
+        if (captureMode == StatusBus.MODE_MIC) TranslationMode.INTERPRETATION else TranslationMode.VIDEO
+
+    private fun prepareSessionSettings(captureMode: String): Boolean {
+        val mode = promptMode(captureMode)
         SettingsStore.saveApiKeys(this, etApiKeys.text.toString())
         SettingsStore.saveBaseUrl(
             this,
             etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
         )
         saveSecondAiSettings()
-        SettingsStore.saveTargetLang(this, acTargetLang.text.toString())
-        // 固定资料若在表单里编辑过就顺手保存，避免开播用到没保存的内容时下次丢失
-        val formProfile = collectStreamerProfile()
-        if (formProfile.key.isNotBlank()) {
-            StreamerProfileStore.save(this, formProfile)
+        val plan = TranslationPlanStore.loadDraft(this, mode)
+        if (plan.scenePresetId == "custom" && plan.customSceneInstruction.isBlank()) {
+            toast("请在翻译方案中填写自定义场景要求")
+            return false
         }
-        // 组装本场提示词 = 固定资料 + 临时上下文，写给服务用
-        SettingsStore.saveComposedPrompt(this, composeSessionPrompt())
-
         if (SettingsStore.apiKeyList(this).isEmpty()) {
             toast("请先填 Gemini API Key")
             bottomNav.selectedItemId = R.id.nav_settings
             openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
             return false
         }
+
+        pendingSessionPrompt = composeSessionPrompt(mode)
+        pendingSessionSource = plan.sourceLanguageCode
+        pendingSessionTarget = plan.targetLanguageCode
+        pendingSessionScene = plan.scenePresetId
+        pendingSessionGlossaryKey = plan.glossaryKey
+        pendingSessionContext = currentSessionContext(mode).manualContext.trim()
+        pendingSessionTitle = when (mode) {
+            TranslationMode.INTERPRETATION -> "同传记录"
+            TranslationMode.VIDEO -> "视频翻译"
+        }
         return true
     }
 
+    private fun captureStartIntent(captureMode: String): Intent =
+        Intent(this, CaptureService::class.java)
+            .setAction(CaptureService.ACTION_START)
+            .putExtra(CaptureService.EXTRA_MODE, captureMode)
+            .putExtra(CaptureService.EXTRA_SESSION_PROMPT, pendingSessionPrompt)
+            .putExtra(CaptureService.EXTRA_SOURCE_LANGUAGE, pendingSessionSource)
+            .putExtra(CaptureService.EXTRA_TARGET_LANGUAGE, pendingSessionTarget)
+            .putExtra(CaptureService.EXTRA_SCENE_PRESET, pendingSessionScene)
+            .putExtra(CaptureService.EXTRA_GLOSSARY_KEY, pendingSessionGlossaryKey)
+            .putExtra(CaptureService.EXTRA_SESSION_TITLE, pendingSessionTitle)
+            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, pendingSessionContext)
+
     private fun startCapture(mode: String) {
+        val reusePendingSnapshot = permRequested &&
+            pendingStartMode == mode &&
+            pendingSessionPrompt.isNotBlank()
         pendingStartMode = mode
-        if (!prepareSessionSettings()) return
+        if (!reusePendingSnapshot && !prepareSessionSettings(mode)) return
 
         val need = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -921,11 +1049,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 麦克风同传：不强制悬浮窗；有权限就顺带挂，没有就只在 App 内看字幕
-        val i = Intent(this, CaptureService::class.java)
-            .setAction(CaptureService.ACTION_START)
-            .putExtra(CaptureService.EXTRA_MODE, StatusBus.MODE_MIC)
-        startForegroundService(i)
+        // 麦克风同传：不强制悬浮窗；有权限就顺带挂，没有就只在 App 内看字幕。
+        startForegroundService(captureStartIntent(StatusBus.MODE_MIC))
     }
 
     private fun renderStatus() {
@@ -934,11 +1059,33 @@ class MainActivity : AppCompatActivity() {
         val mode = s.captureMode
         val conn = s.connState
         val level = s.audioLevelPct.coerceIn(0, 100)
+
+        listOf(
+            LanguageControls(acInterpSourceLang, acInterpTargetLang),
+            LanguageControls(acVideoSourceLang, acVideoTargetLang),
+        ).forEach { controls ->
+            controls.sourceView.isEnabled = !running
+            controls.targetView.isEnabled = !running
+        }
+
+        if (lastObservedRunning && !running && lastActiveMode.isNotEmpty()) {
+            clearFinishedSessionContext(lastActiveMode)
+        }
+        if (running && mode.isNotEmpty()) lastActiveMode = mode
+        lastObservedRunning = running
+
         val micActive = running && mode == StatusBus.MODE_MIC
         val videoActive = running && mode == StatusBus.MODE_VIDEO
+        val sessionSnapshot = s.sessionSnapshot()
+        val translatedSnapshot = buildList {
+            addAll(sessionSnapshot.confirmedTranslations.takeLast(6))
+            sessionSnapshot.currentTranslation.takeIf { it.isNotBlank() }?.let(::add)
+        }.joinToString("\n")
+        val sourceSnapshot = sessionSnapshot.sourceTail
 
         fun heroText(active: Boolean): String = when {
             !active -> "○ 待开始"
+            s.paused -> "Ⅱ 已暂停"
             conn == "ready" -> "● 翻译中"
             conn.startsWith("error") -> "● 出错"
             else -> "● 准备连接"
@@ -963,14 +1110,14 @@ class MainActivity : AppCompatActivity() {
         tvInterpAudioLevel.text = if (micActive) "$level%" else "0%"
         pbInterpAudio.progress = if (micActive) level else 0
         if (micActive) {
-            tvInterpZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
-            tvInterpJa.text = s.jaTail.ifBlank { "等待原文输入…" }
+            tvInterpZh.text = translatedSnapshot.ifBlank { "等待译文…" }
+            tvInterpJa.text = sourceSnapshot.ifBlank { "等待原文输入…" }
             if (s.transcriptPath.isNotEmpty()) {
                 tvInterpTranscriptPath.text = "本场记录：${s.transcriptPath}"
             }
         } else if (!running) {
             // 空闲时保留上次路径提示也可以，但字幕回到占位
-            if (s.zhTail.isBlank()) tvInterpZh.text = "等待中文字幕…"
+            if (s.zhTail.isBlank()) tvInterpZh.text = "等待译文…"
             if (s.jaTail.isBlank()) tvInterpJa.text = "等待原文输入…"
         }
         btnInterpToggle.text = when {
@@ -978,6 +1125,7 @@ class MainActivity : AppCompatActivity() {
             running -> "开始同传"
             else -> "开始同传"
         }
+        btnInterpToggle.backgroundTintList = getColorStateList(if (micActive) R.color.error else R.color.brand)
         btnInterpToggle.isEnabled = !running || micActive
 
         // 视频页
@@ -989,19 +1137,20 @@ class MainActivity : AppCompatActivity() {
         tvAudioLevel.text = if (videoActive) "$level%" else "0%"
         pbAudio.progress = if (videoActive) level else 0
         if (videoActive) {
-            tvLiveZh.text = s.zhTail.ifBlank { "等待中文字幕…" }
-            tvLiveJa.text = s.jaTail.ifBlank { "等待日文输入…" }
+            tvLiveZh.text = translatedSnapshot.ifBlank { "等待译文…" }
+            tvLiveJa.text = sourceSnapshot.ifBlank { "等待原文输入…" }
             if (s.transcriptPath.isNotEmpty()) {
                 tvTranscriptPath.text = "本场记录：${s.transcriptPath}"
             }
         } else if (!running) {
-            if (s.zhTail.isBlank()) tvLiveZh.text = "等待中文字幕…"
-            if (s.jaTail.isBlank()) tvLiveJa.text = "等待日文输入…"
+            if (s.zhTail.isBlank()) tvLiveZh.text = "等待译文…"
+            if (s.jaTail.isBlank()) tvLiveJa.text = "等待原文输入…"
         }
         btnToggle.text = when {
             videoActive -> "停止视频字幕"
             else -> "开始视频字幕"
         }
+        btnToggle.backgroundTintList = getColorStateList(if (videoActive) R.color.error else R.color.brand)
         btnToggle.isEnabled = !running || videoActive
 
         tvStatus.text = buildString {

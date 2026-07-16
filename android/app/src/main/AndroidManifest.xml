@@ -14,7 +14,7 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="实时翻译"
+        android:label="流译"
         android:theme="@style/Theme.LiveTranslate">
 
         <activity

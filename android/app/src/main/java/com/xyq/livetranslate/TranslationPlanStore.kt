@@ -1,0 +1,145 @@
+package com.xyq.livetranslate
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+
+/**
+ * v2 翻译方案存储。两种模式使用完全独立的键；不读取 v1 的全局语言/提示词设置。
+ */
+object TranslationPlanStore {
+    private const val PREFS = "translation_plans_v2"
+    private const val KEY_DRAFT_PREFIX = "draft_"
+    private const val KEY_SAVED_PREFIX = "saved_"
+
+    fun loadDraft(context: Context, mode: TranslationMode): TranslationPlan {
+        val raw = prefs(context).getString(KEY_DRAFT_PREFIX + mode.storageKey, null)
+            ?: return TranslationPlan.default(mode)
+        return runCatching { decodePlan(JSONObject(raw), mode) }
+            .getOrElse { TranslationPlan.default(mode) }
+            .normalized()
+    }
+
+    fun saveDraft(context: Context, plan: TranslationPlan) {
+        val normalized = plan.normalized()
+        prefs(context).edit()
+            .putString(KEY_DRAFT_PREFIX + normalized.mode.storageKey, encodePlan(normalized).toString())
+            .apply()
+    }
+
+    fun resetDraft(context: Context, mode: TranslationMode) {
+        prefs(context).edit()
+            .remove(KEY_DRAFT_PREFIX + mode.storageKey)
+            .apply()
+    }
+
+    fun listSaved(context: Context, mode: TranslationMode): List<SavedTranslationPlan> {
+        val raw = prefs(context).getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val id = item.optString("id").trim()
+                    val name = item.optString("name").trim()
+                    val planJson = item.optJSONObject("plan") ?: continue
+                    if (id.isNotEmpty() && name.isNotEmpty()) {
+                        add(SavedTranslationPlan(id, name, decodePlan(planJson, mode).normalized()))
+                    }
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    @Synchronized
+    fun saveAs(
+        context: Context,
+        mode: TranslationMode,
+        name: String,
+        plan: TranslationPlan,
+    ): SavedTranslationPlan {
+        val saved = SavedTranslationPlan(
+            id = UUID.randomUUID().toString(),
+            name = name.trim().ifEmpty { "未命名方案" },
+            plan = plan.copy(mode = mode).normalized(),
+        )
+        val updated = listSaved(context, mode).toMutableList().apply {
+            val index = indexOfFirst { it.id == saved.id }
+            if (index >= 0) set(index, saved) else add(saved)
+        }
+        writeSavedPlans(context, mode, updated)
+        return saved
+    }
+
+    @Synchronized
+    fun deleteSavedPlan(context: Context, mode: TranslationMode, id: String) {
+        writeSavedPlans(context, mode, listSaved(context, mode).filterNot { it.id == id })
+    }
+
+    fun applySaved(
+        context: Context,
+        mode: TranslationMode,
+        id: String,
+    ): TranslationPlan? {
+        val plan = listSaved(context, mode).firstOrNull { it.id == id }?.plan ?: return null
+        saveDraft(context, plan)
+        return plan
+    }
+
+    internal fun encodePlan(plan: TranslationPlan): JSONObject = JSONObject().apply {
+        put("mode", plan.mode.storageKey)
+        put("sourceLanguageCode", plan.sourceLanguageCode)
+        put("targetLanguageCode", plan.targetLanguageCode)
+        put("scenePresetId", plan.scenePresetId)
+        put("customSceneInstruction", plan.customSceneInstruction)
+        put("advancedInstruction", plan.advancedInstruction)
+        put("glossaryKey", plan.glossaryKey)
+    }
+
+    internal fun decodePlan(json: JSONObject, expectedMode: TranslationMode): TranslationPlan {
+        val storedMode = json.optString("mode")
+        require(storedMode.isEmpty() || storedMode == expectedMode.storageKey) {
+            "方案模式与存储分区不一致"
+        }
+        return TranslationPlan(
+            mode = expectedMode,
+            sourceLanguageCode = json.optString(
+                "sourceLanguageCode",
+                TranslationPlan.DEFAULT_SOURCE_LANGUAGE,
+            ),
+            targetLanguageCode = json.optString(
+                "targetLanguageCode",
+                TranslationPlan.DEFAULT_TARGET_LANGUAGE,
+            ),
+            scenePresetId = json.optString(
+                "scenePresetId",
+                TranslationPlan.defaultSceneId(expectedMode),
+            ),
+            customSceneInstruction = json.optString("customSceneInstruction", ""),
+            advancedInstruction = json.optString("advancedInstruction", ""),
+            glossaryKey = json.optString("glossaryKey", ""),
+        ).normalized()
+    }
+
+    private fun writeSavedPlans(
+        context: Context,
+        mode: TranslationMode,
+        plans: List<SavedTranslationPlan>,
+    ) {
+        val array = JSONArray()
+        plans.forEach { saved ->
+            array.put(JSONObject().apply {
+                put("id", saved.id)
+                put("name", saved.name)
+                put("plan", encodePlan(saved.plan))
+            })
+        }
+        prefs(context).edit()
+            .putString(KEY_SAVED_PREFIX + mode.storageKey, array.toString())
+            .apply()
+    }
+
+    private fun prefs(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+}

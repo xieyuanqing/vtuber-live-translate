@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+            <ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/pageHistory"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/page_margin"
+                    android:paddingTop="@dimen/space_24"
+                    android:paddingBottom="@dimen/page_bottom_padding">
+
+                    <TextView
+                        style="@style/PageTitle"
+                        android:text="历史记录" />
+
+                    <TextView
+                        style="@style/PageDesc"
+                        android:text="每场翻译自动存档，点开即可回看。" />
+
+                    <Button
+                        android:id="@+id/btnRefreshHistory"
+                        style="@style/LuminousSecondaryButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="刷新列表" />
+
+                    <TextView
+                        android:id="@+id/tvHistoryEmpty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="还没有历史记录。翻译一场之后再回来看看。"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/historyList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardHistoryDetail"
+                        style="@style/LuminousOutlinedCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:id="@+id/tvHistoryTitle"
+                                style="@style/CardTitle"
+                                android:text="记录内容" />
+
+                            <Button
+                                android:id="@+id/btnCopyHistory"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end"
+                                android:text="复制全文" />
+
+                            <TextView
+                                android:id="@+id/tvHistoryDetail"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="monospace"
+                                android:text=""
+                                android:textIsSelectable="true"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>

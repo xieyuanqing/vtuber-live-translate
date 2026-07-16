@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-07-16 · v2.0.0 通用实时翻译与 Luminous Blue 全面重构
+
+本次不保留旧测试数据兼容层，直接将产品从 VTuber 视频字幕工具重构为通用的「同传 + 视频」实时翻译 App。
+
+**产品与界面**
+
+- 统一底部「同传 / 视频 / 历史 / 设置」四页结构，使用 Luminous Blue 蓝白设计系统
+- 同传和视频各自拥有独立语言、场景、术语库、高级要求和本场上下文
+- 配置集中到 `TranslationPlanBottomSheet`；AI 内容分析只在对应业务页出现
+- 设置页只维护 AI 服务、字幕、长期翻译参数、诊断、关于和通用术语库
+
+**数据与运行链路**
+
+- 新增 `TranslationPlan` / `TranslationPlanStore`，草稿、命名方案及模式校验完整隔离
+- 新增通用 `GlossaryProfile`，替代旧 `StreamerProfile`
+- 启动时创建不可变会话快照，权限回调、重连和后台服务不再读取变化中的 UI 设置
+- `StatusBus` 提供结构化字幕快照；历史升级为包含模式、语言、时长、原文和译文的会话 JSON
+- 悬浮字幕支持普通/紧凑态和真实暂停；同传与视频停止后只清理各自本场上下文
+
+**清理**
+
+- 删除旧 prompt 预设、`composedPrompt` 回退、旧场景同步、旧迁移代码
+- 删除 `StreamerProfile`、`StreamerProfileStore`、`ProfileGenerator` 和隐藏旧表单
+- 将 `YouTubeVideoInfo` 拆成独立有效模型，视频 URL 仅用于抓取，不注入翻译提示词
+
+**版本**：versionCode 21 / versionName 2.0.0。
+
+**真实验证**：
+
+- `:app:testDebugUnitTest`：12 项测试通过
+- `:app:lintDebug`：通过
+- `:app:assembleDebug`：通过
+- APK ZIP 完整性：通过
+- APK v2 签名：通过，固定 debug 证书
+- 包信息：`com.xyq.livetranslate`，minSdk 29，targetSdk 35
+
+---
+
+## 2026-07-15 · 同传 / 视频四层提示词拆分
+
+**问题**：同传和视频虽然输入场景不同，却共用同一个 `composedPrompt`；默认资料还会让通用同传带上 VTuber 偏置。
+
+**实现**：
+
+- `PromptBuilder` 改为四层组合：隐藏基础规则 → 自动模式规则 → 模式独立场景预设 → 仅本场上下文 / 专名资料
+- 同传预设：通用、会议、课堂、采访、旅行交流、自定义
+- 视频预设：通用视频、直播、VTuber、动漫、游戏、新闻、课程、自定义
+- 两个 Tab 各自提供预设、本模式自定义要求和本场上下文；预设与自定义要求分模式保存，本场上下文不单独持久化，并在该模式停止后自动清空
+- 设置 → 场景 / 术语库新增同传和视频场景入口，与两个首页使用同一状态并双向即时同步；本场上下文仍只保留在对应首页
+- 同传和视频首页顶部新增显眼的“源语言 → 目标语言”选择，和设置页双向同步；默认日语 → 中文，运行期间锁定避免界面与当前连接不一致
+- 源语言方向写入系统提示词，目标语言同时写入提示词和 Gemini Live `targetLanguageCode`；字幕标签与 AI 资料生成也跟随当前语言方向
+- 通用模式不再默认注入 `通用VTuber` 资料；只有 VTuber 场景或明确选中的自建资料才加入专名块
+- `prepareSessionSettings(captureMode)` 只校验即将启动的模式；本场提示词延后到麦克风服务真正启动或投屏授权成功时才写入，`CaptureService` 停止时删除 `composedPrompt`
+- 权限请求中的待启动模式写入 `savedInstanceState`，Activity 重建后不会把同传串成视频
+- 设置页预览改为“本场资料预览”，不再显示隐藏的基础 / 模式提示词；YouTube AI 分析结果只回填视频上下文，注入模型时不携带视频 URL
+- 自建资料即使只填写“资料名”，该名称也会进入专名资料块
+
+**验证**：
+
+- `:app:testDebugUnitTest`：6 组单元测试通过，覆盖预设隔离、同传无视频偏置、VTuber 视频资料、仅资料名、语言方向和隐藏预览
+- `:app:lintDebug`：通过；剩余为项目既有硬编码文案、依赖版本和大布局警告
+- `:app:assembleDebug`：本地 Android 35 SDK 实际构建成功
+
+---
+
 ## 2026-07-13 · v1.9.1 修复：切换底部 Tab 闪退
 
 **现象**：App 默认打开「同传」正常，点击「视频 / 历史 / 设置」立即闪退。

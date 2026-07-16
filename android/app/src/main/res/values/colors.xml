@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#4F46E5</color>
+    <!-- Luminous Blue Utility：以 Stitch 实际导出 token 为准。 -->
+    <color name="brand">#0058BC</color>
     <color name="brand_on">#FFFFFF</color>
+    <color name="primary_container">#0070EB</color>
+    <color name="primary_fixed">#D8E2FF</color>
+    <color name="primary_fixed_dim">#ADC6FF</color>
+    <color name="on_primary_fixed">#001A41</color>
+
+    <color name="app_background">#FCF8FB</color>
+    <color name="surface_white">#FFFFFF</color>
+    <color name="surface_low">#F6F3F5</color>
+    <color name="surface_container">#F0EDEF</color>
+    <color name="surface_high">#EAE7EA</color>
+
+    <color name="text_primary">#1B1B1D</color>
+    <color name="text_secondary">#414755</color>
+    <color name="text_muted">#717786</color>
+    <color name="outline_variant">#C1C6D7</color>
+    <color name="hairline">#ECE9EC</color>
+
+    <color name="error">#BA1A1A</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FFDAD6</color>
+    <color name="success">#238636</color>
 </resources>

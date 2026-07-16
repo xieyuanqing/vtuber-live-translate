@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.LiveTranslate" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.LiveTranslate" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/brand</item>
         <item name="colorOnPrimary">@color/brand_on</item>
+        <item name="colorPrimaryContainer">@color/primary_fixed</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_fixed</item>
+        <item name="colorSurface">@color/app_background</item>
+        <item name="colorSurfaceVariant">@color/surface_low</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/text_muted</item>
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="android:colorAccent">@color/brand</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="grid_4">4dp</dimen>
+    <dimen name="space_8">8dp</dimen>
+    <dimen name="space_12">12dp</dimen>
+    <dimen name="space_16">16dp</dimen>
+    <dimen name="space_24">24dp</dimen>
+    <dimen name="space_32">32dp</dimen>
+    <dimen name="page_margin">16dp</dimen>
+    <dimen name="page_bottom_padding">32dp</dimen>
+    <dimen name="card_radius">24dp</dimen>
+    <dimen name="sheet_radius">28dp</dimen>
+    <dimen name="field_radius">12dp</dimen>
+    <dimen name="touch_target">48dp</dimen>
+    <dimen name="primary_action_height">56dp</dimen>
+</resources>

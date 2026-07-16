@@ -34,7 +34,7 @@ class GeminiLiveClient(
     private val keyProvider: () -> String,
     private val baseUrl: String,
     private val prompt: String,
-    private val targetLang: String = SettingsStore.DEFAULT_TARGET_LANG,
+    private val targetLang: String = TranslationPlan.DEFAULT_TARGET_LANGUAGE,
     private val echoTargetLanguage: Boolean = true,
     private val rotateAfterMs: Long = SettingsStore.DEFAULT_ROTATE_SECONDS * 1000L,
     private val listener: Listener,

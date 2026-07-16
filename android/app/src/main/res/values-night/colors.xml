@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#818CF8</color>
-    <color name="brand_on">#1E1B4B</color>
+    <!-- 最终版固定为蓝白浅色，不在夜间切回旧紫色。 -->
+    <color name="brand">#0058BC</color>
+    <color name="brand_on">#FFFFFF</color>
 </resources>

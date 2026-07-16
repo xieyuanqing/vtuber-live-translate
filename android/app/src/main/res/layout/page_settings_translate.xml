@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+            <ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/pageSettingsTranslate"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/page_margin"
+                    android:paddingTop="@dimen/space_24"
+                    android:paddingBottom="@dimen/page_bottom_padding">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="翻译 API" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="当前接入 Gemini Live Translate" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:hint="Gemini API Key"
+                                app:helperText="多个 Key 用英文逗号分隔">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etApiKeys"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:importantForAutofill="no"
+                                    android:inputType="textVisiblePassword"
+                                    android:maxLines="2"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:hint="API Base URL">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etBaseUrl"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:importantForAutofill="no"
+                                    android:inputType="textUri"
+                                    android:maxLines="1"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="翻译参数" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="改动在下次开始翻译时生效" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/swEchoTarget"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="源音频已是目标语言时照常出字幕"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/tvRotateVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="连接主动轮换 505 秒"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slRotate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="5"
+                                android:valueFrom="120"
+                                android:valueTo="580" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnResetTranslate"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="恢复默认"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>

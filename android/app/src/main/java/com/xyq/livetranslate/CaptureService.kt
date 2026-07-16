@@ -42,10 +42,18 @@ class CaptureService : Service() {
     companion object {
         const val ACTION_START = "com.xyq.livetranslate.START"
         const val ACTION_STOP = "com.xyq.livetranslate.STOP"
+        const val ACTION_TOGGLE_PAUSE = "com.xyq.livetranslate.TOGGLE_PAUSE"
         const val EXTRA_RESULT_CODE = "resultCode"
         const val EXTRA_RESULT_DATA = "resultData"
         /** [StatusBus.MODE_VIDEO] 或 [StatusBus.MODE_MIC] */
         const val EXTRA_MODE = "mode"
+        const val EXTRA_SESSION_PROMPT = "sessionPrompt"
+        const val EXTRA_SOURCE_LANGUAGE = "sourceLanguage"
+        const val EXTRA_TARGET_LANGUAGE = "targetLanguage"
+        const val EXTRA_SCENE_PRESET = "scenePreset"
+        const val EXTRA_GLOSSARY_KEY = "glossaryKey"
+        const val EXTRA_SESSION_TITLE = "sessionTitle"
+        const val EXTRA_SESSION_CONTEXT = "sessionContext"
         private const val TAG = "CaptureService"
         private const val NOTIF_ID = 1
         private const val CHANNEL = "livetranslate"
@@ -60,9 +68,11 @@ class CaptureService : Service() {
     private var logger: TranscriptLogger? = null
 
     @Volatile private var capturing = false
+    @Volatile private var paused = false
     private var activeMode: String = ""
     private val jaTail = StringBuilder()
     private val zhLines = ArrayDeque<String>()
+    private val sessionLines = ArrayDeque<String>()
     private var lastConfirmedZh = ""
     private var stabilizer: SubtitleStabilizer? = null
     private var wakeLock: PowerManager.WakeLock? = null
@@ -73,6 +83,11 @@ class CaptureService : Service() {
         when (intent?.action) {
             ACTION_START -> start(intent)
             ACTION_STOP -> stopEverything()
+            ACTION_TOGGLE_PAUSE -> {
+                paused = !paused
+                StatusBus.paused = paused
+                StatusBus.connState = if (paused) "paused" else "connected"
+            }
         }
         return START_NOT_STICKY
     }
@@ -83,7 +98,26 @@ class CaptureService : Service() {
             return
         }
 
-        val mode = intent.getStringExtra(EXTRA_MODE)?.takeIf { it.isNotBlank() } ?: StatusBus.MODE_VIDEO
+        val mode = intent.getStringExtra(EXTRA_MODE)
+            ?.takeIf { it == StatusBus.MODE_MIC || it == StatusBus.MODE_VIDEO }
+        val sessionPrompt = intent.getStringExtra(EXTRA_SESSION_PROMPT)?.takeIf { it.isNotBlank() }
+        if (mode == null || sessionPrompt == null) {
+            StatusBus.connState = "error:缺少会话快照"
+            Log.e(TAG, "reject start without valid mode/prompt snapshot")
+            stopSelf()
+            return
+        }
+        val apiKeysSnapshot = SettingsStore.apiKeyList(this).toList()
+        if (apiKeysSnapshot.isEmpty()) {
+            StatusBus.connState = "error:未配置 API Key"
+            stopSelf()
+            return
+        }
+        val baseUrlSnapshot = SettingsStore.baseUrl(this)
+        val echoSnapshot = SettingsStore.echoTargetLanguage(this)
+        val rotateMsSnapshot = SettingsStore.rotateSeconds(this) * 1000L
+        val idleMsSnapshot = SettingsStore.stabIdleMs(this).toLong()
+        val maxCharsSnapshot = SettingsStore.stabMaxChars(this)
         activeMode = mode
         StatusBus.captureMode = mode
 
@@ -133,9 +167,33 @@ class CaptureService : Service() {
 
         StatusBus.reset()
         StatusBus.captureMode = mode
+        StatusBus.startSession()
         zhLines.clear()
+        sessionLines.clear()
         lastConfirmedZh = ""
-        logger = TranscriptLogger(this)
+        val translationMode = if (mode == StatusBus.MODE_MIC) {
+            TranslationMode.INTERPRETATION
+        } else {
+            TranslationMode.VIDEO
+        }
+        val sessionPlan = TranslationPlan(
+            mode = translationMode,
+            sourceLanguageCode = intent.getStringExtra(EXTRA_SOURCE_LANGUAGE)
+                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.DEFAULT_SOURCE_LANGUAGE,
+            targetLanguageCode = intent.getStringExtra(EXTRA_TARGET_LANGUAGE)
+                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.DEFAULT_TARGET_LANGUAGE,
+            scenePresetId = intent.getStringExtra(EXTRA_SCENE_PRESET)
+                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.defaultSceneId(translationMode),
+            glossaryKey = intent.getStringExtra(EXTRA_GLOSSARY_KEY).orEmpty(),
+        ).normalized()
+        val sessionContext = intent.getStringExtra(EXTRA_SESSION_CONTEXT).orEmpty()
+        logger = TranscriptLogger(
+            context = this,
+            mode = translationMode,
+            plan = sessionPlan,
+            title = intent.getStringExtra(EXTRA_SESSION_TITLE).orEmpty(),
+            contextSummary = sessionContext,
+        )
         StatusBus.transcriptPath = logger?.pathHint ?: ""
 
         val useOverlay = mode == StatusBus.MODE_VIDEO || Settings.canDrawOverlays(this)
@@ -144,8 +202,8 @@ class CaptureService : Service() {
         }
         stabilizer = SubtitleStabilizer(
             mainHandler,
-            idleCommitMs = SettingsStore.stabIdleMs(this).toLong(),
-            maxCurrentChars = SettingsStore.stabMaxChars(this),
+            idleCommitMs = idleMsSnapshot,
+            maxCurrentChars = maxCharsSnapshot,
         ) { confirmed, current ->
             overlay?.maybeReapplyStyle()
             overlay?.setLines(confirmed, current)
@@ -157,16 +215,16 @@ class CaptureService : Service() {
 
         val c = GeminiLiveClient(
             keyProvider = {
-                val ks = SettingsStore.apiKeyList(this)
-                if (ks.isEmpty()) "" else ks.random().also { k ->
-                    StatusBus.currentKeyLabel = "key#${ks.indexOf(k) + 1}/${ks.size}"
+                apiKeysSnapshot.random().also { key ->
+                    StatusBus.currentKeyLabel =
+                        "key#${apiKeysSnapshot.indexOf(key) + 1}/${apiKeysSnapshot.size}"
                 }
             },
-            baseUrl = SettingsStore.baseUrl(this),
-            prompt = SettingsStore.composedPrompt(this),
-            targetLang = SettingsStore.targetLang(this),
-            echoTargetLanguage = SettingsStore.echoTargetLanguage(this),
-            rotateAfterMs = SettingsStore.rotateSeconds(this) * 1000L,
+            baseUrl = baseUrlSnapshot,
+            prompt = sessionPrompt,
+            targetLang = sessionPlan.targetLanguageCode,
+            echoTargetLanguage = echoSnapshot,
+            rotateAfterMs = rotateMsSnapshot,
             listener = object : GeminiLiveClient.Listener {
                 override fun onState(state: String) {
                     StatusBus.connState = state
@@ -199,19 +257,47 @@ class CaptureService : Service() {
             record.channelCount,
         ) { chunk -> c.feedChunk(chunk) }
 
+        paused = false
+        StatusBus.paused = false
         capturing = true
         StatusBus.serviceRunning = true
-        record.startRecording()
+        try {
+            record.startRecording()
+        } catch (e: Exception) {
+            Log.e(TAG, "AudioRecord.startRecording failed: ${e.message}", e)
+            StatusBus.connState = "error:音频采集启动失败"
+            stopEverything()
+            return
+        }
         captureThread = Thread({
-            val buf = ShortArray(2048)
-            while (capturing) {
-                val n = audioRecord?.read(buf, 0, buf.size) ?: break
-                if (n > 0) {
-                    StatusBus.audioLevelPct = estimateLevelPct(buf, n)
-                    processor.feed(buf, n)
-                } else if (n < 0) {
-                    Log.w(TAG, "AudioRecord.read error $n")
-                    break
+            var readFailed = false
+            try {
+                val buf = ShortArray(2048)
+                while (capturing) {
+                    val n = audioRecord?.read(buf, 0, buf.size) ?: break
+                    if (n > 0) {
+                        if (paused) {
+                            StatusBus.audioLevelPct = 0
+                        } else {
+                            StatusBus.audioLevelPct = estimateLevelPct(buf, n)
+                            processor.feed(buf, n)
+                        }
+                    } else if (n < 0) {
+                        Log.w(TAG, "AudioRecord.read error $n")
+                        StatusBus.connState = "error:音频采集已中断"
+                        readFailed = true
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "capture loop failed: ${e.message}", e)
+                StatusBus.connState = "error:音频采集异常"
+                readFailed = true
+            } finally {
+                if (readFailed && capturing) {
+                    mainHandler.post {
+                        if (capturing) stopEverything()
+                    }
                 }
             }
         }, "capture").also { it.start() }
@@ -259,9 +345,17 @@ class CaptureService : Service() {
         val c = confirmed.trim()
         if (c.isNotEmpty() && c != lastConfirmedZh) {
             zhLines.addLast(c)
+            sessionLines.addLast(c)
+            logger?.commitTranslation(c)
             lastConfirmedZh = c
             while (zhLines.size > 4) zhLines.removeFirst()
+            while (sessionLines.size > 20) sessionLines.removeFirst()
         }
+        StatusBus.updateSessionSubtitles(
+            confirmed = sessionLines.toList(),
+            current = current,
+            source = jaTail.toString(),
+        )
         StatusBus.zhTail = buildString {
             zhLines.forEachIndexed { index, line ->
                 if (index > 0) append('\n')
@@ -375,6 +469,7 @@ class CaptureService : Service() {
 
     private fun stopEverything() {
         capturing = false
+        paused = false
         runCatching { captureThread?.join(500) }
         captureThread = null
         runCatching { audioRecord?.stop() }
@@ -396,6 +491,7 @@ class CaptureService : Service() {
         wakeLock = null
         activeMode = ""
         StatusBus.serviceRunning = false
+        StatusBus.paused = false
         StatusBus.captureMode = ""
         StatusBus.audioLevelPct = 0
         if (!StatusBus.connState.startsWith("error")) StatusBus.connState = "idle"

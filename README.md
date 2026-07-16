@@ -1,59 +1,88 @@
-# VTuber 直播实时翻译（安卓悬浮字幕）
+# 流译
 
-自用安卓 App：捕获手机上正在播放的 YouTube 直播音频，送 Gemini Live Translate 实时翻译，用悬浮窗把中文字幕盖在 YouTube 上层。
+自用 Android 实时翻译工具。支持现场麦克风同传，以及捕获手机中视频/直播音频后生成悬浮字幕。
 
-> 定位：直播中看懂大意的辅助字幕，不追求发布级质量。录播精修另有离线流程（gemini-asr-correction-github，在 VPS 上）。
+> 产品定位是低延迟理解辅助，不追求发布级字幕质量；录播精修仍使用离线流程。
+
+## 功能
+
+- **同传**：麦克风采集，适合会议、课堂、采访、旅行交流等现场场景
+- **视频**：通过 MediaProjection + AudioPlaybackCapture 捕获应用内播放音频
+- **独立翻译方案**：同传和视频分别保存语言方向、场景、术语库、高级要求与本场上下文
+- **通用术语库**：维护名称、分类、别名、固定译法、误识别修正和翻译风格
+- **AI 内容分析**：在对应业务页整理现场资料或视频元数据，可直接形成本场上下文和术语库
+- **实时字幕**：App 内字幕流，以及可暂停、可切换普通/紧凑形态的系统悬浮字幕
+- **结构化历史**：保存模式、语言方向、时长、原文和译文，支持详情查看与 Markdown 复制
+- **安全设置**：API Key 通过 Android Keystore 加密；实时翻译与内容分析可使用独立接口
+
+## 页面结构
+
+底部导航固定为：
+
+1. 同传
+2. 视频
+3. 历史
+4. 设置
+
+AI 资料整理位于同传/视频方案面板；设置页只维护 AI 服务、字幕样式、长期翻译参数、诊断和术语库。
 
 ## 核心链路
 
 ```text
-YouTube App 播放直播
-→ MediaProjection + AudioPlaybackCapture 内录
+麦克风 / 应用内播放音频
 → PCM16 / 16kHz / mono / 100ms chunk
-→ Gemini Live Translate WebSocket（gemini-3.5-live-translate-preview）
-→ 字幕稳定器
-→ 悬浮窗中文字幕
-→ transcript 落盘（可接录播精修）
+→ Gemini Live Translate WebSocket
+→ 字幕稳定器与结构化会话状态
+→ App 字幕流 + 系统悬浮字幕
+→ 结构化历史记录
 ```
 
-## 当前状态（2026-07-10）
+开始翻译时会生成不可变会话快照。权限回调、重连和后台服务不会重新读取正在编辑的方案，因此同传与视频的语言、场景、提示词和本场上下文不会互相覆盖。
 
-- [x] 协议与翻译质量已实测：20 分钟真实节奏推流，日文听写约 8/10，中文实时约 6/10（够看大意），详见原计划第 5、6 节
-- [x] 手机内录能力已验证：腾讯会议共享屏幕可带系统声音（第三方 App 走 AudioPlaybackCapture 的直接证据）、系统录屏支持内录
-- [x] 构建链路已验证：骨架 App 在真机运行确认（2026-07-08）
-- [x] **v0.2 全链路真机实测通过**（2026-07-08）：内录 → 翻译 → 悬浮字幕 + transcript 落盘，最小闭环达成
-- [x] v0.3 字幕稳定器完成：切句去重、确认行/当前行两级显示
-- [x] **v1.0 完整版完成**（2026-07-08）：key 加密 + 多 key 轮换、prompt 预设管理、悬浮窗样式控制 + 点击收起、transcript 存公共下载目录、电池白名单引导。阶段 1 全部落地
-- [x] v1.1 UI 打磨（2026-07-08）：自适应 App 图标、Material 3 卡片式界面、悬浮窗两级字幕视觉分层
-- [x] **v1.1 真机实测基本通过**（2026-07-09）：用户确认基本运行功能正常；只要悬浮窗存在，后台存活无需再作为主要风险反复追踪
-- [x] **v1.2 P0 页面整体打磨第一版**（2026-07-09）：运行控制台前置、输入音量电平、当前会话卡片、最近稳定中文字幕记录流
-- [x] **v1.3 App 壳子 + P1 后端第一版**（2026-07-09）：侧边栏多页面结构；主播资料库、YouTube oEmbed 获取、prompt 生成与应用链路落地
-- [x] **v1.4 状态栏 + 提示词分层 + 历史页 + 文案重做**（2026-07-09）：修状态栏遮挡（edge-to-edge inset）；固定提示词（主播资料）/ 临时提示词（仅本场，不保存）拆分；历史记录页可查看/复制；统一页面文案与风格样式
-- [x] **v1.5 资料 AI + 整体 UI 精简**（2026-07-10）：独立第二 AI 接口（Gemini / OpenAI 双格式 + Google Search grounding），YouTube 链接一键自动分析生成主播资料和本场提示词；全界面文案大幅精简，视觉更接近成品 App 风格
-- [x] **v1.6 高级设置**（2026-07-10）：设置页新增默认收起的高级设置卡片——目标语言 / 同语言回显（云端 translationConfig 仅有的两个参数）、连接主动轮换间隔、断句静默转正时间、当前行最大字数；官方文档核对结论记入 tech-notes
-- [x] **v1.7 设置界面重构**（2026-07-10）：设置改为分类二级菜单（翻译服务 / 字幕与悬浮窗 / 资料 AI / 诊断 / 关于），诊断并入设置、新增关于页，为后续接入其他翻译模型（OpenAI Realtime 等）预留扩展位
-- [x] **v1.8 提示词优化**（2026-07-10）：注入提示词瘦身——去掉 YouTube 链接和 App 内部概念表头，只留名词与译法；资料 AI 的临时提示词输出对齐"给翻译模型用"的定位
-- [x] **v1.9 通用实时翻译壳 + 麦克风同传**（2026-07-13）：底部 Tab「同传 / 视频 / 历史 / 设置」；同传走麦克风、视频走系统内录，共用 Gemini Live 翻译与历史；主播资料改为设置内「场景 / 术语库」
-- [ ] 下一步：真机验收同传；预置常用场景/主播资料；历史标注来源模式；文案与视觉通用化
+## Android 要求
+
+- minSdk 29
+- targetSdk 35
+- Java 17
+- 视频内录要求目标应用允许 AudioPlaybackCapture
+- 悬浮字幕需要系统悬浮窗权限
+- Android 13 及以上建议允许通知，以便前台服务稳定运行
+
+## 本地构建
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+Debug APK：
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+## 2.0.0
+
+- 使用 Luminous Blue 蓝白视觉系统重写四个主页面和设置子页面
+- 将原有全局配置拆分为同传/视频独立 `TranslationPlan`
+- 用通用 `GlossaryProfile` 替代主播专用资料模型
+- 新增业务页 AI 内容分析、方案 Bottom Sheet 和命名方案
+- 历史记录升级为结构化会话 JSON
+- 悬浮字幕升级为普通/紧凑双形态，并接入真实暂停控制
+- 删除旧 prompt 预设、旧场景兼容层、旧主播模型和迁移代码
 
 ## 文档
 
-| 文件 | 内容 |
-|---|---|
-| [docs/00-original-plan.md](docs/00-original-plan.md) | 原始调研与计划全文（2026-07-07，含全部实测数据），存档不改动 |
-| [docs/01-roadmap.md](docs/01-roadmap.md) | 开发路线图：阶段划分、每步验收标准——**跟着这个做** |
-| [docs/02-tech-notes.md](docs/02-tech-notes.md) | 技术速查：WS 协议、音频格式、重连策略、安卓 API、本机构建环境、参考项目对照 |
-| [docs/03-android-primer.md](docs/03-android-primer.md) | 安卓开发入门速成（只讲本项目用到的概念）+ App 架构图 + 名词表 |
-| [docs/04-dev-log.md](docs/04-dev-log.md) | 开发日志：每步做了什么、验收结果、遇到的问题（每次开发后更新） |
-| [docs/05-felo-benchmark.md](docs/05-felo-benchmark.md) | Felo Translator（`base.apk`）静态分析与产品体验对标清单 |
-
-## 参考项目（灵感来源，Linux.do 论坛分享）
-
-- [FaQxD233/gemini-live-translate](https://github.com/FaQxD233/gemini-live-translate) — Windows 桌面版（Python/PySide6，WASAPI loopback 内录）。`gemini_client.py` / `pcm_processor.py` 是 WS 协议和音频处理的直接移植参考。
-- [letr1n1ty/Gemive](https://github.com/letr1n1ty/Gemive) — Chrome MV3 插件（tabCapture 抓标签页音频）。悬浮窗交互、transcript Markdown 导出、多 key 轮换的产品设计参考。
+- [docs/00-original-plan.md](docs/00-original-plan.md)：原始调研与计划存档
+- [docs/01-roadmap.md](docs/01-roadmap.md)：开发路线与验收标准
+- [docs/02-tech-notes.md](docs/02-tech-notes.md)：协议、音频、重连和 Android 技术记录
+- [docs/03-android-primer.md](docs/03-android-primer.md)：项目架构和 Android 概念
+- [docs/04-dev-log.md](docs/04-dev-log.md)：开发日志与真实验证记录
+- [docs/05-felo-benchmark.md](docs/05-felo-benchmark.md)：竞品静态分析与体验对标
 
 ## 原则
 
-- 自用优先：不做后端、账号系统、应用商店分发
-- 一步一验收：先跑通最小闭环，再加舒适性功能
-- 发布级字幕不在本项目范围内，走既有录播精修流程
+- 自用优先，不建设账号系统或服务端
+- 实时链路优先低延迟和可用性
+- 同传与视频的临时配置严格隔离
+- 发布级字幕交给离线精修流程

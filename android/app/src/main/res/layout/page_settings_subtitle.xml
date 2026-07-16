@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+            <ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/pageSettingsSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/page_margin"
+                    android:paddingTop="@dimen/space_24"
+                    android:paddingBottom="@dimen/page_bottom_padding">
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="悬浮窗样式" />
+
+                            <TextView
+                                android:id="@+id/tvFontVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="字号 16sp"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slFont"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="1"
+                                android:valueFrom="12"
+                                android:valueTo="26" />
+
+                            <TextView
+                                android:id="@+id/tvOpacityVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="背景不透明度 66%"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slOpacity"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="5"
+                                android:valueFrom="20"
+                                android:valueTo="95" />
+
+                            <TextView
+                                android:id="@+id/tvLinesVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="最多行数 3"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slLines"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="1"
+                                android:valueFrom="1"
+                                android:valueTo="3" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                style="@style/CardTitle"
+                                android:text="断句节奏" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="4dp"
+                                android:text="改动在下次开始翻译时生效" />
+
+                            <TextView
+                                android:id="@+id/tvIdleVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="静默 2.5 秒转正"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slIdle"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="250"
+                                android:valueFrom="1000"
+                                android:valueTo="6000" />
+
+                            <TextView
+                                android:id="@+id/tvMaxCharsVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="当前行最长 42 字"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slMaxChars"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="2"
+                                android:valueFrom="20"
+                                android:valueTo="80" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnResetSubtitle"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="恢复默认"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </ScrollView>
