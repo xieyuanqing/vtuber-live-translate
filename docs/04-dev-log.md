@@ -30,6 +30,17 @@
 - 删除 `StreamerProfile`、`StreamerProfileStore`、`ProfileGenerator` 和隐藏旧表单
 - 将 `YouTubeVideoInfo` 拆成独立有效模型，视频 URL 仅用于抓取，不注入翻译提示词
 
+**追加代码审查修复**
+
+- Android 11–13 麦克风前台服务显式启用 `FOREGROUND_SERVICE_TYPE_MICROPHONE`；视频模式继续使用 `MEDIA_PROJECTION`
+- Android 13+ 通知权限改为可选，拒绝通知不再阻止录音启动
+- 同传/视频本场资料跨 Activity 重建保存，并在启动 Intent 成功发出后立即消费，避免旧上下文串入下一场
+- 暂停状态与真实连接状态分离；原文片段即时进入结构化会话快照
+- 取消自动写入公共 Downloads 的 Markdown 副本，历史删除语义只对应一份 App 私有数据
+- 方案库和术语库逐项容错；外层或单条数据损坏时，在修复写入前保存原始 JSON 备份
+- AI 生成术语先保留为内存候选，只有点击“应用”才持久化；View 销毁后旧请求自动失效
+- 连续两句译文相同但原文不同的情况不再被误判为重复；同传边界会过滤残留视频元数据
+
 **版本**：versionCode 21 / versionName 2.0.0。
 
 **真实验证**：
@@ -40,6 +51,8 @@
 - APK ZIP 完整性：通过
 - APK v2 签名：通过，固定 debug 证书
 - 包信息：`com.xyq.livetranslate`，minSdk 29，targetSdk 35
+- 最终复验：12 项单测、0 failures；GitHub Actions `Android Debug Build #29482790597` 通过并上传 `LiveTranslate-debug-apk`
+- 最终 Debug APK SHA-256：`d6373f9fe17f7cb211dd75c0d302123b2de0c6213d0ca36ab85504cbbe12de0a`
 
 ---
 

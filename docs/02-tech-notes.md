@@ -85,7 +85,7 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 |---|---|---|
 | 内录 | MediaProjection + AudioPlaybackCaptureConfiguration + AudioRecord | API 29+；每次会话需用户授权；**旁路复制，YouTube 原声照常播**，无需回放原声 |
 | 悬浮窗 | SYSTEM_ALERT_WINDOW + WindowManager | 窗口类型 TYPE_APPLICATION_OVERLAY |
-| 后台常驻 | ForegroundService | Android 14（API 34）起需声明 `foregroundServiceType="mediaProjection"` |
+| 后台常驻 | ForegroundService | Manifest 声明 `mediaProjection|microphone`；Android 11（API 30）起麦克风会话显式传 `FOREGROUND_SERVICE_TYPE_MICROPHONE`，视频会话传 `MEDIA_PROJECTION` |
 | 网络 | OkHttp WebSocket | Base URL 做成可配置 |
 | 配置存储 | SharedPreferences + 加密存储（Keystore） | API key 不落明文；自用版足够简单可靠 |
 
@@ -107,7 +107,7 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 | PCM 重采样 + 分块 | 同项目 `pcm_processor.py` |
 | 自定义 API Base URL 的设置设计 | 同项目 `settings.py` / `settings_window.py` |
 | 悬浮窗交互（拖动/缩放/收起小圆点） | Gemive 的 content/overlay 部分 |
-| transcript 导出（Downloads/日期/文件名格式） | Gemive 的 Markdown 导出 |
+| 结构化历史与 Markdown 文本 | App 私有历史为唯一自动存储；详情页按需复制，不自动写入公共 Downloads |
 | 多 key 逗号分隔、会话开始随机选 | Gemive 的设置页 |
 
 仓库地址：
