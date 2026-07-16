@@ -11,8 +11,8 @@ android {
         applicationId = "com.xyq.livetranslate"
         minSdk = 29
         targetSdk = 35
-        versionCode = 24
-        versionName = "2.0.3"
+        versionCode = 25
+        versionName = "2.0.4"
     }
 
     signingConfigs {
@@ -39,6 +39,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -48,4 +51,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }

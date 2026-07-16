@@ -31,7 +31,7 @@
             android:paddingVertical="@dimen/space_8">
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -39,6 +39,7 @@
                 app:boxBackgroundMode="none"
                 app:boxStrokeWidth="0dp"
                 app:boxStrokeWidthFocused="0dp"
+                app:endIconMode="none"
                 app:hintEnabled="false">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -63,7 +64,7 @@
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -71,6 +72,7 @@
                 app:boxBackgroundMode="none"
                 app:boxStrokeWidth="0dp"
                 app:boxStrokeWidthFocused="0dp"
+                app:endIconMode="none"
                 app:hintEnabled="false">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView

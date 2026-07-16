@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-16 · v2.0.4 修复启动闪退
+
+**现象**：安装 2.0.3 后打开 App 直接闪退。
+
+**根因**：同传/视频主页语言胶囊使用
+`TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu` + `app:boxBackgroundMode="none"`。
+Material 的 ExposedDropdownMenu 会强制 `endIconMode=dropdown`，而 dropdown end icon 不支持 `boxBackgroundMode=none`，
+inflate 时抛 `IllegalStateException: The current box background mode 0 is not supported by the end icon mode 3`，
+在 `MainActivity.setContentView` 阶段崩溃。
+
+**修复**：语言胶囊改为普通 Dense 样式 + `app:endIconMode="none"`，保留透明胶囊外观与 AutoComplete 绑定。
+
+**回归**：新增 Robolectric `MainActivityStartupTest` 覆盖启动 inflate；本地复现失败后修复通过。
+
+**版本**：versionCode 25 / versionName 2.0.4。
+
+---
+
 ## 2026-07-16 · v2.0.3 第二期：方案库列表页
 
 按 `docs/06-ui-polish-plan.md` 第二期落地独立「方案库」页。
