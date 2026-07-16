@@ -12,6 +12,7 @@ object TranslationPlanStore {
     private const val PREFS = "translation_plans_v2"
     private const val KEY_DRAFT_PREFIX = "draft_"
     private const val KEY_SAVED_PREFIX = "saved_"
+    private const val KEY_CORRUPT_BACKUP_PREFIX = "corrupt_saved_backup_"
 
     fun loadDraft(context: Context, mode: TranslationMode): TranslationPlan {
         val raw = prefs(context).getString(KEY_DRAFT_PREFIX + mode.storageKey, null)
@@ -36,20 +37,12 @@ object TranslationPlanStore {
 
     fun listSaved(context: Context, mode: TranslationMode): List<SavedTranslationPlan> {
         val raw = prefs(context).getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return emptyList()
-        return runCatching {
-            val array = JSONArray(raw)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val id = item.optString("id").trim()
-                    val name = item.optString("name").trim()
-                    val planJson = item.optJSONObject("plan") ?: continue
-                    if (id.isNotEmpty() && name.isNotEmpty()) {
-                        add(SavedTranslationPlan(id, name, decodePlan(planJson, mode).normalized()))
-                    }
-                }
+        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                decodeSavedItem(array, index, mode).getOrNull()?.let(::add)
             }
-        }.getOrDefault(emptyList())
+        }
     }
 
     @Synchronized
@@ -59,6 +52,7 @@ object TranslationPlanStore {
         name: String,
         plan: TranslationPlan,
     ): SavedTranslationPlan {
+        backupCorruptSavedData(context, mode)
         val saved = SavedTranslationPlan(
             id = UUID.randomUUID().toString(),
             name = name.trim().ifEmpty { "未命名方案" },
@@ -74,6 +68,7 @@ object TranslationPlanStore {
 
     @Synchronized
     fun deleteSavedPlan(context: Context, mode: TranslationMode, id: String) {
+        backupCorruptSavedData(context, mode)
         writeSavedPlans(context, mode, listSaved(context, mode).filterNot { it.id == id })
     }
 
@@ -137,6 +132,34 @@ object TranslationPlanStore {
         }
         prefs(context).edit()
             .putString(KEY_SAVED_PREFIX + mode.storageKey, array.toString())
+            .apply()
+    }
+
+    private fun decodeSavedItem(
+        array: JSONArray,
+        index: Int,
+        mode: TranslationMode,
+    ): Result<SavedTranslationPlan> = runCatching {
+        val item = array.getJSONObject(index)
+        val id = item.getString("id").trim()
+        val name = item.getString("name").trim()
+        require(id.isNotEmpty() && name.isNotEmpty())
+        SavedTranslationPlan(
+            id = id,
+            name = name,
+            plan = decodePlan(item.getJSONObject("plan"), mode).normalized(),
+        )
+    }
+
+    private fun backupCorruptSavedData(context: Context, mode: TranslationMode) {
+        val storage = prefs(context)
+        val raw = storage.getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return
+        val array = runCatching { JSONArray(raw) }.getOrNull()
+        val isCorrupt = array == null ||
+            (0 until array.length()).any { decodeSavedItem(array, it, mode).isFailure }
+        if (!isCorrupt) return
+        storage.edit()
+            .putString(KEY_CORRUPT_BACKUP_PREFIX + mode.storageKey, raw)
             .apply()
     }
 

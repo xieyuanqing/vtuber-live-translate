@@ -45,15 +45,23 @@ object StatusBus {
         current: String,
         source: String = jaTail,
     ) {
-        val old = sessionRef.get()
-        sessionRef.set(
+        sessionRef.updateAndGet { old ->
             old.copy(
                 startedAtMs = old.startedAtMs.takeIf { it > 0L } ?: System.currentTimeMillis(),
                 confirmedTranslations = confirmed.takeLast(20).toList(),
                 currentTranslation = current.trim(),
                 sourceTail = source.trim(),
-            ),
-        )
+            )
+        }
+    }
+
+    fun updateSessionSource(source: String) {
+        sessionRef.updateAndGet { old ->
+            old.copy(
+                startedAtMs = old.startedAtMs.takeIf { it > 0L } ?: System.currentTimeMillis(),
+                sourceTail = source.trim(),
+            )
+        }
     }
 
     fun reset() {

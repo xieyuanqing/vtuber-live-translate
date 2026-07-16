@@ -289,7 +289,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="自动存档于 下载/LiveTranslate/"
+                                android:text="自动保存到应用内历史"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
                         </LinearLayout>

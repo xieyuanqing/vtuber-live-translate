@@ -22,7 +22,14 @@ class PromptBuilderTest {
     fun `interpretation prompt uses meeting scene without video bias`() {
         val prompt = PromptBuilder.build(
             glossary = null,
-            context = SessionPromptContext(manualContext = "本次讨论 Aurora 项目的上线日期。"),
+            context = SessionPromptContext(
+                video = YouTubeVideoInfo(
+                    url = "https://youtu.be/stale",
+                    title = "不应进入同传的旧视频",
+                    authorName = "旧频道",
+                ),
+                manualContext = "本次讨论 Aurora 项目的上线日期。",
+            ),
             plan = TranslationPlan(
                 mode = TranslationMode.INTERPRETATION,
                 sourceLanguageCode = "ja",
@@ -38,6 +45,8 @@ class PromptBuilderTest {
         assertTrue(prompt.contains("不回答、解释、总结或续写"))
         assertFalse(prompt.contains("输入来自视频、直播"))
         assertFalse(prompt.contains("VTuber 直播"))
+        assertFalse(prompt.contains("不应进入同传的旧视频"))
+        assertFalse(prompt.contains("旧频道"))
     }
 
     @Test

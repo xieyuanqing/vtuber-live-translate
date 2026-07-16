@@ -86,7 +86,6 @@ class CaptureService : Service() {
             ACTION_TOGGLE_PAUSE -> {
                 paused = !paused
                 StatusBus.paused = paused
-                StatusBus.connState = if (paused) "paused" else "connected"
             }
         }
         return START_NOT_STICKY
@@ -122,14 +121,12 @@ class CaptureService : Service() {
         StatusBus.captureMode = mode
 
         createChannel()
-        val fgsType = if (mode == StatusBus.MODE_MIC) {
-            if (Build.VERSION.SDK_INT >= 34) {
+        val fgsType = when {
+            mode == StatusBus.MODE_MIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            } else {
-                0
-            }
-        } else {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            mode == StatusBus.MODE_VIDEO ->
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            else -> 0
         }
         try {
             ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(mode), fgsType)
@@ -241,6 +238,7 @@ class CaptureService : Service() {
                     logger?.logJa(text)
                     appendTail(jaTail, text)
                     StatusBus.jaTail = jaTail.toString()
+                    StatusBus.updateSessionSource(StatusBus.jaTail)
                 }
 
                 override fun onOutputText(text: String) {

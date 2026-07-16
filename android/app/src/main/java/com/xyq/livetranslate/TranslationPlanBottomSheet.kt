@@ -33,6 +33,7 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
     private lateinit var plan: TranslationPlan
     private var savedPlans: List<SavedTranslationPlan> = emptyList()
     private var latestAnalysisRequestId = ""
+    private var pendingGlossary: GlossaryProfile? = null
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
@@ -131,6 +132,7 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
                     analyze.isEnabled = true
                     analyzeStatus.text = "方案已切换，之前的分析结果已忽略"
                 }
+                pendingGlossary = null
                 TranslationPlanStore.applySaved(
                     requireContext(),
                     mode,
@@ -210,8 +212,11 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
                         } else {
                             context.setText(result.sessionContext)
                             result.glossary?.let { profile ->
-                                val savedGlossary = GlossaryStore.upsert(requireContext(), profile)
-                                plan = plan.copy(glossaryKey = savedGlossary.id)
+                                val candidate = profile.copy(
+                                    id = profile.id.ifBlank { UUID.randomUUID().toString() },
+                                ).normalized()
+                                pendingGlossary = candidate
+                                plan = plan.copy(glossaryKey = candidate.id)
                             }
                             analyzeStatus.text = result.note
                         }
@@ -235,6 +240,12 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
                 customSceneInstruction = customScene.text?.toString().orEmpty(),
                 advancedInstruction = advanced.text?.toString().orEmpty(),
             ).normalized()
+            pendingGlossary
+                ?.takeIf { it.id == plan.glossaryKey }
+                ?.let { glossary ->
+                    val savedGlossary = GlossaryStore.upsert(requireContext(), glossary)
+                    plan = plan.copy(glossaryKey = savedGlossary.id)
+                }
             TranslationPlanStore.saveDraft(requireContext(), plan)
             name.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let { planName ->
                 TranslationPlanStore.saveAs(requireContext(), mode, planName, plan)
@@ -256,6 +267,11 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
             ?: return
         sheet.layoutParams.height = (resources.displayMetrics.heightPixels * 0.9f).toInt()
         BottomSheetBehavior.from(sheet).state = BottomSheetBehavior.STATE_EXPANDED
+    }
+
+    override fun onDestroyView() {
+        latestAnalysisRequestId = ""
+        super.onDestroyView()
     }
 
     companion object {

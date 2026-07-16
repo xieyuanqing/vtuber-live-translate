@@ -4,23 +4,22 @@ import android.content.Context
 import org.json.JSONArray
 import java.util.UUID
 
-/** 通用术语库。 */
+/** 通用术语库。单条损坏不会影响其他条目；外层 JSON 损坏会在修复写入前保留备份。 */
 object GlossaryStore {
     private const val PREFS = "glossary_profiles_v2"
     private const val KEY_PROFILES = "profiles"
+    private const val KEY_CORRUPT_BACKUP = "corrupt_profiles_backup"
 
     fun list(context: Context): List<GlossaryProfile> {
         val raw = prefs(context).getString(KEY_PROFILES, null) ?: return emptyList()
-        return runCatching {
-            val array = JSONArray(raw)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val json = array.optJSONObject(index) ?: continue
-                    val profile = GlossaryProfileJson.decode(json)
+        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                decodeProfile(array, index).getOrNull()?.let { profile ->
                     if (profile.isUsable) add(profile)
                 }
             }
-        }.getOrDefault(emptyList())
+        }
     }
 
     fun find(context: Context, id: String): GlossaryProfile? =
@@ -31,6 +30,7 @@ object GlossaryStore {
         context: Context,
         profile: GlossaryProfile,
     ): GlossaryProfile {
+        backupCorruptData(context)
         val normalized = profile.copy(
             id = profile.id.trim().ifEmpty { UUID.randomUUID().toString() },
             name = profile.name.trim().ifEmpty { "未命名术语库" },
@@ -45,6 +45,7 @@ object GlossaryStore {
 
     @Synchronized
     fun delete(context: Context, id: String) {
+        backupCorruptData(context)
         write(context, list(context).filterNot { it.id == id })
     }
 
@@ -52,6 +53,22 @@ object GlossaryStore {
         val array = JSONArray()
         profiles.forEach { array.put(GlossaryProfileJson.encode(it)) }
         prefs(context).edit().putString(KEY_PROFILES, array.toString()).apply()
+    }
+
+    private fun decodeProfile(array: JSONArray, index: Int): Result<GlossaryProfile> = runCatching {
+        GlossaryProfileJson.decode(array.getJSONObject(index)).also {
+            require(it.isUsable)
+        }
+    }
+
+    private fun backupCorruptData(context: Context) {
+        val storage = prefs(context)
+        val raw = storage.getString(KEY_PROFILES, null) ?: return
+        val array = runCatching { JSONArray(raw) }.getOrNull()
+        val isCorrupt = array == null ||
+            (0 until array.length()).any { decodeProfile(array, it).isFailure }
+        if (!isCorrupt) return
+        storage.edit().putString(KEY_CORRUPT_BACKUP, raw).apply()
     }
 
     private fun prefs(context: Context) =

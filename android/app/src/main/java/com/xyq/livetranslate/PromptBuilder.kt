@@ -167,6 +167,7 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
+        val modeContext = context.forMode(normalized.mode)
         val scene = normalized.scene
         val sourceLanguage = TranslationLanguageCatalog.source(normalized.sourceLanguageCode)
         val targetLanguage = TranslationLanguageCatalog.target(normalized.targetLanguageCode)
@@ -193,7 +194,7 @@ object PromptBuilder {
             appendLine("【场景预设：${scene.label}】")
             appendLine(sceneInstruction)
             appendGlossary(glossary)
-            appendSessionContext(context)
+            appendSessionContext(modeContext)
             if (normalized.advancedInstruction.isNotBlank()) {
                 appendLine()
                 appendLine("【用户高级要求】")
@@ -209,6 +210,7 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
+        val modeContext = context.forMode(normalized.mode)
         return buildString {
             appendLine("翻译：${normalized.directionLabel}")
             appendLine("模式：${normalized.mode.label}")
@@ -217,7 +219,7 @@ object PromptBuilder {
                 appendLine("自定义要求：${normalized.customSceneInstruction.ifBlank { "未填写" }}")
             }
             appendGlossary(glossary)
-            appendSessionContext(context)
+            appendSessionContext(modeContext)
             if (normalized.advancedInstruction.isNotBlank()) {
                 appendLine()
                 appendLine("【用户高级要求】")
@@ -241,6 +243,9 @@ object PromptBuilder {
         }
         if (normalized.style.isNotEmpty()) appendLine("补充风格：${normalized.style}")
     }
+
+    private fun SessionPromptContext.forMode(mode: TranslationMode): SessionPromptContext =
+        if (mode == TranslationMode.INTERPRETATION) copy(video = null) else this
 
     private fun StringBuilder.appendSessionContext(context: SessionPromptContext) {
         val video = context.video

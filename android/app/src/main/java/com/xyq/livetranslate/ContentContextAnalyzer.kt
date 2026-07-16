@@ -29,10 +29,15 @@ object ContentContextAnalyzer {
         model: String,
         format: AiTextClient.Format,
     ): ContentAnalysisResult {
-        require(request.material.isNotBlank() || request.video != null) { "请先提供本场资料或视频链接" }
+        val modeRequest = request.copy(
+            video = request.video.takeIf { request.mode == TranslationMode.VIDEO },
+        )
+        require(modeRequest.material.isNotBlank() || modeRequest.video != null) {
+            "请先提供本场资料或视频链接"
+        }
         val response = AiTextClient.generate(
-            systemPrompt = systemPrompt(request),
-            userPrompt = userPrompt(request),
+            systemPrompt = systemPrompt(modeRequest),
+            userPrompt = userPrompt(modeRequest),
             baseUrl = baseUrl,
             apiKey = apiKey,
             model = model,

@@ -50,6 +50,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         const val STATE_PENDING_GLOSSARY = "pending_glossary"
         const val STATE_PENDING_TITLE = "pending_title"
         const val STATE_PENDING_CONTEXT = "pending_context"
+        const val STATE_INTERPRETATION_CONTEXT = "interpretation_context"
+        const val STATE_VIDEO_CONTEXT = "video_context"
+        const val STATE_VIDEO_URL = "video_url"
     }
 
     // 壳子：底部 4 Tab
@@ -173,8 +176,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private var permRequested = false
     /** 权限回调后要启动的模式：video / mic */
     private var pendingStartMode: String = StatusBus.MODE_VIDEO
-    private var lastObservedRunning = false
-    private var lastActiveMode: String = ""
     private var syncingLanguageControls = false
 
     private data class LanguageControls(
@@ -204,6 +205,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                     .putExtra(CaptureService.EXTRA_RESULT_CODE, res.resultCode)
                     .putExtra(CaptureService.EXTRA_RESULT_DATA, res.data)
                 startForegroundService(i)
+                consumeStartedSession(StatusBus.MODE_VIDEO)
             } else {
                 toast("未获得屏幕捕获授权，无法内录")
             }
@@ -223,6 +225,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingSessionGlossaryKey = savedInstanceState?.getString(STATE_PENDING_GLOSSARY).orEmpty()
         pendingSessionTitle = savedInstanceState?.getString(STATE_PENDING_TITLE).orEmpty()
         pendingSessionContext = savedInstanceState?.getString(STATE_PENDING_CONTEXT).orEmpty()
+        interpretationSessionContext = savedInstanceState?.getString(STATE_INTERPRETATION_CONTEXT).orEmpty()
+        videoSessionContext = savedInstanceState?.getString(STATE_VIDEO_CONTEXT).orEmpty()
+        videoSessionUrl = savedInstanceState?.getString(STATE_VIDEO_URL).orEmpty()
         setContentView(R.layout.activity_main)
 
         bindViews()
@@ -252,6 +257,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         outState.putString(STATE_PENDING_GLOSSARY, pendingSessionGlossaryKey)
         outState.putString(STATE_PENDING_TITLE, pendingSessionTitle)
         outState.putString(STATE_PENDING_CONTEXT, pendingSessionContext)
+        outState.putString(STATE_INTERPRETATION_CONTEXT, interpretationSessionContext)
+        outState.putString(STATE_VIDEO_CONTEXT, videoSessionContext)
+        outState.putString(STATE_VIDEO_URL, videoSessionUrl)
         super.onSaveInstanceState(outState)
     }
 
@@ -560,7 +568,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         .distinct()
         .toList()
 
-    private fun clearFinishedSessionContext(captureMode: String) {
+    private fun consumeStartedSession(captureMode: String) {
         when (promptMode(captureMode)) {
             TranslationMode.INTERPRETATION -> interpretationSessionContext = ""
             TranslationMode.VIDEO -> {
@@ -568,6 +576,13 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                 videoSessionUrl = ""
             }
         }
+        pendingSessionPrompt = ""
+        pendingSessionSource = ""
+        pendingSessionTarget = ""
+        pendingSessionScene = ""
+        pendingSessionGlossaryKey = ""
+        pendingSessionTitle = ""
+        pendingSessionContext = ""
     }
 
     private fun currentSessionContext(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
@@ -1017,23 +1032,23 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingStartMode = mode
         if (!reusePendingSnapshot && !prepareSessionSettings(mode)) return
 
-        val need = mutableListOf<String>()
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            need += Manifest.permission.RECORD_AUDIO
-        }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            need += Manifest.permission.POST_NOTIFICATIONS
-        }
-        if (need.isNotEmpty()) {
+        val missingAudioPermission =
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        if (missingAudioPermission) {
             if (permRequested) {
                 permRequested = false
-                toast("缺少录音/通知权限，请在系统设置中授予")
+                toast("缺少录音权限，请在系统设置中授予")
                 return
             }
+            val request = mutableListOf(Manifest.permission.RECORD_AUDIO)
+            if (
+                Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                request += Manifest.permission.POST_NOTIFICATIONS
+            }
             permRequested = true
-            permLauncher.launch(need.toTypedArray())
+            permLauncher.launch(request.toTypedArray())
             return
         }
         permRequested = false
@@ -1051,6 +1066,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
         // 麦克风同传：不强制悬浮窗；有权限就顺带挂，没有就只在 App 内看字幕。
         startForegroundService(captureStartIntent(StatusBus.MODE_MIC))
+        consumeStartedSession(StatusBus.MODE_MIC)
     }
 
     private fun renderStatus() {
@@ -1068,11 +1084,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             controls.targetView.isEnabled = !running
         }
 
-        if (lastObservedRunning && !running && lastActiveMode.isNotEmpty()) {
-            clearFinishedSessionContext(lastActiveMode)
-        }
-        if (running && mode.isNotEmpty()) lastActiveMode = mode
-        lastObservedRunning = running
 
         val micActive = running && mode == StatusBus.MODE_MIC
         val videoActive = running && mode == StatusBus.MODE_VIDEO
