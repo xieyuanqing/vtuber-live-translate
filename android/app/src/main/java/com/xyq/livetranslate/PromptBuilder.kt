@@ -167,6 +167,7 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
+        val modeContext = context.forMode(normalized.mode)
         val scene = normalized.scene
         val sourceLanguage = TranslationLanguageCatalog.source(normalized.sourceLanguageCode)
         val targetLanguage = TranslationLanguageCatalog.target(normalized.targetLanguageCode)
@@ -192,6 +193,7 @@ object PromptBuilder {
             appendLine()
             appendLine("【场景预设：${scene.label}】")
             appendLine(sceneInstruction)
+            appendSessionContext(modeContext)
             if (normalized.advancedInstruction.isNotBlank()) {
                 appendLine()
                 appendLine("【方案提示词】")
@@ -207,6 +209,7 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
+        val modeContext = context.forMode(normalized.mode)
         return buildString {
             appendLine("翻译：${normalized.directionLabel}")
             appendLine("模式：${normalized.mode.label}")
@@ -214,11 +217,29 @@ object PromptBuilder {
             if (normalized.scene.id == "custom") {
                 appendLine("自定义要求：${normalized.customSceneInstruction.ifBlank { "未填写" }}")
             }
+            appendSessionContext(modeContext)
             if (normalized.advancedInstruction.isNotBlank()) {
                 appendLine()
                 appendLine("【方案提示词】")
                 appendLine(normalized.advancedInstruction)
             }
         }.trim()
+    }
+
+    private fun SessionPromptContext.forMode(mode: TranslationMode): SessionPromptContext =
+        if (mode == TranslationMode.INTERPRETATION) copy(video = null) else this
+
+    private fun StringBuilder.appendSessionContext(context: SessionPromptContext) {
+        val video = context.video
+        val manual = context.manualContext.trim()
+        if (video == null && manual.isEmpty()) return
+
+        appendLine()
+        appendLine("【仅本场有效的上下文】")
+        if (video != null) {
+            if (video.title.isNotEmpty()) appendLine("视频标题：${video.title}")
+            if (video.authorName.isNotEmpty()) appendLine("频道/作者：${video.authorName}")
+        }
+        if (manual.isNotEmpty()) appendLine(manual)
     }
 }

@@ -18,8 +18,32 @@ class PromptBuilderTest {
         assertTrue(prompt.contains("会议"))
         assertTrue(prompt.contains("【方案提示词】"))
         assertTrue(prompt.contains("专名保留日文"))
-        assertFalse(prompt.contains("【仅本场有效的上下文】"))
         assertFalse(prompt.contains("【术语与场景资料】"))
+    }
+
+    @Test
+    fun `session context is injected but not part of plan storage`() {
+        val plan = TranslationPlan(
+            mode = TranslationMode.VIDEO,
+            scenePresetId = "general_video",
+            advancedInstruction = "角色名保留日文。",
+        )
+        val prompt = PromptBuilder.build(
+            context = SessionPromptContext(
+                video = YouTubeVideoInfo(
+                    url = "https://youtu.be/demo",
+                    title = "测试直播",
+                    authorName = "频道A",
+                ),
+                manualContext = "今晚聊新曲发布。",
+            ),
+            plan = plan,
+        )
+        assertTrue(prompt.contains("【仅本场有效的上下文】"))
+        assertTrue(prompt.contains("测试直播"))
+        assertTrue(prompt.contains("频道A"))
+        assertTrue(prompt.contains("今晚聊新曲发布。"))
+        assertTrue(prompt.contains("角色名保留日文。"))
     }
 
     @Test

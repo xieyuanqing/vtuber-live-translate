@@ -52,6 +52,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         const val STATE_PENDING_TARGET = "pending_target"
         const val STATE_PENDING_SCENE = "pending_scene"
         const val STATE_PENDING_TITLE = "pending_title"
+        const val STATE_PENDING_CONTEXT = "pending_context"
+        const val STATE_INTERPRETATION_CONTEXT = "interpretation_context"
+        const val STATE_VIDEO_CONTEXT = "video_context"
+        const val STATE_VIDEO_URL = "video_url"
     }
 
     // 壳子：底部 4 Tab
@@ -103,6 +107,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var tvInterpTranscriptPath: TextView
     private lateinit var acInterpSourceLang: MaterialAutoCompleteTextView
     private lateinit var acInterpTargetLang: MaterialAutoCompleteTextView
+    private lateinit var etInterpSessionContext: com.google.android.material.textfield.TextInputEditText
+    private lateinit var btnInterpAnalyzeContext: com.google.android.material.button.MaterialButton
+    private lateinit var tvInterpAnalyzeStatus: TextView
 
     // 视频页（原实时翻译：系统内录 + 悬浮字幕）
     private lateinit var tvHeroStatus: TextView
@@ -116,6 +123,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var tvTranscriptPath: TextView
     private lateinit var acVideoSourceLang: MaterialAutoCompleteTextView
     private lateinit var acVideoTargetLang: MaterialAutoCompleteTextView
+    private lateinit var etVideoSessionUrl: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etVideoSessionContext: com.google.android.material.textfield.TextInputEditText
+    private lateinit var btnVideoAnalyzeContext: com.google.android.material.button.MaterialButton
+    private lateinit var tvVideoAnalyzeStatus: TextView
 
     // 历史页
     private lateinit var btnRefreshHistory: Button
@@ -162,7 +173,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private var pendingSessionTarget = ""
     private var pendingSessionScene = ""
     private var pendingSessionTitle = ""
+    private var pendingSessionContext = ""
     private var permRequested = false
+    private var latestInterpAnalysisRequestId = ""
+    private var latestVideoAnalysisRequestId = ""
     /** 权限回调后要启动的模式：video / mic */
     private var pendingStartMode: String = StatusBus.MODE_VIDEO
     private var syncingLanguageControls = false
@@ -210,6 +224,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingSessionTarget = savedInstanceState?.getString(STATE_PENDING_TARGET).orEmpty()
         pendingSessionScene = savedInstanceState?.getString(STATE_PENDING_SCENE).orEmpty()
         pendingSessionTitle = savedInstanceState?.getString(STATE_PENDING_TITLE).orEmpty()
+        pendingSessionContext = savedInstanceState?.getString(STATE_PENDING_CONTEXT).orEmpty()
         setContentView(R.layout.activity_main)
 
         bindViews()
@@ -221,6 +236,18 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         setupStyleSliders()
         setupParamControls()
         setupFinalPlanUi()
+        setupSessionContextUi()
+
+        // 恢复本场临时上下文到主页输入框（不进方案库）
+        etInterpSessionContext.setText(
+            savedInstanceState?.getString(STATE_INTERPRETATION_CONTEXT).orEmpty(),
+        )
+        etVideoSessionContext.setText(
+            savedInstanceState?.getString(STATE_VIDEO_CONTEXT).orEmpty(),
+        )
+        etVideoSessionUrl.setText(
+            savedInstanceState?.getString(STATE_VIDEO_URL).orEmpty(),
+        )
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
@@ -237,6 +264,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         outState.putString(STATE_PENDING_TARGET, pendingSessionTarget)
         outState.putString(STATE_PENDING_SCENE, pendingSessionScene)
         outState.putString(STATE_PENDING_TITLE, pendingSessionTitle)
+        outState.putString(STATE_PENDING_CONTEXT, pendingSessionContext)
+        outState.putString(STATE_INTERPRETATION_CONTEXT, etInterpSessionContext.text?.toString().orEmpty())
+        outState.putString(STATE_VIDEO_CONTEXT, etVideoSessionContext.text?.toString().orEmpty())
+        outState.putString(STATE_VIDEO_URL, etVideoSessionUrl.text?.toString().orEmpty())
         super.onSaveInstanceState(outState)
     }
 
@@ -310,6 +341,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         tvInterpTranscriptPath = findViewById(R.id.tvInterpTranscriptPath)
         acInterpSourceLang = findViewById(R.id.acInterpSourceLang)
         acInterpTargetLang = findViewById(R.id.acInterpTargetLang)
+        etInterpSessionContext = findViewById(R.id.etInterpSessionContext)
+        btnInterpAnalyzeContext = findViewById(R.id.btnInterpAnalyzeContext)
+        tvInterpAnalyzeStatus = findViewById(R.id.tvInterpAnalyzeStatus)
 
         tvHeroStatus = findViewById(R.id.tvHeroStatus)
         tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
@@ -322,6 +356,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         tvTranscriptPath = findViewById(R.id.tvTranscriptPath)
         acVideoSourceLang = findViewById(R.id.acVideoSourceLang)
         acVideoTargetLang = findViewById(R.id.acVideoTargetLang)
+        etVideoSessionUrl = findViewById(R.id.etVideoSessionUrl)
+        etVideoSessionContext = findViewById(R.id.etVideoSessionContext)
+        btnVideoAnalyzeContext = findViewById(R.id.btnVideoAnalyzeContext)
+        tvVideoAnalyzeStatus = findViewById(R.id.tvVideoAnalyzeStatus)
 
         btnRefreshHistory = findViewById(R.id.btnRefreshHistory)
         tvHistoryEmpty = findViewById(R.id.tvHistoryEmpty)
@@ -446,16 +484,171 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     }
 
     private fun consumeStartedSession(captureMode: String) {
+        when (promptMode(captureMode)) {
+            TranslationMode.INTERPRETATION -> etInterpSessionContext.setText("")
+            TranslationMode.VIDEO -> {
+                etVideoSessionContext.setText("")
+                etVideoSessionUrl.setText("")
+            }
+        }
         pendingSessionPrompt = ""
         pendingSessionSource = ""
         pendingSessionTarget = ""
         pendingSessionScene = ""
         pendingSessionTitle = ""
+        pendingSessionContext = ""
+    }
+
+    private fun currentSessionContext(mode: TranslationMode): SessionPromptContext {
+        val manual = when (mode) {
+            TranslationMode.INTERPRETATION -> etInterpSessionContext.text?.toString().orEmpty()
+            TranslationMode.VIDEO -> etVideoSessionContext.text?.toString().orEmpty()
+        }.trim()
+        // 视频元数据在 AI 解析时写入 manual 文本；启动时只传 manual 即可。
+        return SessionPromptContext(manualContext = manual)
     }
 
     private fun composeSessionPrompt(mode: TranslationMode): String {
         val plan = TranslationPlanStore.loadDraft(this, mode)
-        return PromptBuilder.build(plan = plan)
+        return PromptBuilder.build(
+            context = currentSessionContext(mode),
+            plan = plan,
+        )
+    }
+
+    private fun setupSessionContextUi() {
+        btnInterpAnalyzeContext.setOnClickListener {
+            analyzeSessionContext(TranslationMode.INTERPRETATION)
+        }
+        btnVideoAnalyzeContext.setOnClickListener {
+            analyzeSessionContext(TranslationMode.VIDEO)
+        }
+    }
+
+    private fun analyzeSessionContext(mode: TranslationMode) {
+        val apiKey = SettingsStore.secondAiApiKey(this)
+        val statusView = if (mode == TranslationMode.INTERPRETATION) {
+            tvInterpAnalyzeStatus
+        } else {
+            tvVideoAnalyzeStatus
+        }
+        val button = if (mode == TranslationMode.INTERPRETATION) {
+            btnInterpAnalyzeContext
+        } else {
+            btnVideoAnalyzeContext
+        }
+        if (apiKey.isBlank()) {
+            statusView.text = "请先在设置 → 内容分析 AI 中填写 API Key"
+            return
+        }
+        val material = when (mode) {
+            TranslationMode.INTERPRETATION -> etInterpSessionContext.text?.toString().orEmpty().trim()
+            TranslationMode.VIDEO -> etVideoSessionContext.text?.toString().orEmpty().trim()
+        }
+        val url = etVideoSessionUrl.text?.toString().orEmpty().trim()
+        if (mode == TranslationMode.INTERPRETATION && material.isBlank()) {
+            statusView.text = "请先填写本场背景或资料"
+            return
+        }
+        if (mode == TranslationMode.VIDEO && url.isBlank() && material.isBlank()) {
+            statusView.text = "请先填写视频链接或本场资料"
+            return
+        }
+        if (mode == TranslationMode.VIDEO && url.isBlank()) {
+            statusView.text = "解析视频需要先填写 YouTube 链接"
+            return
+        }
+
+        val requestId = java.util.UUID.randomUUID().toString()
+        if (mode == TranslationMode.INTERPRETATION) {
+            latestInterpAnalysisRequestId = requestId
+        } else {
+            latestVideoAnalysisRequestId = requestId
+        }
+        val plan = TranslationPlanStore.loadDraft(this, mode).normalized()
+        val baseUrl = SettingsStore.secondAiBaseUrl(this)
+        val model = SettingsStore.secondAiModel(this)
+        val format = AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(this))
+        button.isEnabled = false
+        statusView.text = "正在整理，请稍候…"
+        Thread({
+            runCatching {
+                val videoInfo = if (mode == TranslationMode.VIDEO) {
+                    YouTubeOEmbedClient.fetch(url)
+                } else {
+                    null
+                }
+                val source = TranslationLanguageCatalog.source(plan.sourceLanguageCode)
+                val target = TranslationLanguageCatalog.target(plan.targetLanguageCode)
+                ContentContextAnalyzer.analyze(
+                    request = ContentAnalysisRequest(
+                        mode = mode,
+                        sourceLanguageLabel = source.label,
+                        targetLanguageLabel = target.label,
+                        material = material,
+                        video = videoInfo,
+                    ),
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    model = model,
+                    format = format,
+                ) to videoInfo
+            }.onSuccess { (result, videoInfo) ->
+                runOnUiThread {
+                    val latest = if (mode == TranslationMode.INTERPRETATION) {
+                        latestInterpAnalysisRequestId
+                    } else {
+                        latestVideoAnalysisRequestId
+                    }
+                    if (requestId != latest) return@runOnUiThread
+                    val inputChanged = when (mode) {
+                        TranslationMode.INTERPRETATION ->
+                            etInterpSessionContext.text?.toString().orEmpty().trim() != material
+                        TranslationMode.VIDEO ->
+                            etVideoSessionContext.text?.toString().orEmpty().trim() != material ||
+                                etVideoSessionUrl.text?.toString().orEmpty().trim() != url
+                    }
+                    if (inputChanged) {
+                        if (mode == TranslationMode.INTERPRETATION) latestInterpAnalysisRequestId = ""
+                        else latestVideoAnalysisRequestId = ""
+                        statusView.text = "输入已修改，之前的分析结果已忽略"
+                        button.isEnabled = true
+                        return@runOnUiThread
+                    }
+                    if (result.sessionContext.isBlank()) {
+                        statusView.text = "AI 没有返回可用背景，请补充资料后重试"
+                    } else {
+                        // 把标题/频道一并写入本场文本，方便用户看见并编辑
+                        val composed = buildString {
+                            if (videoInfo != null) {
+                                if (videoInfo.title.isNotBlank()) appendLine("视频标题：${videoInfo.title}")
+                                if (videoInfo.authorName.isNotBlank()) appendLine("频道/作者：${videoInfo.authorName}")
+                                if (isNotEmpty()) appendLine()
+                            }
+                            append(result.sessionContext)
+                        }.trim()
+                        if (mode == TranslationMode.INTERPRETATION) {
+                            etInterpSessionContext.setText(composed)
+                        } else {
+                            etVideoSessionContext.setText(composed)
+                        }
+                        statusView.text = result.note.ifBlank { "本场资料已整理" }
+                    }
+                    button.isEnabled = true
+                }
+            }.onFailure { error ->
+                runOnUiThread {
+                    val latest = if (mode == TranslationMode.INTERPRETATION) {
+                        latestInterpAnalysisRequestId
+                    } else {
+                        latestVideoAnalysisRequestId
+                    }
+                    if (requestId != latest) return@runOnUiThread
+                    statusView.text = "整理失败：${error.message ?: "未知错误"}"
+                    button.isEnabled = true
+                }
+            }
+        }, "session-context-${mode.storageKey}").start()
     }
 
     // ---------- 历史记录 ----------
@@ -748,7 +941,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         val detail = if (plan.advancedInstruction.isNotBlank()) {
             plan.advancedInstruction.replace('\n', ' ').take(48)
         } else {
-            "点击编辑场景与方案提示词"
+            "点击编辑长期方案；本场上下文在主页填写"
         }
         if (mode == TranslationMode.INTERPRETATION) {
             findViewById<TextView>(R.id.tvInterpPlanSummary)?.text = summary
@@ -956,6 +1149,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pendingSessionSource = plan.sourceLanguageCode
         pendingSessionTarget = plan.targetLanguageCode
         pendingSessionScene = plan.scenePresetId
+        pendingSessionContext = currentSessionContext(mode).manualContext.trim()
         pendingSessionTitle = when (mode) {
             TranslationMode.INTERPRETATION -> "同传记录"
             TranslationMode.VIDEO -> "视频翻译"
@@ -973,7 +1167,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             .putExtra(CaptureService.EXTRA_SCENE_PRESET, pendingSessionScene)
             .putExtra(CaptureService.EXTRA_GLOSSARY_KEY, "")
             .putExtra(CaptureService.EXTRA_SESSION_TITLE, pendingSessionTitle)
-            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, "")
+            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, pendingSessionContext)
 
     private fun startCapture(mode: String) {
         val reusePendingSnapshot = permRequested &&

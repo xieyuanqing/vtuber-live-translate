@@ -241,6 +241,67 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- 本场临时上下文：只在主页生效，不进方案库 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            app:cardCornerRadius="@dimen/card_radius">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:text="本场临时上下文" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/grid_4"
+                    android:text="只在本场生效，停止后清除；不会写入方案库"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Field"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:hint="本场背景与资料"
+                    app:helperText="例如现场主题、说话人、专名提示">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etInterpSessionContext"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:inputType="textCapSentences|textMultiLine"
+                        android:minLines="3"
+                        android:maxLines="7" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnInterpAnalyzeContext"
+                    style="@style/LuminousSecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:text="AI 整理本场资料" />
+
+                <TextView
+                    android:id="@+id/tvInterpAnalyzeStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:text="可选：把杂乱资料整理成给翻译用的本场背景"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- 当前字幕 -->
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousOutlinedCard"
