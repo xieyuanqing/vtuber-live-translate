@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-16 · v2.0.3 第二期：方案库列表页
+
+按 `docs/06-ui-polish-plan.md` 第二期落地独立「方案库」页。
+
+**页面**
+
+- 新增 `page_plan_library.xml`：同传/视频 segmented 切换、方案卡片列表、FAB 新建
+- 新增 `item_saved_plan.xml`：图标字 + 名称 + 场景/语言/术语标签 + 应用/编辑/删除
+- 设置首页新增「方案库」入口；同传/视频方案卡增加「方案库」快捷入口
+
+**交互**
+
+- 应用：写入对应模式 draft，刷新主页摘要与语言控件
+- 编辑：先 apply 再打开现有 BottomSheet 编辑器
+- 新建：打开当前分段对应模式的 BottomSheet
+- 删除：`TranslationPlanStore.deleteSavedPlan`
+- 从主页进入方案库后返回原 Tab（同传/视频），从设置进入返回设置
+
+**版本**：versionCode 24 / versionName 2.0.3。
+
+**真实验证**：`:app:compileDebugKotlin` + `:app:testDebugUnitTest` + `:app:lintDebug` + `:app:assembleDebug` 通过。
+
+---
+
 ## 2026-07-16 · v2.0.2 主页 UI 整理：方案合并呈现 + iOS 风格
 
 用户确认：场景与术语库在 UI 上合并成「方案」心智；保留功能，主页先向 `ui.zip` 的 iOS 工具感靠拢。

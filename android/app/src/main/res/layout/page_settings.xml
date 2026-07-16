@@ -77,6 +77,28 @@
                                 android:layout_height="wrap_content" />
 
                             <LinearLayout
+                                android:id="@+id/rowSetPlanLibrary"
+                                style="@style/SettingsRow">
+
+                                <LinearLayout style="@style/SettingsRowText">
+
+                                    <TextView
+                                        style="@style/SettingsRowTitle"
+                                        android:text="方案库" />
+
+                                    <TextView
+                                        style="@style/SettingsRowDesc"
+                                        android:text="同传 / 视频已保存方案" />
+                                </LinearLayout>
+
+                                <TextView style="@style/SettingsRowChevron" />
+                            </LinearLayout>
+
+                            <com.google.android.material.divider.MaterialDivider
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content" />
+
+                            <LinearLayout
                                 android:id="@+id/rowSetScenes"
                                 style="@style/SettingsRow">
 
