@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.1.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.2.0-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
@@ -20,6 +20,7 @@
 - **实时字幕**：提供 App 内字幕流，以及可拖动、独立暂停、可收进屏幕侧边且保持翻译运行的系统悬浮字幕。
 - **结构化历史**：按会话保存语言、场景、时长、原文和译文，支持搜索、模式筛选、详情查看与 Markdown 复制。
 - **本地安全存储**：API Key 使用 Android Keystore 加密，历史记录保存在 App 私有目录。
+- **好友分享（可选）**：为没有 Gemini Key 的朋友提供邀请码入口，通过持有者自部署的网关代理请求，绑定令牌加密保存并可随时解绑。
 
 ## 页面结构
 
@@ -133,7 +134,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - 会话历史以结构化 JSON 保存在 App 私有目录 `history_v2`，不会自动复制到公共 Downloads。
 - 音频只在翻译会话运行期间发送到用户配置的实时翻译端点。
 - 本场上下文会进入当前会话提示词；历史仅保存截断后的上下文摘要。
-- 项目不包含账号系统、自建业务后端、广告 SDK 或分析 SDK。
+- 项目不包含账号系统、广告 SDK 或分析 SDK。
+- 唯一的服务端是可选的好友邀请网关 `server/friend_gateway`，由持有者自行部署，仅用于代理转发好友请求；不部署时 App 保持纯本地运行。网关不保存音频或字幕内容，只维护设备绑定、令牌与限流计数。
 
 使用自定义 Base URL 或内容分析服务时，数据处理规则取决于对应服务提供方，请自行评估可信度。
 
@@ -146,8 +148,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 │       ├── main/java/.../           # Kotlin 业务代码
 │       ├── main/res/                # XML 布局、主题与图形资源
 │       └── test/java/.../           # JVM / Robolectric 回归测试
+├── server/friend_gateway/           # 可选好友邀请网关（FastAPI + SQLite，持有者自部署）
 ├── docs/                            # 路线图、技术记录和开发日志
-├── .github/workflows/               # Android Debug CI
+├── .github/workflows/               # Android Debug CI 与网关测试
 ├── CLAUDE.md                        # AI 辅助开发速览
 └── README.md
 ```
@@ -173,13 +176,15 @@ GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/w
 3. 执行 `:app:assembleDebug`；
 4. 上传可下载的 Debug APK artifact。
 
+好友邀请网关有独立工作流 [`.github/workflows/friend-gateway.yml`](.github/workflows/friend-gateway.yml)，在涉及 `server/friend_gateway/**` 的 `main` 推送 / Pull Request 及手动触发时用 uv 安装依赖并执行 `pytest`。
+
 本地交付前还应运行单元测试与 Lint，不能只以 CI 的 `assembleDebug` 代替全部验证。
 
 ## 当前状态
 
-当前版本：**v2.1.0（versionCode 29）**。
+当前版本：**v2.2.0（versionCode 32）**。
 
-v2.1.0 将原先不可编辑的内置场景改为按模式隔离的本地场景库，支持场景编辑、新建、删除、默认选择与模板恢复；方案只引用场景 ID，运行中的会话和历史名称继续使用启动快照。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
+v2.2.0 新增可选的好友邀请网关：为没有 Gemini Key 的朋友提供分享入口，App 端通过 `ApiCredentialMode` 在个人 Key 直连与好友网关（Bearer 令牌 + 设备签名）之间切换，个人路径不依赖网关；同时修正了悬浮字幕的真机压暗问题并支持保持翻译运行的侧边收起。v2.1.0 将原先不可编辑的内置场景改为按模式隔离的本地场景库，支持场景编辑、新建、删除、默认选择与模板恢复。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
 
 ## 已知限制
 

@@ -1,0 +1,47 @@
+name: Friend Gateway Tests
+
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - "server/friend_gateway/**"
+      - ".github/workflows/friend-gateway.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/friend_gateway/**"
+      - ".github/workflows/friend-gateway.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: server/friend_gateway
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Sync dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Run tests
+        run: uv run pytest

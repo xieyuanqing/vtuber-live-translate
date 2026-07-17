@@ -12,7 +12,7 @@ android {
         minSdk = 29
         targetSdk = 35
         versionCode = 32
-        versionName = "2.2.0-friend.3"
+        versionName = "2.2.0"
     }
 
     signingConfigs {

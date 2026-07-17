@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-17 · v2.2.0 好友网关并入主线并收口文档与 CI
+
+将 `test/friend-invite-gateway` 整体合并进主线，把好友邀请网关从实验分支正式纳入产品，并补齐配套护栏：
+
+- **合并**：fast-forward 合入好友网关三提交（网关后端、悬浮字幕侧边收起、好友 Live 签名路径修复），无冲突。
+- **版本收口**：`versionName` 从预发布 `2.2.0-friend.3` 定稿为 `2.2.0`，`versionCode` 维持 32；同步 README 徽章与当前状态。
+- **文档边界**：CLAUDE.md 项目定位与产品边界原写“不建设后端/账号/跨设备”，与已落地代码矛盾。改写为“默认纯本地、好友网关是唯一且可选的后端，作用域仅限好友分享，不是账号体系”，并新增边界第 10 条约束 `ApiCredentialMode` 双路径与“不得滑向账号体系”。README 隐私段同步修正，并说明网关只维护绑定/令牌/限流、不保存音频或字幕内容（依 `store.py` 仅有 `invites/bind_challenges/auth_nonces/usage_daily` 四表核实）。
+- **CI**：新增 `.github/workflows/friend-gateway.yml`，在 `server/friend_gateway/**` 变更时用 uv 安装依赖并跑 `pytest`，补上原 Android CI 不覆盖后端的缺口。
+
+**版本**：versionCode 32 / versionName 2.2.0。
+
+**验证**：`server/friend_gateway` 本地 `uv run pytest` 11 项全过；`git diff --check` 通过。Android 侧本容器缺少 JDK 17 与 Android SDK，无法本地构建；本次在 Android 可编译代码上的改动仅 `versionName` 字符串，`assembleDebug` 与单测/Lint 依赖 CI 与合入前 `v2.2.0-friend.3` 记录的完整验证（53 项测试 0 失败、APK 签名通过）。
+
+---
+
 ## 2026-07-17 · v2.2.0-friend.3 修复好友实时翻译无法连接
 
 修复好友邀请码通道下，内容分析正常但同传/视频实时翻译长期停在黄色“准备连接”的问题：
