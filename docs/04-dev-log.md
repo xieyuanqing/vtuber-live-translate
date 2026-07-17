@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-17 · 仓库文档与主线发布整理
+
+为准备合并 `main`，按当前 v2.0.7 代码重写仓库入口文档：
+
+- 重写 `README.md`：补齐真实功能、架构、技术栈、构建、首次使用、权限、隐私、CI、项目结构、限制和许可证状态
+- 新增 `docs/README.md` 作为当前文档与历史资料的统一索引
+- 重写 `CLAUDE.md`，修正本地构建环境和已移除术语库等过时说明，明确会话快照与模式隔离约束
+- 更新路线图当前状态、Prompt 组合说明和 UI 实施状态，保留旧计划与旧日志作为历史记录
+- 修正内容分析客户端中仍把 Google Search 限定为 VTuber 场景的过时注释，不改请求逻辑
+
+**验证**：全部 Markdown 相对链接检查通过（0 个断链）；README 经 GitHub GFM API 实际渲染；文档敏感信息扫描 0 命中；`git diff --check` 通过；`:app:testDebugUnitTest :app:lintDebug :app:assembleDebug` 构建成功。
+
+**版本**：纯文档与仓库整理，不修改 v2.0.7 / versionCode 28。
+
+---
+
 ## 2026-07-17 · v2.0.7 Luminous Blue 最终 UI 复刻
 
 按照 `docs/06-ui-polish-plan.md` 完成原生 Android 界面重构，保持同传、视频、方案和本场上下文的数据边界不变。

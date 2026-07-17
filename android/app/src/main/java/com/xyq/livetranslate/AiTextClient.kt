@@ -80,7 +80,7 @@ object AiTextClient {
                     .put("responseMimeType", "application/json")
                     .put("temperature", 0.2)
             )
-            // 开启 Google Search grounding，让模型实时搜索 web 获取 VTuber 最新信息
+            // 开启 Google Search grounding，补充用户当前主题或视频的最新公开背景
             .put(
                 "tools", org.json.JSONArray()
                     .put(JSONObject().put("google_search", JSONObject()))

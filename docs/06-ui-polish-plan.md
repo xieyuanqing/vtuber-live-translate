@@ -1,7 +1,8 @@
 # 最终 UI 近 1:1 复刻计划（功能定型版）
 
-> 目标分支：`feat/final-ui`
-> 当前基线：v2.0.6 / versionCode 27
+> 实施状态：已完成，成果进入 v2.0.7 / versionCode 28
+> 目标分支：`feat/final-ui`（实施期间）
+> 实施基线：v2.0.6 / versionCode 27
 > 技术栈：原生 Android，Kotlin + XML Views + Material 3
 > 本文是本轮 UI 改造的实施说明；旧的分期、术语库和临时上下文位置方案全部作废。
 

@@ -40,7 +40,7 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
     "inputAudioTranscription": {},
     "outputAudioTranscription": {},
     "systemInstruction": {
-      "parts": [{"text": "<主播 prompt>"}]
+      "parts": [{"text": "<当前会话的组合提示词>"}]
     }
   }
 }
@@ -56,7 +56,7 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 
 - **云端可调参数就这么多**：`translationConfig` 只有 `targetLanguageCode`（BCP-47，默认 `en`）和 `echoTargetLanguage`（默认 `false`；true=输入已是目标语言时照常复述输出，false=保持沉默）两个字段，外加 `inputAudioTranscription` / `outputAudioTranscription` 两个转写开关。没有 VAD、voice、temperature 等常规 Live API 配置
 - **官方示例把转写开关放 generationConfig 里**，与我们实测的"必须放 setup 顶层"不一致；我们的结构实测可用，不改。若某天升级报 1007，先试官方结构
-- **官方声称翻译模式"不支持 tools 和 instructions"**，但 `systemInstruction` 实测可用且对专名有效——依赖的是未文档化行为，模型更新后可能失效，届时主播资料注入需要另想出路（如靠 transcript 后处理替换专名）
+- **官方声称翻译模式"不支持 tools 和 instructions"**，但 `systemInstruction` 实测可用且对场景约束、专名和翻译风格有改善——依赖的是未文档化行为，模型更新后可能失效，届时需要评估 transcript 后处理等替代方案
 - 语言代码表：中文官方写法是 `zh-Hans`（简体）/ `zh-Hant`（繁体）；我们用的 `zh` 实测可用
 - 模型能力表：函数调用 / Search grounding / 结构化输出 / 思考均不支持；输入仅音频（文本输入不支持）；翻译语音输出为 24kHz PCM（本 App 丢弃不播）
 - token 限制：输入 131,072 / 输出 65,536（直播场景配合 8 分半轮换用不满）
@@ -115,8 +115,14 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 - https://github.com/FaQxD233/gemini-live-translate （Windows，Python/PySide6）
 - https://github.com/letr1n1ty/Gemive （Chrome MV3 插件）
 
-## prompt
+## Prompt 组合
 
-- 模板与主播资料库的完整设计：原计划第 10 节
-- 实测有效的完整示例（風真いろは场次）：原计划 6.3 节
-- 阶段 0/1 先硬编码或本地预设文件，自动生成放阶段 2
+当前由 `PromptBuilder` 在会话启动前一次性生成 `systemInstruction`：
+
+1. 隐藏基础规则；
+2. 同传或视频模式规则；
+3. 当前模式的场景预设 / 自定义场景说明；
+4. 当前方案的高级提示词；
+5. 仅本场使用的临时上下文。
+
+同传和视频分别读取自己的 `TranslationPlan`，本场上下文不写入方案库。术语库已从当前提示词链路移除。原始计划中的主播资料和風真いろは示例仅作为早期实验记录，不再代表现行数据模型。
