@@ -19,7 +19,11 @@ class TranslationPlanStoreTest {
 
     @After
     fun clearStore() {
-        context.getSharedPreferences("translation_plans_v2", Context.MODE_PRIVATE)
+        context.getSharedPreferences("translation_plans_v3", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+        context.getSharedPreferences("scene_library_v1", Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
@@ -53,6 +57,61 @@ class TranslationPlanStoreTest {
         assertEquals("动漫方案", all.single().name)
         assertEquals("anime", all.single().plan.scenePresetId)
         assertEquals(originalDraft, TranslationPlanStore.loadDraft(context, mode))
+    }
+
+    @Test
+    fun missingSceneReferencesResolveAtUseTimeWithoutChangingStoredIds() {
+        clearStore()
+        val mode = TranslationMode.VIDEO
+        val custom = requireNotNull(SceneLibraryStore.create(context, mode, "临时", "临时场景"))
+        val plan = TranslationPlan.default(mode).copy(scenePresetId = custom.id)
+        TranslationPlanStore.saveDraft(context, plan)
+        val saved = TranslationPlanStore.saveAs(context, mode, "临时方案", plan)
+
+        SceneLibraryStore.delete(context, mode, custom.id)
+
+        val draft = TranslationPlanStore.loadDraft(context, mode)
+        val stored = TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan
+        val fallbackId = SceneLibraryStore.default(context, mode).id
+        assertEquals(custom.id, draft.scenePresetId)
+        assertEquals(custom.id, stored.scenePresetId)
+        assertEquals(fallbackId, SceneLibraryStore.resolve(context, mode, draft.scenePresetId).id)
+        assertEquals(fallbackId, SceneLibraryStore.resolve(context, mode, stored.scenePresetId).id)
+    }
+
+    @Test
+    fun fallbackDoesNotRewriteReferencesDuringUnrelatedCrud() {
+        clearStore()
+        val mode = TranslationMode.VIDEO
+        val original = TranslationPlan.default(mode).copy(scenePresetId = "anime")
+        TranslationPlanStore.saveDraft(context, original)
+        val saved = TranslationPlanStore.saveAs(context, mode, "动漫方案", original)
+
+        SceneLibraryStore.delete(context, mode, "anime")
+        val fallbackId = SceneLibraryStore.default(context, mode).id
+        assertEquals("anime", TranslationPlanStore.loadDraft(context, mode).scenePresetId)
+        assertEquals("anime", TranslationPlanStore.listSaved(context, mode).single().plan.scenePresetId)
+        assertEquals(
+            fallbackId,
+            SceneLibraryStore.resolve(context, mode, original.scenePresetId).id,
+        )
+
+        val renamed = TranslationPlanStore.updateSaved(
+            context,
+            mode,
+            saved.id,
+            "动漫方案（改名）",
+            TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan,
+        )
+        assertEquals("anime", renamed?.plan?.scenePresetId)
+        TranslationPlanStore.saveAs(context, mode, "无关方案", TranslationPlan.default(mode))
+        SceneLibraryStore.reset(context, mode)
+
+        assertEquals("anime", TranslationPlanStore.loadDraft(context, mode).scenePresetId)
+        assertEquals(
+            "anime",
+            TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan.scenePresetId,
+        )
     }
 
     @Test

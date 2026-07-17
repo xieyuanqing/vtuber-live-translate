@@ -16,6 +16,7 @@ data class HistorySession(
     val sourceLanguageCode: String,
     val targetLanguageCode: String,
     val scenePresetId: String,
+    val sceneLabel: String,
     val contextSummary: String,
     val startedAt: Long,
     val endedAt: Long? = null,
@@ -26,9 +27,6 @@ data class HistorySession(
             ?.let { (it - startedAt).coerceAtLeast(0L) }
             ?: segments.lastOrNull()?.elapsedMs?.coerceAtLeast(0L)
             ?: 0L
-
-    val sceneLabel: String
-        get() = ScenePromptCatalog.resolve(mode, scenePresetId).label
 
     val directionLabel: String
         get() = "${TranslationLanguageCatalog.source(sourceLanguageCode).label} → " +
@@ -43,6 +41,7 @@ object HistorySessionJson {
         put("sourceLanguageCode", session.sourceLanguageCode)
         put("targetLanguageCode", session.targetLanguageCode)
         put("scenePresetId", session.scenePresetId)
+        put("sceneLabel", session.sceneLabel)
         put("contextSummary", session.contextSummary)
         put("startedAt", session.startedAt)
         session.endedAt?.let { put("endedAt", it) }
@@ -79,16 +78,18 @@ object HistorySessionJson {
                 }
             }
         }
+        val scenePresetId = json.optString(
+            "scenePresetId",
+            TranslationPlan.defaultSceneId(mode),
+        )
         return HistorySession(
             id = json.optString("id"),
             title = json.optString("title"),
             mode = mode,
             sourceLanguageCode = json.optString("sourceLanguageCode", "auto"),
             targetLanguageCode = json.optString("targetLanguageCode", "zh"),
-            scenePresetId = json.optString(
-                "scenePresetId",
-                TranslationPlan.defaultSceneId(mode),
-            ),
+            scenePresetId = scenePresetId,
+            sceneLabel = json.optString("sceneLabel"),
             contextSummary = json.optString("contextSummary"),
             startedAt = json.optLong("startedAt"),
             endedAt = if (json.has("endedAt")) json.optLong("endedAt") else null,

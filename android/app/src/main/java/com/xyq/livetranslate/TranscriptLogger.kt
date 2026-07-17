@@ -14,8 +14,9 @@ import java.util.UUID
  */
 class TranscriptLogger(
     private val context: Context,
-    mode: TranslationMode = TranslationMode.VIDEO,
-    plan: TranslationPlan = TranslationPlan.default(mode),
+    mode: TranslationMode,
+    plan: TranslationPlan,
+    sceneLabel: String,
     title: String = "",
     contextSummary: String = "",
 ) {
@@ -37,6 +38,7 @@ class TranscriptLogger(
         sourceLanguageCode = plan.sourceLanguageCode,
         targetLanguageCode = plan.targetLanguageCode,
         scenePresetId = plan.scenePresetId,
+        sceneLabel = sceneLabel.trim().ifEmpty { plan.scenePresetId },
         contextSummary = contextSummary.trim().take(240),
         startedAt = startedAt,
     )

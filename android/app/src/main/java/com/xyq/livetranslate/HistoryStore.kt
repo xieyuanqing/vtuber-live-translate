@@ -17,6 +17,7 @@ object HistoryStore {
         val sourceLanguageCode: String,
         val targetLanguageCode: String,
         val scenePresetId: String,
+        val sceneLabel: String,
         val durationMs: Long,
         val summary: String,
     )
@@ -50,6 +51,7 @@ object HistoryStore {
                         sourceLanguageCode = session.sourceLanguageCode,
                         targetLanguageCode = session.targetLanguageCode,
                         scenePresetId = session.scenePresetId,
+                        sceneLabel = session.sceneLabel,
                         durationMs = session.durationMs,
                         summary = session.segments.lastOrNull()?.translatedText
                             ?: session.contextSummary,

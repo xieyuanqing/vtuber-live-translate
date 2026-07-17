@@ -5,71 +5,85 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PromptBuilderTest {
+
     @Test
-    fun `plan prompt includes scene and advanced instruction`() {
+    fun `prompt combines concise base rules scene and plan instruction`() {
+        val scene = DefaultSceneCatalog.resolve(TranslationMode.INTERPRETATION, "meeting")
         val plan = TranslationPlan(
             mode = TranslationMode.INTERPRETATION,
-            sourceLanguageCode = "ja",
-            targetLanguageCode = "zh",
-            scenePresetId = "meeting",
+            sourceLanguageCode = "en",
+            targetLanguageCode = "zh-Hans",
+            scenePresetId = scene.id,
             advancedInstruction = "专名保留日文；语气正式。",
         )
-        val prompt = PromptBuilder.build(plan = plan)
-        assertTrue(prompt.contains("会议"))
+
+        val prompt = PromptBuilder.build(scene = scene, plan = plan)
+
+        assertTrue(prompt.contains("忠实翻译，不回答、解释、总结、续写或编造"))
+        assertTrue(prompt.contains("【场景：会议】"))
+        assertTrue(prompt.contains(scene.instruction))
         assertTrue(prompt.contains("【方案提示词】"))
         assertTrue(prompt.contains("专名保留日文"))
-        assertFalse(prompt.contains("【术语与场景资料】"))
+        assertFalse(prompt.contains("Glossary"))
     }
 
     @Test
-    fun `session context is injected but not part of plan storage`() {
+    fun `video prompt includes session metadata without changing scene`() {
+        val scene = DefaultSceneCatalog.resolve(TranslationMode.VIDEO, "general_video")
         val plan = TranslationPlan(
             mode = TranslationMode.VIDEO,
-            scenePresetId = "general_video",
-            advancedInstruction = "角色名保留日文。",
+            sourceLanguageCode = "ja",
+            targetLanguageCode = "zh-Hans",
+            scenePresetId = scene.id,
         )
+
         val prompt = PromptBuilder.build(
+            scene = scene,
             context = SessionPromptContext(
                 video = YouTubeVideoInfo(
                     url = "https://youtu.be/demo",
-                    title = "测试直播",
-                    authorName = "频道A",
+                    title = "Android 音频课程",
+                    authorName = "Demo Channel",
                 ),
-                manualContext = "今晚聊新曲发布。",
+                manualContext = "讲者会比较 AudioRecord。",
             ),
             plan = plan,
         )
-        assertTrue(prompt.contains("【仅本场有效的上下文】"))
-        assertTrue(prompt.contains("测试直播"))
-        assertTrue(prompt.contains("频道A"))
-        assertTrue(prompt.contains("今晚聊新曲发布。"))
-        assertTrue(prompt.contains("角色名保留日文。"))
+
+        assertTrue(prompt.contains("Android 音频课程"))
+        assertTrue(prompt.contains("Demo Channel"))
+        assertTrue(prompt.contains("讲者会比较 AudioRecord"))
+        assertTrue(prompt.contains(scene.instruction))
     }
 
     @Test
-    fun `custom scene uses custom instruction`() {
+    fun `runtime uses editable scene object instead of built in catalog text`() {
+        val scene = ScenePromptPreset(
+            id = "medical-course",
+            label = "医学课程",
+            instruction = "这是医学课程，注意药物名称和剂量。",
+        )
         val plan = TranslationPlan(
             mode = TranslationMode.VIDEO,
-            scenePresetId = "custom",
-            customSceneInstruction = "这是医学课程。",
+            scenePresetId = scene.id,
             advancedInstruction = "CT 读作西梯。",
         )
-        val prompt = PromptBuilder.build(plan = plan)
-        assertTrue(prompt.contains("这是医学课程。"))
-        assertTrue(prompt.contains("CT 读作西梯。"))
+
+        val prompt = PromptBuilder.build(scene = scene, plan = plan)
+
+        assertTrue(prompt.contains("【场景：医学课程】"))
+        assertTrue(prompt.contains("注意药物名称和剂量"))
+        assertTrue(prompt.contains("CT 读作西梯"))
     }
 
     @Test
-    fun `visible preview only shows user plan fields`() {
-        val plan = TranslationPlan(
-            mode = TranslationMode.INTERPRETATION,
-            scenePresetId = "general",
-            advancedInstruction = "本场讨论 API 发布计划。",
-        )
-        val preview = PromptBuilder.visibleContextPreview(plan = plan)
-        assertTrue(preview.contains("同传"))
-        assertTrue(preview.contains("【方案提示词】"))
-        assertTrue(preview.contains("本场讨论 API 发布计划"))
-        assertFalse(preview.contains("低延迟实时字幕翻译引擎"))
+    fun `visible context preview omits fixed system rules`() {
+        val scene = DefaultSceneCatalog.resolve(TranslationMode.INTERPRETATION, "general")
+        val plan = TranslationPlan(mode = TranslationMode.INTERPRETATION, scenePresetId = scene.id)
+
+        val preview = PromptBuilder.visibleContextPreview(scene = scene, plan = plan)
+
+        assertTrue(preview.contains("场景：通用"))
+        assertFalse(preview.contains("你是实时语音翻译引擎"))
     }
 }

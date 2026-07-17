@@ -9,6 +9,7 @@ data class TranslationSessionSnapshot(
     val sourceLanguageCode: String = "",
     val targetLanguageCode: String = "",
     val scenePresetId: String = "",
+    val sceneLabel: String = "",
     val confirmedTranslations: List<String> = emptyList(),
     val currentTranslation: String = "",
     val sourceTail: String = "",
@@ -52,7 +53,11 @@ object StatusBus {
         sessionRef.set(TranslationSessionSnapshot(startedAtMs = nowMs))
     }
 
-    fun startSession(plan: TranslationPlan, nowMs: Long = System.currentTimeMillis()) {
+    fun startSession(
+        plan: TranslationPlan,
+        nowMs: Long = System.currentTimeMillis(),
+        sceneLabel: String = "",
+    ) {
         val normalized = plan.normalized()
         sessionRef.set(
             TranslationSessionSnapshot(
@@ -60,6 +65,7 @@ object StatusBus {
                 sourceLanguageCode = normalized.sourceLanguageCode,
                 targetLanguageCode = normalized.targetLanguageCode,
                 scenePresetId = normalized.scenePresetId,
+                sceneLabel = sceneLabel.trim(),
             ),
         )
     }

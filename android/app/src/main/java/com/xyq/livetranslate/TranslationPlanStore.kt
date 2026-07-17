@@ -6,24 +6,23 @@ import org.json.JSONObject
 import java.util.UUID
 
 /**
- * v2 翻译方案存储。两种模式使用完全独立的键；不读取 v1 的全局语言/提示词设置。
+ * v3 翻译方案存储。方案只引用场景 ID，场景内容由 SceneLibraryStore 统一管理。
  */
 object TranslationPlanStore {
-    private const val PREFS = "translation_plans_v2"
+    private const val PREFS = "translation_plans_v3"
     private const val KEY_DRAFT_PREFIX = "draft_"
     private const val KEY_SAVED_PREFIX = "saved_"
     private const val KEY_CORRUPT_BACKUP_PREFIX = "corrupt_saved_backup_"
 
     fun loadDraft(context: Context, mode: TranslationMode): TranslationPlan {
         val raw = prefs(context).getString(KEY_DRAFT_PREFIX + mode.storageKey, null)
-            ?: return TranslationPlan.default(mode)
+            ?: return defaultPlan(context, mode)
         return runCatching { decodePlan(JSONObject(raw), mode) }
-            .getOrElse { TranslationPlan.default(mode) }
-            .normalized()
+            .getOrElse { defaultPlan(context, mode) }
     }
 
     fun saveDraft(context: Context, plan: TranslationPlan) {
-        val normalized = plan.normalized()
+        val normalized = normalizeForStorage(context, plan)
         prefs(context).edit()
             .putString(KEY_DRAFT_PREFIX + normalized.mode.storageKey, encodePlan(normalized).toString())
             .apply()
@@ -35,7 +34,10 @@ object TranslationPlanStore {
             .apply()
     }
 
-    fun listSaved(context: Context, mode: TranslationMode): List<SavedTranslationPlan> {
+    fun listSaved(context: Context, mode: TranslationMode): List<SavedTranslationPlan> =
+        readSavedRaw(context, mode)
+
+    private fun readSavedRaw(context: Context, mode: TranslationMode): List<SavedTranslationPlan> {
         val raw = prefs(context).getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return emptyList()
         val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
         return buildList {
@@ -56,12 +58,9 @@ object TranslationPlanStore {
         val saved = SavedTranslationPlan(
             id = UUID.randomUUID().toString(),
             name = name.trim().ifEmpty { "未命名方案" },
-            plan = plan.copy(mode = mode).normalized(),
+            plan = normalizeForStorage(context, plan.copy(mode = mode)),
         )
-        val updated = listSaved(context, mode).toMutableList().apply {
-            val index = indexOfFirst { it.id == saved.id }
-            if (index >= 0) set(index, saved) else add(saved)
-        }
+        val updated = readSavedRaw(context, mode).toMutableList().apply { add(saved) }
         writeSavedPlans(context, mode, updated)
         return saved
     }
@@ -75,13 +74,13 @@ object TranslationPlanStore {
         plan: TranslationPlan,
     ): SavedTranslationPlan? {
         backupCorruptSavedData(context, mode)
-        val items = listSaved(context, mode).toMutableList()
+        val items = readSavedRaw(context, mode).toMutableList()
         val index = items.indexOfFirst { it.id == id }
         if (index < 0) return null
         val updated = SavedTranslationPlan(
             id = id,
             name = name.trim().ifEmpty { items[index].name },
-            plan = plan.copy(mode = mode).normalized(),
+            plan = normalizeForStorage(context, plan.copy(mode = mode)),
         )
         items[index] = updated
         writeSavedPlans(context, mode, items)
@@ -91,7 +90,7 @@ object TranslationPlanStore {
     @Synchronized
     fun deleteSavedPlan(context: Context, mode: TranslationMode, id: String) {
         backupCorruptSavedData(context, mode)
-        writeSavedPlans(context, mode, listSaved(context, mode).filterNot { it.id == id })
+        writeSavedPlans(context, mode, readSavedRaw(context, mode).filterNot { it.id == id })
     }
 
     fun applySaved(
@@ -109,9 +108,7 @@ object TranslationPlanStore {
         put("sourceLanguageCode", plan.sourceLanguageCode)
         put("targetLanguageCode", plan.targetLanguageCode)
         put("scenePresetId", plan.scenePresetId)
-        put("customSceneInstruction", plan.customSceneInstruction)
         put("advancedInstruction", plan.advancedInstruction)
-        put("glossaryKey", "")
     }
 
     internal fun decodePlan(json: JSONObject, expectedMode: TranslationMode): TranslationPlan {
@@ -133,9 +130,7 @@ object TranslationPlanStore {
                 "scenePresetId",
                 TranslationPlan.defaultSceneId(expectedMode),
             ),
-            customSceneInstruction = json.optString("customSceneInstruction", ""),
             advancedInstruction = json.optString("advancedInstruction", ""),
-            glossaryKey = "",
         ).normalized()
     }
 
@@ -169,7 +164,7 @@ object TranslationPlanStore {
         SavedTranslationPlan(
             id = id,
             name = name,
-            plan = decodePlan(item.getJSONObject("plan"), mode).normalized(),
+            plan = decodePlan(item.getJSONObject("plan"), mode),
         )
     }
 
@@ -183,6 +178,22 @@ object TranslationPlanStore {
         storage.edit()
             .putString(KEY_CORRUPT_BACKUP_PREFIX + mode.storageKey, raw)
             .apply()
+    }
+
+    private fun defaultPlan(context: Context, mode: TranslationMode) =
+        TranslationPlan(
+            mode = mode,
+            scenePresetId = SceneLibraryStore.default(context, mode).id,
+        )
+
+    private fun normalizeForStorage(context: Context, plan: TranslationPlan): TranslationPlan {
+        val requestedSceneId = plan.scenePresetId.trim()
+        val normalized = plan.normalized()
+        return normalized.copy(
+            scenePresetId = requestedSceneId.ifEmpty {
+                SceneLibraryStore.default(context, normalized.mode).id
+            },
+        )
     }
 
     private fun prefs(context: Context) =

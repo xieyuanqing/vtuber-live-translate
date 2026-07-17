@@ -51,7 +51,7 @@ class CaptureService : Service() {
         const val EXTRA_SOURCE_LANGUAGE = "sourceLanguage"
         const val EXTRA_TARGET_LANGUAGE = "targetLanguage"
         const val EXTRA_SCENE_PRESET = "scenePreset"
-        const val EXTRA_GLOSSARY_KEY = "glossaryKey"
+        const val EXTRA_SCENE_LABEL = "sceneLabel"
         const val EXTRA_SESSION_TITLE = "sessionTitle"
         const val EXTRA_SESSION_CONTEXT = "sessionContext"
         private const val TAG = "CaptureService"
@@ -100,12 +100,39 @@ class CaptureService : Service() {
         val mode = intent.getStringExtra(EXTRA_MODE)
             ?.takeIf { it == StatusBus.MODE_MIC || it == StatusBus.MODE_VIDEO }
         val sessionPrompt = intent.getStringExtra(EXTRA_SESSION_PROMPT)?.takeIf { it.isNotBlank() }
-        if (mode == null || sessionPrompt == null) {
-            StatusBus.connState = "error:缺少会话快照"
-            Log.e(TAG, "reject start without valid mode/prompt snapshot")
+        val translationMode = when (mode) {
+            StatusBus.MODE_MIC -> TranslationMode.INTERPRETATION
+            StatusBus.MODE_VIDEO -> TranslationMode.VIDEO
+            else -> null
+        }
+        val sourceLanguage = intent.getStringExtra(EXTRA_SOURCE_LANGUAGE)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val targetLanguage = intent.getStringExtra(EXTRA_TARGET_LANGUAGE)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val scenePresetId = intent.getStringExtra(EXTRA_SCENE_PRESET)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val sessionSceneLabel = intent.getStringExtra(EXTRA_SCENE_LABEL)?.trim()?.takeIf { it.isNotEmpty() }
+        val languageCodesValid = sourceLanguage != null && targetLanguage != null &&
+            TranslationLanguageCatalog.sources.any { it.code == sourceLanguage } &&
+            TranslationLanguageCatalog.targets.any { it.code == targetLanguage }
+        if (
+            mode == null || translationMode == null || sessionPrompt == null || sourceLanguage == null ||
+            targetLanguage == null || scenePresetId == null || sessionSceneLabel == null || !languageCodesValid
+        ) {
+            StatusBus.connState = "error:会话快照无效"
+            Log.e(TAG, "reject start without valid complete session snapshot")
             stopSelf()
             return
         }
+        val sessionPlan = TranslationPlan(
+            mode = translationMode,
+            sourceLanguageCode = sourceLanguage,
+            targetLanguageCode = targetLanguage,
+            scenePresetId = scenePresetId,
+        ).normalized()
         val apiKeysSnapshot = SettingsStore.apiKeyList(this).toList()
         if (apiKeysSnapshot.isEmpty()) {
             StatusBus.connState = "error:未配置 API Key"
@@ -167,27 +194,13 @@ class CaptureService : Service() {
         zhLines.clear()
         sessionLines.clear()
         lastConfirmedZh = ""
-        val translationMode = if (mode == StatusBus.MODE_MIC) {
-            TranslationMode.INTERPRETATION
-        } else {
-            TranslationMode.VIDEO
-        }
-        val sessionPlan = TranslationPlan(
-            mode = translationMode,
-            sourceLanguageCode = intent.getStringExtra(EXTRA_SOURCE_LANGUAGE)
-                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.DEFAULT_SOURCE_LANGUAGE,
-            targetLanguageCode = intent.getStringExtra(EXTRA_TARGET_LANGUAGE)
-                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.DEFAULT_TARGET_LANGUAGE,
-            scenePresetId = intent.getStringExtra(EXTRA_SCENE_PRESET)
-                ?.takeIf { it.isNotBlank() } ?: TranslationPlan.defaultSceneId(translationMode),
-            glossaryKey = intent.getStringExtra(EXTRA_GLOSSARY_KEY).orEmpty(),
-        ).normalized()
-        StatusBus.startSession(sessionPlan)
+        StatusBus.startSession(sessionPlan, sceneLabel = sessionSceneLabel)
         val sessionContext = intent.getStringExtra(EXTRA_SESSION_CONTEXT).orEmpty()
         logger = TranscriptLogger(
             context = this,
             mode = translationMode,
             plan = sessionPlan,
+            sceneLabel = sessionSceneLabel,
             title = intent.getStringExtra(EXTRA_SESSION_TITLE).orEmpty(),
             contextSummary = sessionContext,
         )

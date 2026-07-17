@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/space_8"
+    android:paddingTop="@dimen/space_8">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilSceneName"
+        style="@style/Field"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="场景名称">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSceneName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapSentences"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilSceneInstruction"
+        style="@style/Field"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:hint="场景提示词"
+        app:helperText="只写该场景需要特别关注的内容，核心翻译规则已由系统处理">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSceneInstruction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:minLines="4"
+            android:maxLines="10" />
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

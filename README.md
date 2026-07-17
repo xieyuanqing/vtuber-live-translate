@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.0.7-0058BC)
+![Version](https://img.shields.io/badge/version-2.1.0-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
@@ -14,7 +14,8 @@
 - **麦克风同传**：用于会议、课堂、采访、旅行交流等现场场景。
 - **视频字幕**：通过 MediaProjection 与 AudioPlaybackCapture 捕获应用内播放音频。
 - **模式隔离**：同传和视频分别维护语言方向、场景、方案与本场临时上下文，互不覆盖。
-- **翻译方案**：保存长期使用的语言、场景和提示词；方案库支持创建、应用、编辑与删除。
+- **可编辑场景库**：内置模板只用于首次初始化；可按模式新建、编辑、删除、设为默认或恢复模板。
+- **翻译方案**：保存长期使用的语言、场景引用和额外提示词；方案库支持创建、应用、编辑与删除。
 - **AI 内容整理**：可在业务页整理现场背景，或根据视频链接生成本场上下文；支持 Gemini 原生与 OpenAI 兼容接口。
 - **实时字幕**：提供 App 内字幕流，以及可拖动、暂停、切换普通/紧凑形态的系统悬浮字幕。
 - **结构化历史**：按会话保存语言、场景、时长、原文和译文，支持搜索、模式筛选、详情查看与 Markdown 复制。
@@ -27,13 +28,14 @@
 1. **同传**：麦克风实时翻译、本场背景和场景快捷配置。
 2. **视频**：应用内音频捕获、视频链接分析和悬浮字幕。
 3. **历史**：会话搜索、模式筛选与独立详情页。
-4. **设置**：翻译服务、内容分析 AI、方案库、字幕、诊断和关于信息。
+4. **设置**：翻译服务、内容分析 AI、场景库、方案库、字幕、诊断和关于信息。
 
 长期配置与临时信息有明确边界：
 
-- **方案**只保存可复用的长期配置，包括语言、场景和方案提示词。
+- **场景库**保存可复用的场景名称与场景提示词，同传和视频分别维护默认项。
+- **方案**只保存语言方向、场景 ID 和方案级额外提示词；修改场景会影响下次启动的引用方案。
 - **本场上下文**只存在于同传或视频主页，不写入方案库。
-- 会话启动时生成不可变快照；权限回调、重连和后台服务不会重新读取正在编辑的配置。
+- 会话启动时冻结完整 Prompt 和场景名称；权限回调、重连和后台服务不会重新读取正在编辑的配置。
 
 ## 工作原理
 
@@ -175,9 +177,9 @@ GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/w
 
 ## 当前状态
 
-当前版本：**v2.0.7（versionCode 28）**。
+当前版本：**v2.1.0（versionCode 29）**。
 
-v2.0.7 完成了 Luminous Blue 原生界面重构、同传/视频运行态整屏切换、历史搜索筛选与独立详情、方案原位编辑、会话快照冻结，以及悬浮字幕普通/紧凑双形态。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
+v2.1.0 将原先不可编辑的内置场景改为按模式隔离的本地场景库，支持场景编辑、新建、删除、默认选择与模板恢复；方案只引用场景 ID，运行中的会话和历史名称继续使用启动快照。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
 
 ## 已知限制
 

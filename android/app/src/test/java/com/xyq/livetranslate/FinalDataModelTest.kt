@@ -34,6 +34,7 @@ class FinalDataModelTest {
             sourceLanguageCode = "en",
             targetLanguageCode = "zh-Hans",
             scenePresetId = "lecture",
+            sceneLabel = "课堂",
             contextSummary = "Android 课程",
             startedAt = 1_000L,
             endedAt = 62_000L,
@@ -102,13 +103,14 @@ class FinalDataModelTest {
             scenePresetId = "livestream",
         )
 
-        StatusBus.startSession(plan, 456L)
+        StatusBus.startSession(plan, 456L, sceneLabel = "直播")
         val snapshot = StatusBus.sessionSnapshot()
 
         assertEquals(456L, snapshot.startedAtMs)
         assertEquals("ja", snapshot.sourceLanguageCode)
         assertEquals("en", snapshot.targetLanguageCode)
         assertEquals("livestream", snapshot.scenePresetId)
+        assertEquals("直播", snapshot.sceneLabel)
     }
 
     @Test
@@ -120,6 +122,7 @@ class FinalDataModelTest {
             sourceLanguageCode = "ja",
             targetLanguageCode = "zh-Hans",
             scenePresetId = "general_video",
+            sceneLabel = "通用视频",
             contextSummary = "",
             startedAt = 1_000L,
             endedAt = null,

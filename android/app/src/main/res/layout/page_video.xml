@@ -159,6 +159,7 @@
                 android:layout_marginTop="@dimen/space_8"
                 app:chipSpacingHorizontal="@dimen/space_8"
                 app:chipSpacingVertical="@dimen/space_8"
+                app:selectionRequired="true"
                 app:singleSelection="true" />
 
             <com.google.android.material.card.MaterialCardView

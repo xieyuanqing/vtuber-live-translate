@@ -11,8 +11,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -29,6 +28,8 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
             sessionContext: String,
             videoUrl: String,
         )
+
+        fun onSceneLibraryRequested(mode: TranslationMode)
     }
 
     var listener: Listener? = null
@@ -67,10 +68,8 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val title = view.findViewById<TextView>(R.id.tvPlanSheetTitle)
-        val chips = view.findViewById<ChipGroup>(R.id.chipGroupPlanScenes)
+        val sceneField = view.findViewById<MaterialAutoCompleteTextView>(R.id.acPlanScene)
         val nameLayout = view.findViewById<TextInputLayout>(R.id.tilPlanName)
-        val customSceneLayout = view.findViewById<TextInputLayout>(R.id.tilPlanCustomScene)
-        val customScene = view.findViewById<TextInputEditText>(R.id.etPlanCustomScene)
         val advanced = view.findViewById<TextInputEditText>(R.id.etPlanCustom)
         val name = view.findViewById<TextInputEditText>(R.id.etPlanName)
         val sourceLanguage = view.findViewById<MaterialAutoCompleteTextView>(R.id.acPlanSourceLanguage)
@@ -79,9 +78,39 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.btnClosePlanSheet).setOnClickListener { dismiss() }
 
         title.text = if (mode == TranslationMode.INTERPRETATION) "同传方案" else "视频方案"
-        name.setText(arguments?.getString(ARG_NAME).orEmpty())
-        customScene.setText(plan.customSceneInstruction)
+        val initialName = arguments?.getString(ARG_NAME).orEmpty()
+        val initialPlan = plan
+        name.setText(initialName)
         advanced.setText(plan.advancedInstruction)
+        view.findViewById<View>(R.id.btnManageScenes).setOnClickListener {
+            val openSceneLibrary = {
+                listener?.onSceneLibraryRequested(mode)
+                dismiss()
+            }
+            val hasUnsavedChanges = name.text?.toString().orEmpty() != initialName ||
+                advanced.text?.toString().orEmpty() != initialPlan.advancedInstruction ||
+                plan != initialPlan
+            if (hasUnsavedChanges) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("放弃未保存修改？")
+                    .setMessage("进入场景库会关闭当前方案编辑器。")
+                    .setNegativeButton("继续编辑", null)
+                    .setPositiveButton("放弃并前往") { _, _ -> openSceneLibrary() }
+                    .show()
+            } else {
+                openSceneLibrary()
+            }
+        }
+
+        val scenes = SceneLibraryStore.list(requireContext(), mode)
+        val selectedScene = SceneLibraryStore.resolve(requireContext(), mode, plan.scenePresetId)
+        sceneField.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, scenes.map { it.label }),
+        )
+        sceneField.setText(selectedScene.label, false)
+        sceneField.setOnItemClickListener { _, _, position, _ ->
+            scenes.getOrNull(position)?.let { plan = plan.copy(scenePresetId = it.id) }
+        }
 
         val sourceOptions = TranslationLanguageCatalog.sources
         val targetOptions = TranslationLanguageCatalog.targets
@@ -100,55 +129,10 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
             plan = plan.copy(targetLanguageCode = targetOptions[position].code)
         }
 
-        fun renderPlan(newPlan: TranslationPlan) {
-            plan = newPlan.copy(mode = mode, glossaryKey = "").normalized()
-            customScene.setText(plan.customSceneInstruction)
-            advanced.setText(plan.advancedInstruction)
-            val scene = ScenePromptCatalog.resolve(mode, plan.scenePresetId)
-            for (index in 0 until chips.childCount) {
-                val chip = chips.getChildAt(index) as? Chip ?: continue
-                chip.isChecked = chip.tag == scene.id
-            }
-            customSceneLayout.visibility = if (scene.id == "custom") View.VISIBLE else View.GONE
-        }
-
-        ScenePromptCatalog.presets(mode).forEach { preset ->
-            chips.addView(Chip(requireContext()).apply {
-                id = View.generateViewId()
-                text = preset.label
-                tag = preset.id
-                isCheckable = true
-                isCheckedIconVisible = false
-                minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
-                chipBackgroundColor = requireContext().getColorStateList(R.color.selector_scene_chip_bg)
-                setTextColor(requireContext().getColorStateList(R.color.selector_scene_chip_text))
-                chipStrokeWidth = 0f
-                setOnCheckedChangeListener { _, checked ->
-                    if (checked) {
-                        plan = plan.copy(scenePresetId = preset.id, glossaryKey = "")
-                        customSceneLayout.visibility =
-                            if (preset.id == "custom") View.VISIBLE else View.GONE
-                    }
-                }
-            })
-        }
-        renderPlan(plan)
-
         apply.setOnClickListener {
-            val selectedScene = chips.findViewById<Chip>(chips.checkedChipId)?.tag as? String
-                ?: plan.scenePresetId
             plan = plan.copy(
-                scenePresetId = selectedScene,
-                customSceneInstruction = customScene.text?.toString().orEmpty(),
                 advancedInstruction = advanced.text?.toString().orEmpty(),
-                glossaryKey = "",
             ).normalized()
-            if (plan.scenePresetId == "custom" && plan.customSceneInstruction.isBlank()) {
-                customSceneLayout.error = "请填写自定义场景要求"
-                customScene.requestFocus()
-                return@setOnClickListener
-            }
-            customSceneLayout.error = null
             val planName = name.text?.toString()?.trim().orEmpty()
             nameLayout.error = null
             if (savedPlanId.isNotEmpty()) {

@@ -129,36 +129,50 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <TextView
-                style="@style/LuminousSectionLabel"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_24"
-                android:text="翻译场景" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupPlanScenes"
+                <TextView
+                    style="@style/LuminousSectionLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="翻译场景" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnManageScenes"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/touch_target"
+                    android:text="管理场景库"
+                    android:textAllCaps="false"
+                    android:textColor="@color/brand" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
-                app:chipSpacingHorizontal="8dp"
-                app:chipSpacingVertical="8dp"
-                app:selectionRequired="true"
-                app:singleSelection="true" />
+                android:hint="场景"
+                app:boxBackgroundColor="@color/surface_low"
+                app:boxCornerRadiusBottomEnd="@dimen/field_radius"
+                app:boxCornerRadiusBottomStart="@dimen/field_radius"
+                app:boxCornerRadiusTopEnd="@dimen/field_radius"
+                app:boxCornerRadiusTopStart="@dimen/field_radius"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="1.5dp"
+                app:helperText="场景提示词可在场景库中查看和编辑">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPlanCustomScene"
-                style="@style/Field"
-                android:layout_marginTop="@dimen/space_12"
-                android:hint="自定义场景说明"
-                android:visibility="gone"
-                app:helperText="选择“自定义”时生效">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPlanCustomScene"
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/acPlanScene"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:minLines="2"
-                    android:maxLines="5" />
+                    android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
