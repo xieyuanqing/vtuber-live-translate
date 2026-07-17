@@ -58,7 +58,7 @@ CaptureService
 | `GeminiLiveClient.kt` | Gemini Live setup、WebSocket、主动轮换与断线重连 |
 | `PcmProcessor.kt` | 音频重采样和分块 |
 | `SubtitleStabilizer.kt` | 流式字幕稳定、确认与去重 |
-| `SubtitleOverlay.kt` | WindowManager 悬浮字幕、拖动、普通/紧凑样式 |
+| `SubtitleOverlay.kt` | WindowManager 悬浮字幕、拖动、独立暂停与侧边收起 |
 | `TranslationPlan.kt` | 当前长期方案模型与语言/场景边界 |
 | `TranslationPlanStore.kt` | 模式隔离的草稿和命名方案持久化 |
 | `SceneLibraryStore.kt` | 可编辑场景、模式默认项及初始化模板持久化 |

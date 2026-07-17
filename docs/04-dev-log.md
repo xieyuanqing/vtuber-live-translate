@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-17 · v2.2.0-friend.2 悬浮字幕真实设备修正
+
+根据真实设备截图修正视频悬浮字幕：
+
+- 移除 `WRAP_CONTENT` 根窗中的 `MATCH_PARENT` 高度装饰子 View，改由根 View 自绘蓝色强调条，避免部分 ROM 将半透明悬浮层测成整屏并压暗整个画面
+- 展开态改为约屏幕宽度 88%、最大 360dp 的可拖动字幕面板，不再贴满屏幕宽度
+- 原“紧凑字幕”改为真正的侧边收起：点击右上角收起键后吸附到最近屏幕边缘，仅保留 44×60dp 小胶囊；点击胶囊恢复原位置
+- 收起只改变悬浮层外观，不发送暂停或停止指令；暂停按钮继续作为独立操作
+- 新增悬浮窗几何与 WindowManager 实例测试，覆盖根窗非全屏约束、展开尺寸、宽屏上限、紧凑屏适配、左右吸附、收起/恢复和纵向边界，并验证收起不改变暂停状态
+
+**版本**：versionCode 31 / versionName 2.2.0-friend.2。
+
+**验证**：`clean :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` 全量成功；11 个测试报告共 52 项测试，0 failures / 0 errors / 0 skipped；`git diff --check` 通过。Debug APK 为 `com.xyq.livetranslate` / minSdk 29 / targetSdk 35，大小 `13,386,377 bytes`，APK Signature Scheme v2 验证通过，SHA-256 为 `a86c0671e922550fdf7bba72124a2f73a734b8788aa30cfb7d9fc77178f250b5`。
+
+---
+
 ## 2026-07-17 · v2.1.0 可编辑场景库与精简 Prompt
 
 将原先由代码直接解析的固定场景预设改为本地可编辑场景库，场景配置从翻译方案中独立出来。
