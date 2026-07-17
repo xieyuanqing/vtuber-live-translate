@@ -4,7 +4,6 @@ import android.util.Base64
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -71,6 +70,13 @@ class GeminiLiveClient(
             429 -> "好友测试额度已用完"
             else -> null
         }
+
+        /**
+         * Request.Builder 支持 ws/wss 并会规范化为 http/https；HttpUrl.toHttpUrl() 不支持 ws/wss。
+         * 好友通道签名必须从规范化后的 Request URL 取 path，否则会在握手发出前直接抛异常。
+         */
+        internal fun websocketEncodedPath(url: String): String =
+            Request.Builder().url(url).build().url.encodedPath
     }
 
     private val http = OkHttpClient.Builder()
@@ -156,7 +162,7 @@ class GeminiLiveClient(
             if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
                 header("Authorization", "Bearer $key")
                 if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
-                val path = url.toHttpUrl().encodedPath
+                val path = websocketEncodedPath(url)
                 requestSignatureProvider
                     ?.invoke("GET", path, byteArrayOf(), key)
                     ?.forEach(::header)

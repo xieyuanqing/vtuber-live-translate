@@ -29,4 +29,17 @@ class GeminiLiveClientPolicyTest {
         assertNull(GeminiLiveClient.gatewayHttpFailureReason(null))
         assertNull(GeminiLiveClient.gatewayHttpFailureReason(503))
     }
+
+    @Test
+    fun websocketSigningPathAcceptsWssGatewayUrl() {
+        val path = GeminiLiveClient.websocketEncodedPath(
+            "wss://translate-test.994431.xyz/gateway/ws/" +
+                "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+        )
+
+        assertEquals(
+            "/gateway/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent",
+            path,
+        )
+    }
 }

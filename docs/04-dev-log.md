@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-17 · v2.2.0-friend.3 修复好友实时翻译无法连接
+
+修复好友邀请码通道下，内容分析正常但同传/视频实时翻译长期停在黄色“准备连接”的问题：
+
+- 根本原因是好友 Live 在生成设备签名时直接对 `wss://` 地址调用 OkHttp `String.toHttpUrl()`；该 API 只接受 `http/https`，会在 WebSocket 握手发出前抛出 `IllegalArgumentException`
+- 个人 API Key 路径不需要设备签名，因此不触发；好友内容分析使用 `https://`，也不触发，这解释了两条链路表现不一致
+- 改为通过 `Request.Builder.url()` 对 `ws/wss` 地址做 OkHttp 原生规范化，再从规范化结果读取签名 path
+- 新增 `wss://translate-test.994431.xyz/gateway/ws/...` 回归测试，防止签名路径解析再次阻断好友 Live
+
+**版本**：versionCode 32 / versionName 2.2.0-friend.3。
+
+**验证**：真实 OkHttp 4.12.0 行为验证确认 `Request.Builder.url(wss://...)` 可用而 `HttpUrl.get(wss://...)` 抛错；公网好友网关端到端握手获得 HTTP 101 与 Gemini `setupComplete`。本地 `clean :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` 全量成功；11 个测试报告共 53 项测试，0 failures / 0 errors / 0 skipped；`git diff --check` 通过。Debug APK 为 `com.xyq.livetranslate` / versionCode 32 / versionName 2.2.0-friend.3 / minSdk 29 / targetSdk 35，大小 `13,386,581 bytes`，APK Signature Scheme v2 验证通过，SHA-256 为 `bd35d8f507a977172f0368c86295aff7da945b726e545d4b8f3626fdda740297`。
+
+---
+
 ## 2026-07-17 · v2.2.0-friend.2 悬浮字幕真实设备修正
 
 根据真实设备截图修正视频悬浮字幕：
