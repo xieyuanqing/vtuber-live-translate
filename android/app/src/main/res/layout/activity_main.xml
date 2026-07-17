@@ -28,6 +28,9 @@
         <include layout="@layout/page_history" />
         <include layout="@layout/page_settings" />
 
+        <!-- 历史详情与设置子页共用同一套返回栈表现。 -->
+        <include layout="@layout/page_history_detail" />
+
         <!-- 设置二级页继续独立承载，进入时隐藏底栏并显示返回箭头。 -->
         <include layout="@layout/page_plan_library" />
         <include layout="@layout/page_settings_translate" />

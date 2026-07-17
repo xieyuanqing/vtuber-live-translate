@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var pageInterp: View
     private lateinit var pageVideo: View
     private lateinit var pageHistory: View
+    private lateinit var pageHistoryDetail: View
     private lateinit var pageSettings: View
     private var currentMainTabId = R.id.nav_interp
 
@@ -96,11 +97,20 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private var planLibraryMode: TranslationMode = TranslationMode.INTERPRETATION
 
     // 同传页（麦克风）
+    private lateinit var interpIdleContent: View
+    private lateinit var interpRunningContent: View
+    private lateinit var chipGroupInterpHomeScenes: ChipGroup
     private lateinit var tvInterpStatus: TextView
     private lateinit var tvInterpSubStatus: TextView
+    private lateinit var tvInterpRunningStatus: TextView
+    private lateinit var viewInterpRunningStatusDot: View
+    private lateinit var tvInterpElapsed: TextView
+    private lateinit var tvInterpRunningMeta: TextView
+    private lateinit var interpConfirmedList: LinearLayout
     private lateinit var tvInterpAudioLevel: TextView
     private lateinit var pbInterpAudio: ProgressBar
     private lateinit var btnInterpToggle: Button
+    private lateinit var btnInterpStop: MaterialButton
     private lateinit var tvInterpTargetLanguageLabel: TextView
     private lateinit var tvInterpZh: TextView
     private lateinit var tvInterpJa: TextView
@@ -112,11 +122,23 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private lateinit var tvInterpAnalyzeStatus: TextView
 
     // 视频页（原实时翻译：系统内录 + 悬浮字幕）
+    private lateinit var videoIdleContent: View
+    private lateinit var videoRunningContent: View
+    private lateinit var chipGroupVideoHomeScenes: ChipGroup
     private lateinit var tvHeroStatus: TextView
+    private lateinit var viewVideoRunningStatusDot: View
     private lateinit var tvHeroSubStatus: TextView
+    private lateinit var tvVideoElapsed: TextView
+    private lateinit var tvVideoRunningMeta: TextView
+    private lateinit var videoConfirmedList: LinearLayout
     private lateinit var tvAudioLevel: TextView
     private lateinit var pbAudio: ProgressBar
     private lateinit var btnToggle: Button
+    private lateinit var btnVideoStop: MaterialButton
+    private lateinit var rowOverlayPermission: View
+    private lateinit var viewOverlayPermissionDot: View
+    private lateinit var tvOverlayPermissionStatus: TextView
+    private lateinit var btnOverlayPermissionSettings: View
     private lateinit var tvVideoTargetLanguageLabel: TextView
     private lateinit var tvLiveZh: TextView
     private lateinit var tvLiveJa: TextView
@@ -130,12 +152,22 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     // 历史页
     private lateinit var btnRefreshHistory: Button
+    private lateinit var etHistorySearch: EditText
+    private lateinit var chipHistoryAll: Chip
+    private lateinit var chipHistoryInterp: Chip
+    private lateinit var chipHistoryVideo: Chip
     private lateinit var tvHistoryEmpty: TextView
     private lateinit var historyList: LinearLayout
     private lateinit var cardHistoryDetail: View
     private lateinit var tvHistoryTitle: TextView
     private lateinit var btnCopyHistory: Button
     private lateinit var tvHistoryDetail: TextView
+    private lateinit var tvHistoryDetailMeta: TextView
+    private lateinit var tvHistoryDetailContext: TextView
+    private lateinit var tvHistoryDetailEmpty: TextView
+    private lateinit var historyDetailSegments: LinearLayout
+    private var allHistoryItems: List<HistoryStore.HistoryItem> = emptyList()
+    private var historyModeFilter: TranslationMode? = null
 
     // 设置页
     private lateinit var etApiKeys: EditText
@@ -251,7 +283,14 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
         btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
+        btnVideoStop.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
         btnInterpToggle.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
+        btnInterpStop.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
+        val openOverlaySettings = View.OnClickListener {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        }
+        rowOverlayPermission.setOnClickListener(openOverlaySettings)
+        btnOverlayPermissionSettings.setOnClickListener(openOverlaySettings)
 
         showPage(R.id.nav_interp)
     }
@@ -279,6 +318,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     }
 
     override fun onPause() {
+        if (::etSecondAiKey.isInitialized) saveSecondAiSettings()
         super.onPause()
         ui.removeCallbacks(refresh)
     }
@@ -304,6 +344,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pageInterp = findViewById(R.id.pageInterp)
         pageVideo = findViewById(R.id.pageVideo)
         pageHistory = findViewById(R.id.pageHistory)
+        pageHistoryDetail = findViewById(R.id.pageHistoryDetail)
         pageSettings = findViewById(R.id.pageSettings)
         pageSettingsTranslate = findViewById(R.id.pageSettingsTranslate)
         pageSettingsSubtitle = findViewById(R.id.pageSettingsSubtitle)
@@ -312,7 +353,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
         pagePlanLibrary = findViewById(R.id.pagePlanLibrary)
         settingsSubViews = listOf(
-            pagePlanLibrary,
+            pageHistoryDetail, pagePlanLibrary,
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
         )
@@ -330,11 +371,20 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         planLibraryList = findViewById(R.id.planLibraryList)
         fabNewPlan = findViewById(R.id.fabNewPlan)
 
+        interpIdleContent = findViewById(R.id.interpIdleContent)
+        interpRunningContent = findViewById(R.id.interpRunningContent)
+        chipGroupInterpHomeScenes = findViewById(R.id.chipGroupInterpHomeScenes)
         tvInterpStatus = findViewById(R.id.tvInterpStatus)
         tvInterpSubStatus = findViewById(R.id.tvInterpSubStatus)
+        tvInterpRunningStatus = findViewById(R.id.tvInterpRunningStatus)
+        viewInterpRunningStatusDot = findViewById(R.id.viewInterpRunningStatusDot)
+        tvInterpElapsed = findViewById(R.id.tvInterpElapsed)
+        tvInterpRunningMeta = findViewById(R.id.tvInterpRunningMeta)
+        interpConfirmedList = findViewById(R.id.interpConfirmedList)
         tvInterpAudioLevel = findViewById(R.id.tvInterpAudioLevel)
         pbInterpAudio = findViewById(R.id.pbInterpAudio)
         btnInterpToggle = findViewById(R.id.btnInterpToggle)
+        btnInterpStop = findViewById(R.id.btnInterpStop)
         tvInterpTargetLanguageLabel = findViewById(R.id.tvInterpTargetLanguageLabel)
         tvInterpZh = findViewById(R.id.tvInterpZh)
         tvInterpJa = findViewById(R.id.tvInterpJa)
@@ -345,11 +395,23 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         btnInterpAnalyzeContext = findViewById(R.id.btnInterpAnalyzeContext)
         tvInterpAnalyzeStatus = findViewById(R.id.tvInterpAnalyzeStatus)
 
+        videoIdleContent = findViewById(R.id.videoIdleContent)
+        videoRunningContent = findViewById(R.id.videoRunningContent)
+        chipGroupVideoHomeScenes = findViewById(R.id.chipGroupVideoHomeScenes)
         tvHeroStatus = findViewById(R.id.tvHeroStatus)
+        viewVideoRunningStatusDot = findViewById(R.id.viewVideoRunningStatusDot)
         tvHeroSubStatus = findViewById(R.id.tvHeroSubStatus)
+        tvVideoElapsed = findViewById(R.id.tvVideoElapsed)
+        tvVideoRunningMeta = findViewById(R.id.tvVideoRunningMeta)
+        videoConfirmedList = findViewById(R.id.videoConfirmedList)
         tvAudioLevel = findViewById(R.id.tvAudioLevel)
         pbAudio = findViewById(R.id.pbAudio)
         btnToggle = findViewById(R.id.btnToggle)
+        btnVideoStop = findViewById(R.id.btnVideoStop)
+        rowOverlayPermission = findViewById(R.id.rowOverlayPermission)
+        viewOverlayPermissionDot = findViewById(R.id.viewOverlayPermissionDot)
+        tvOverlayPermissionStatus = findViewById(R.id.tvOverlayPermissionStatus)
+        btnOverlayPermissionSettings = findViewById(R.id.btnOverlayPermissionSettings)
         tvVideoTargetLanguageLabel = findViewById(R.id.tvVideoTargetLanguageLabel)
         tvLiveZh = findViewById(R.id.tvLiveZh)
         tvLiveJa = findViewById(R.id.tvLiveJa)
@@ -362,12 +424,20 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         tvVideoAnalyzeStatus = findViewById(R.id.tvVideoAnalyzeStatus)
 
         btnRefreshHistory = findViewById(R.id.btnRefreshHistory)
+        etHistorySearch = findViewById(R.id.etHistorySearch)
+        chipHistoryAll = findViewById(R.id.chipHistoryAll)
+        chipHistoryInterp = findViewById(R.id.chipHistoryInterp)
+        chipHistoryVideo = findViewById(R.id.chipHistoryVideo)
         tvHistoryEmpty = findViewById(R.id.tvHistoryEmpty)
         historyList = findViewById(R.id.historyList)
         cardHistoryDetail = findViewById(R.id.cardHistoryDetail)
         tvHistoryTitle = findViewById(R.id.tvHistoryTitle)
         btnCopyHistory = findViewById(R.id.btnCopyHistory)
         tvHistoryDetail = findViewById(R.id.tvHistoryDetail)
+        tvHistoryDetailMeta = findViewById(R.id.tvHistoryDetailMeta)
+        tvHistoryDetailContext = findViewById(R.id.tvHistoryDetailContext)
+        tvHistoryDetailEmpty = findViewById(R.id.tvHistoryDetailEmpty)
+        historyDetailSegments = findViewById(R.id.historyDetailSegments)
 
         etApiKeys = findViewById(R.id.etApiKeys)
         etBaseUrl = findViewById(R.id.etBaseUrl)
@@ -467,6 +537,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     }
 
     private fun closeSettingsSub() {
+        if (settingsSubId == R.id.pageSettingsProfileAi) saveSecondAiSettings()
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
         val returnTab = settingsReturnTabId
@@ -655,6 +726,25 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     private fun setupHistoryPage() {
         btnRefreshHistory.setOnClickListener { reloadHistory() }
+        etHistorySearch.doAfterTextChanged { renderHistoryList() }
+        chipHistoryAll.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                historyModeFilter = null
+                renderHistoryList()
+            }
+        }
+        chipHistoryInterp.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                historyModeFilter = TranslationMode.INTERPRETATION
+                renderHistoryList()
+            }
+        }
+        chipHistoryVideo.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                historyModeFilter = TranslationMode.VIDEO
+                renderHistoryList()
+            }
+        }
         btnCopyHistory.setOnClickListener {
             val text = tvHistoryDetail.text.toString()
             if (text.isBlank()) return@setOnClickListener
@@ -665,44 +755,91 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     }
 
     private fun reloadHistory() {
-        val items = HistoryStore.list(this)
+        allHistoryItems = HistoryStore.list(this)
+        renderHistoryList()
+    }
+
+    private fun renderHistoryList() {
+        val query = etHistorySearch.text?.toString().orEmpty().trim().lowercase()
+        val items = allHistoryItems.filter { item ->
+            val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
+                TranslationLanguageCatalog.target(item.targetLanguageCode).label
+            val scene = ScenePromptCatalog.resolve(item.mode, item.scenePresetId).label
+            val matchesMode = historyModeFilter == null || item.mode == historyModeFilter
+            val haystack = listOf(item.title, item.summary, direction, scene).joinToString(" ").lowercase()
+            matchesMode && (query.isEmpty() || query in haystack)
+        }
         historyList.removeAllViews()
+        tvHistoryEmpty.text = if (allHistoryItems.isEmpty()) "暂无历史记录" else "没有匹配的记录"
         tvHistoryEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         items.forEach { item ->
-            val b = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_8) }
-                isAllCaps = false
-                minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
-                cornerRadius = resources.getDimensionPixelSize(R.dimen.field_radius)
-                insetTop = 0
-                insetBottom = 0
-                backgroundTintList = getColorStateList(R.color.surface_white)
-                setTextColor(getColor(R.color.text_primary))
-                val modeLabel = item.mode.label
-                val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
-                    TranslationLanguageCatalog.target(item.targetLanguageCode).label
-                val summary = item.summary.trim().replace('\n', ' ').take(72)
-                text = buildString {
-                    append(item.title)
-                    append("\n").append(modeLabel).append(" · ").append(direction)
-                    append(" · ").append(HistoryStore.formatDuration(item.durationMs))
-                    append("\n").append(HistoryStore.formatTime(item.updatedAt))
-                    if (summary.isNotEmpty()) append("\n").append(summary)
-                }
-                setOnClickListener { showHistoryDetail(item) }
-            }
-            historyList.addView(b)
+            val card = layoutInflater.inflate(R.layout.item_history_session, historyList, false)
+            val icon = card.findViewById<TextView>(R.id.tvHistoryItemIcon)
+            val mode = card.findViewById<TextView>(R.id.tvHistoryItemMode)
+            val title = card.findViewById<TextView>(R.id.tvHistoryItemTitle)
+            val time = card.findViewById<TextView>(R.id.tvHistoryItemTime)
+            val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
+            val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
+            val isInterpretation = item.mode == TranslationMode.INTERPRETATION
+            icon.text = if (isInterpretation) "麦" else "播"
+            icon.setTextColor(getColor(if (isInterpretation) R.color.brand else R.color.warning))
+            ViewCompat.setBackgroundTintList(
+                icon,
+                getColorStateList(if (isInterpretation) R.color.primary_fixed else R.color.warning_container),
+            )
+            mode.text = item.mode.label
+            mode.setTextColor(getColor(if (isInterpretation) R.color.brand else R.color.warning))
+            title.text = item.title
+            time.text = HistoryStore.formatTime(item.updatedAt)
+            val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
+                TranslationLanguageCatalog.target(item.targetLanguageCode).label
+            val scene = ScenePromptCatalog.resolve(item.mode, item.scenePresetId).label
+            meta.text = "$direction · $scene · ${HistoryStore.formatDuration(item.durationMs)}"
+            summary.text = item.summary.trim().replace('\n', ' ').ifBlank { "暂无字幕摘要" }
+            card.setOnClickListener { showHistoryDetail(item) }
+            card.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_12) }
+            historyList.addView(card)
         }
     }
 
     private fun showHistoryDetail(item: HistoryStore.HistoryItem) {
-        val content = HistoryStore.read(this, item.fileName)
-        tvHistoryTitle.text = item.title
-        tvHistoryDetail.text = content.ifBlank { "（这份记录是空的）" }
-        cardHistoryDetail.visibility = View.VISIBLE
+        val session = HistoryStore.load(this, item.fileName)
+        if (session == null) {
+            toast("记录不存在或已损坏")
+            reloadHistory()
+            return
+        }
+        tvHistoryTitle.text = session.title
+        tvHistoryDetail.text = HistoryStore.toMarkdown(session)
+        tvHistoryDetailMeta.text = buildString {
+            append(session.mode.label).append(" · ").append(session.directionLabel)
+            append("\n").append(session.sceneLabel)
+            append(" · ").append(HistoryStore.formatTime(session.startedAt))
+            append(" · ").append(HistoryStore.formatDuration(session.durationMs))
+        }
+        tvHistoryDetailContext.text = "本场背景\n${session.contextSummary}"
+        tvHistoryDetailContext.visibility = if (session.contextSummary.isBlank()) View.GONE else View.VISIBLE
+        historyDetailSegments.removeAllViews()
+        tvHistoryDetailEmpty.visibility = if (session.segments.isEmpty()) View.VISIBLE else View.GONE
+        session.segments.forEach { segment ->
+            val row = layoutInflater.inflate(R.layout.item_history_segment, historyDetailSegments, false)
+            val elapsed = row.findViewById<TextView>(R.id.tvHistorySegmentTime)
+            val source = row.findViewById<TextView>(R.id.tvHistorySegmentSource)
+            val translation = row.findViewById<TextView>(R.id.tvHistorySegmentTranslation)
+            elapsed.text = HistoryStore.formatDuration(segment.elapsedMs)
+            source.text = segment.sourceText
+            source.visibility = if (segment.sourceText.isBlank()) View.GONE else View.VISIBLE
+            translation.text = segment.translatedText
+            row.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_12) }
+            historyDetailSegments.addView(row)
+        }
+        openSettingsSub(R.id.pageHistoryDetail, "历史详情", returnTabId = R.id.nav_history)
     }
 
     // ---------- 设置 ----------
@@ -814,8 +951,45 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             planLibraryMode = TranslationMode.VIDEO
             openSettingsSub(R.id.pagePlanLibrary, "方案库", returnTabId = R.id.nav_video)
         }
+        setupHomeSceneChips(TranslationMode.INTERPRETATION)
+        setupHomeSceneChips(TranslationMode.VIDEO)
         updatePlanSummary(TranslationMode.INTERPRETATION)
         updatePlanSummary(TranslationMode.VIDEO)
+    }
+
+    private fun setupHomeSceneChips(mode: TranslationMode) {
+        val group = if (mode == TranslationMode.INTERPRETATION) {
+            chipGroupInterpHomeScenes
+        } else {
+            chipGroupVideoHomeScenes
+        }
+        val current = TranslationPlanStore.loadDraft(this, mode)
+        group.removeAllViews()
+        ScenePromptCatalog.presets(mode).forEach { preset ->
+            group.addView(Chip(this).apply {
+                text = preset.label
+                isCheckable = true
+                isCheckedIconVisible = false
+                isChecked = preset.id == current.scenePresetId
+                minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
+                chipBackgroundColor = getColorStateList(R.color.selector_scene_chip_bg)
+                setTextColor(getColorStateList(R.color.selector_scene_chip_text))
+                chipStrokeWidth = 0f
+                setOnClickListener {
+                    if (preset.id == "custom") {
+                        openPlanEditor(mode)
+                        setupHomeSceneChips(mode)
+                    } else {
+                        val latest = TranslationPlanStore.loadDraft(this@MainActivity, mode)
+                        TranslationPlanStore.saveDraft(
+                            this@MainActivity,
+                            latest.copy(scenePresetId = preset.id),
+                        )
+                        updatePlanSummary(mode)
+                    }
+                }
+            })
+        }
     }
 
     private fun setupPlanLibraryPage() {
@@ -832,8 +1006,16 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         }
     }
 
-    private fun openPlanEditor(mode: TranslationMode, planName: String = "") {
-        TranslationPlanBottomSheet.newInstance(mode, planName = planName).also { sheet ->
+    private fun openPlanEditor(
+        mode: TranslationMode,
+        planName: String = "",
+        savedPlanId: String = "",
+    ) {
+        TranslationPlanBottomSheet.newInstance(
+            mode,
+            planName = planName,
+            savedPlanId = savedPlanId,
+        ).also { sheet ->
             sheet.listener = this
             sheet.show(supportFragmentManager, "plan_${mode.storageKey}")
         }
@@ -878,6 +1060,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                 isCheckable = false
                 isFocusable = false
                 minHeight = resources.getDimensionPixelSize(R.dimen.touch_target) / 2
+                chipBackgroundColor = getColorStateList(R.color.primary_fixed)
+                setTextColor(getColor(R.color.brand))
+                chipStrokeWidth = 0f
             })
         }
 
@@ -897,9 +1082,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             toast("已应用：${saved.name}")
         }
         edit.setOnClickListener {
-            TranslationPlanStore.applySaved(this, planLibraryMode, saved.id)
-            updatePlanSummary(planLibraryMode)
-            openPlanEditor(planLibraryMode)
+            openPlanEditor(
+                mode = planLibraryMode,
+                planName = saved.name,
+                savedPlanId = saved.id,
+            )
         }
         delete.setOnClickListener {
             TranslationPlanStore.deleteSavedPlan(this, planLibraryMode, saved.id)
@@ -930,6 +1117,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             }
         }
         updatePlanSummary(mode)
+        setupHomeSceneChips(mode)
         if (settingsSubId == R.id.pagePlanLibrary) {
             reloadPlanLibrary()
         }
@@ -1213,12 +1401,46 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         consumeStartedSession(StatusBus.MODE_MIC)
     }
 
+    private fun renderConfirmedTranslations(container: LinearLayout, translations: List<String>) {
+        val visible = translations.map(String::trim).filter(String::isNotEmpty).takeLast(6)
+        val renderKey = visible.joinToString("\u0000")
+        if (container.tag == renderKey) return
+        container.tag = renderKey
+        container.removeAllViews()
+        if (visible.isEmpty()) {
+            container.addView(TextView(this).apply {
+                text = "等待语音…"
+                textSize = 14f
+                setTextColor(getColor(R.color.text_muted))
+            })
+            return
+        }
+        visible.forEachIndexed { index, line ->
+            container.addView(TextView(this).apply {
+                text = line
+                textSize = 16f
+                alpha = 0.48f + (index + 1).toFloat() / visible.size * 0.34f
+                setTextColor(getColor(R.color.text_secondary))
+                setPadding(0, resources.getDimensionPixelSize(R.dimen.grid_4), 0,
+                    resources.getDimensionPixelSize(R.dimen.grid_4))
+            })
+        }
+    }
+
+    private fun formatRunningElapsed(startedAtMs: Long): String {
+        if (startedAtMs <= 0L) return "00:00"
+        return formatElapsedDuration(System.currentTimeMillis() - startedAtMs)
+    }
+
     private fun renderStatus() {
         val s = StatusBus
         val running = s.serviceRunning
         val mode = s.captureMode
         val conn = s.connState
         val level = s.audioLevelPct.coerceIn(0, 100)
+        val micActive = running && mode == StatusBus.MODE_MIC
+        val videoActive = running && mode == StatusBus.MODE_VIDEO
+        val snapshot = s.sessionSnapshot()
 
         listOf(
             LanguageControls(acInterpSourceLang, acInterpTargetLang),
@@ -1228,85 +1450,99 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             controls.targetView.isEnabled = !running
         }
 
+        interpIdleContent.visibility = if (micActive) View.GONE else View.VISIBLE
+        interpRunningContent.visibility = if (micActive) View.VISIBLE else View.GONE
+        videoIdleContent.visibility = if (videoActive) View.GONE else View.VISIBLE
+        videoRunningContent.visibility = if (videoActive) View.VISIBLE else View.GONE
 
-        val micActive = running && mode == StatusBus.MODE_MIC
-        val videoActive = running && mode == StatusBus.MODE_VIDEO
-        val sessionSnapshot = s.sessionSnapshot()
-        val translatedSnapshot = buildList {
-            addAll(sessionSnapshot.confirmedTranslations.takeLast(6))
-            sessionSnapshot.currentTranslation.takeIf { it.isNotBlank() }?.let(::add)
-        }.joinToString("\n")
-        val sourceSnapshot = sessionSnapshot.sourceTail
-
-        fun heroText(active: Boolean): String = when {
-            !active -> "○ 待开始"
-            s.paused -> "Ⅱ 已暂停"
-            conn == "ready" -> "● 翻译中"
-            conn.startsWith("error") -> "● 出错"
-            else -> "● 准备连接"
+        val activeStatusText = when {
+            s.paused -> "已暂停"
+            conn == "ready" -> "翻译中"
+            conn.startsWith("error") -> "连接出错"
+            conn == "rotating" -> "正在切换连接"
+            else -> "准备连接"
+        }
+        val activeStatusColor = when {
+            s.paused -> R.color.warning
+            conn == "ready" -> R.color.success
+            conn.startsWith("error") -> R.color.error
+            else -> R.color.brand
         }
 
-        fun subText(active: Boolean, idle: String): String = if (!active) {
-            idle
+        val overlayAllowed = Settings.canDrawOverlays(this)
+        tvOverlayPermissionStatus.text = if (overlayAllowed) "已授权，可在其他应用上显示字幕" else "未授权，开始视频字幕前需要开启"
+        ViewCompat.setBackgroundTintList(
+            viewOverlayPermissionDot,
+            getColorStateList(if (overlayAllowed) R.color.success else R.color.error),
+        )
+        btnOverlayPermissionSettings.visibility = if (overlayAllowed) View.GONE else View.VISIBLE
+
+        // 同传空闲态与运行态
+        tvInterpStatus.text = if (running && !micActive) "视频运行中" else "待开始"
+        tvInterpSubStatus.text = if (running && !micActive) {
+            "当前正在运行视频字幕，请先停止后再开同传"
         } else {
-            buildString {
-                append("连接 ").append(conn)
-                if (s.currentKeyLabel.isNotEmpty()) append(" · ").append(s.currentKeyLabel)
-                append(" · 已发送 ").append(s.chunksSent.get()).append(" 块")
-            }
+            "麦克风实时同传"
         }
-
-        // 同传页
-        tvInterpStatus.text = heroText(micActive)
-        tvInterpSubStatus.text = when {
-            running && !micActive -> "当前正在运行视频字幕，请先停止后再开同传"
-            else -> subText(micActive, "麦克风实时同传")
-        }
-        tvInterpAudioLevel.text = if (micActive) "$level%" else "0%"
-        pbInterpAudio.progress = if (micActive) level else 0
+        btnInterpToggle.isEnabled = !running
         if (micActive) {
-            tvInterpZh.text = translatedSnapshot.ifBlank { "等待译文…" }
-            tvInterpJa.text = sourceSnapshot.ifBlank { "等待原文输入…" }
-            if (s.transcriptPath.isNotEmpty()) {
-                tvInterpTranscriptPath.text = "本场记录：${s.transcriptPath}"
+            val plan = TranslationPlanStore.loadDraft(this, TranslationMode.INTERPRETATION)
+            val sourceCode = snapshot.sourceLanguageCode.ifBlank { plan.sourceLanguageCode }
+            val targetCode = snapshot.targetLanguageCode.ifBlank { plan.targetLanguageCode }
+            val sceneId = snapshot.scenePresetId.ifBlank { plan.scenePresetId }
+            val direction = "${TranslationLanguageCatalog.source(sourceCode).label} → " +
+                TranslationLanguageCatalog.target(targetCode).label
+            val scene = ScenePromptCatalog.resolve(TranslationMode.INTERPRETATION, sceneId).label
+            tvInterpRunningStatus.text = activeStatusText
+            ViewCompat.setBackgroundTintList(viewInterpRunningStatusDot, getColorStateList(activeStatusColor))
+            tvInterpElapsed.text = formatRunningElapsed(snapshot.startedAtMs)
+            tvInterpRunningMeta.text = "$direction · $scene"
+            tvInterpAudioLevel.text = "$level%"
+            pbInterpAudio.progress = level
+            renderConfirmedTranslations(interpConfirmedList, snapshot.confirmedTranslations)
+            tvInterpZh.text = snapshot.currentTranslation.trim()
+                .ifBlank { snapshot.confirmedTranslations.lastOrNull().orEmpty() }
+                .ifBlank { "等待译文…" }
+            tvInterpJa.text = snapshot.sourceTail.trim().ifBlank { "等待原文输入…" }
+            tvInterpTranscriptPath.text = if (s.transcriptPath.isNotEmpty()) {
+                "本场记录：${s.transcriptPath}"
+            } else {
+                "自动保存到应用内历史"
             }
-        } else if (!running) {
-            // 空闲时保留上次路径提示也可以，但字幕回到占位
-            if (s.zhTail.isBlank()) tvInterpZh.text = "等待译文…"
-            if (s.jaTail.isBlank()) tvInterpJa.text = "等待原文输入…"
         }
-        btnInterpToggle.text = when {
-            micActive -> "停止同传"
-            running -> "开始同传"
-            else -> "开始同传"
-        }
-        btnInterpToggle.backgroundTintList = getColorStateList(if (micActive) R.color.error else R.color.brand)
-        btnInterpToggle.isEnabled = !running || micActive
 
-        // 视频页
-        tvHeroStatus.text = heroText(videoActive)
-        tvHeroSubStatus.text = when {
-            running && !videoActive -> "当前正在运行同传，请先停止后再开视频字幕"
-            else -> subText(videoActive, "尚未开始翻译")
-        }
-        tvAudioLevel.text = if (videoActive) "$level%" else "0%"
-        pbAudio.progress = if (videoActive) level else 0
+        // 视频空闲态与运行态
+        btnToggle.isEnabled = !running
         if (videoActive) {
-            tvLiveZh.text = translatedSnapshot.ifBlank { "等待译文…" }
-            tvLiveJa.text = sourceSnapshot.ifBlank { "等待原文输入…" }
-            if (s.transcriptPath.isNotEmpty()) {
-                tvTranscriptPath.text = "本场记录：${s.transcriptPath}"
+            val plan = TranslationPlanStore.loadDraft(this, TranslationMode.VIDEO)
+            val sourceCode = snapshot.sourceLanguageCode.ifBlank { plan.sourceLanguageCode }
+            val targetCode = snapshot.targetLanguageCode.ifBlank { plan.targetLanguageCode }
+            val sceneId = snapshot.scenePresetId.ifBlank { plan.scenePresetId }
+            val direction = "${TranslationLanguageCatalog.source(sourceCode).label} → " +
+                TranslationLanguageCatalog.target(targetCode).label
+            val scene = ScenePromptCatalog.resolve(TranslationMode.VIDEO, sceneId).label
+            tvHeroStatus.text = activeStatusText
+            ViewCompat.setBackgroundTintList(viewVideoRunningStatusDot, getColorStateList(activeStatusColor))
+            tvHeroSubStatus.text = buildString {
+                append("其他应用音频 · ")
+                append(if (overlayAllowed) "悬浮字幕已开启" else "悬浮字幕未授权")
+                if (s.currentKeyLabel.isNotEmpty()) append(" · ").append(s.currentKeyLabel)
             }
-        } else if (!running) {
-            if (s.zhTail.isBlank()) tvLiveZh.text = "等待译文…"
-            if (s.jaTail.isBlank()) tvLiveJa.text = "等待原文输入…"
+            tvVideoElapsed.text = formatRunningElapsed(snapshot.startedAtMs)
+            tvVideoRunningMeta.text = "$direction · $scene"
+            tvAudioLevel.text = "$level%"
+            pbAudio.progress = level
+            renderConfirmedTranslations(videoConfirmedList, snapshot.confirmedTranslations)
+            tvLiveZh.text = snapshot.currentTranslation.trim()
+                .ifBlank { snapshot.confirmedTranslations.lastOrNull().orEmpty() }
+                .ifBlank { "等待译文…" }
+            tvLiveJa.text = snapshot.sourceTail.trim().ifBlank { "等待原文输入…" }
+            tvTranscriptPath.text = if (s.transcriptPath.isNotEmpty()) {
+                "本场记录：${s.transcriptPath}"
+            } else {
+                "自动保存到应用内历史"
+            }
         }
-        btnToggle.text = when {
-            videoActive -> "停止视频字幕"
-            else -> "开始视频字幕"
-        }
-        btnToggle.backgroundTintList = getColorStateList(if (videoActive) R.color.error else R.color.brand)
-        btnToggle.isEnabled = !running || videoActive
 
         tvStatus.text = buildString {
             append(if (running) "● 运行中" else "○ 未运行")

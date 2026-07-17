@@ -11,6 +11,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -20,7 +21,9 @@ import android.widget.TextView
  */
 class SubtitleOverlay(private val context: Context) {
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    private var root: LinearLayout? = null
+    private var root: FrameLayout? = null
+    private var panel: LinearLayout? = null
+    private var accent: View? = null
     private var header: LinearLayout? = null
     private var statusLabel: TextView? = null
     private var pauseButton: TextView? = null
@@ -39,8 +42,8 @@ class SubtitleOverlay(private val context: Context) {
     private fun dp(value: Int) = (value * density).toInt()
 
     @SuppressLint("ClickableViewAccessibility")
-    fun show() {
-        if (root != null) return
+    fun show(): Boolean {
+        if (root != null) return true
         val dm = context.resources.displayMetrics
         expandedWidth = minOf(dm.widthPixels, dm.heightPixels) - dp(24)
 
@@ -123,6 +126,32 @@ class SubtitleOverlay(private val context: Context) {
             ),
         )
 
+        val shell = FrameLayout(context).apply {
+            elevation = dp(8).toFloat()
+        }
+        val accentView = View(context).apply {
+            background = roundedRect(
+                fill = context.getColor(R.color.primary_container),
+                stroke = Color.TRANSPARENT,
+                radius = 2,
+            )
+        }
+        shell.addView(
+            container,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+            ),
+        )
+        shell.addView(
+            accentView,
+            FrameLayout.LayoutParams(dp(4), FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                gravity = Gravity.START
+                topMargin = dp(12)
+                bottomMargin = dp(12)
+            },
+        )
+
         val params = WindowManager.LayoutParams(
             expandedWidth,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -135,9 +164,19 @@ class SubtitleOverlay(private val context: Context) {
             y = dp(120)
         }
 
-        container.setOnTouchListener(dragListener(container, params))
-        wm.addView(container, params)
-        root = container
+        shell.setOnTouchListener(dragListener(shell, params))
+        try {
+            wm.addView(shell, params)
+        } catch (_: SecurityException) {
+            return false
+        } catch (_: WindowManager.BadTokenException) {
+            return false
+        } catch (_: IllegalStateException) {
+            return false
+        }
+        root = shell
+        panel = container
+        accent = accentView
         header = headerRow
         statusLabel = stateText
         pauseButton = pause
@@ -147,11 +186,14 @@ class SubtitleOverlay(private val context: Context) {
         dot = stateDot
         lp = params
         applyStyleNow()
+        return true
     }
 
     fun hide() {
         root?.let { runCatching { wm.removeView(it) } }
         root = null
+        panel = null
+        accent = null
         header = null
         statusLabel = null
         pauseButton = null
@@ -196,9 +238,14 @@ class SubtitleOverlay(private val context: Context) {
     }
 
     private fun renderLines() {
+        val hasDistinctCurrent = latestCurrent.isNotEmpty() && latestCurrent != latestConfirmed
         tvConfirmed?.apply {
             text = latestConfirmed
-            visibility = if (!compact && latestConfirmed.isNotEmpty()) View.VISIBLE else View.GONE
+            visibility = if (latestConfirmed.isNotEmpty() && (!compact || hasDistinctCurrent)) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
         }
         tvCurrent?.apply {
             text = when {
@@ -220,16 +267,18 @@ class SubtitleOverlay(private val context: Context) {
     }
 
     private fun applyAppearance() {
-        val container = root ?: return
+        val window = root ?: return
+        val container = panel ?: return
         val params = lp ?: return
         val opacity = SettingsStore.bgOpacityPct(context).coerceIn(20, 100)
         if (compact) {
             container.setPadding(dp(12), dp(7), dp(12), dp(10))
-            container.background = roundedRect(
+            window.background = roundedRect(
                 fill = Color.argb(248, 248, 251, 255),
                 stroke = Color.argb(90, 0, 88, 188),
                 radius = 18,
             )
+            accent?.visibility = View.GONE
             statusLabel?.visibility = View.GONE
             pauseButton?.visibility = View.GONE
             compactButton?.apply {
@@ -237,25 +286,34 @@ class SubtitleOverlay(private val context: Context) {
                 setTextColor(Color.parseColor("#0058BC"))
                 contentDescription = "展开字幕"
             }
+            tvConfirmed?.apply {
+                setTextColor(Color.parseColor("#52677F"))
+                setPadding(0, dp(2), 0, 0)
+            }
             tvCurrent?.apply {
                 setTextColor(Color.parseColor("#102A43"))
                 setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
                 setPadding(0, dp(2), 0, 0)
             }
-            params.width = (expandedWidth * 0.78f).toInt()
+            params.width = minOf((expandedWidth * 0.78f).toInt(), dp(280))
         } else {
             container.setPadding(dp(16), dp(12), dp(16), dp(14))
-            container.background = roundedRect(
+            window.background = roundedRect(
                 fill = Color.argb(255 * opacity / 100, 20, 29, 43),
                 stroke = Color.argb(55, 255, 255, 255),
                 radius = 22,
             )
+            accent?.visibility = View.VISIBLE
             statusLabel?.visibility = View.VISIBLE
             pauseButton?.visibility = View.VISIBLE
             compactButton?.apply {
                 text = "↙"
                 setTextColor(Color.WHITE)
                 contentDescription = "收紧字幕"
+            }
+            tvConfirmed?.apply {
+                setTextColor(Color.parseColor("#B8C5D6"))
+                setPadding(0, dp(8), 0, 0)
             }
             tvCurrent?.apply {
                 setTextColor(Color.WHITE)
@@ -267,7 +325,18 @@ class SubtitleOverlay(private val context: Context) {
         val font = SettingsStore.fontSizeSp(context)
         tvCurrent?.textSize = if (compact) (font - 1).coerceAtLeast(13).toFloat() else font.toFloat()
         tvCurrent?.maxLines = if (compact) 2 else SettingsStore.overlayMaxLines(context)
-        runCatching { wm.updateViewLayout(container, params) }
+        runCatching { wm.updateViewLayout(window, params) }
+        window.post { clampToDisplay(window, params) }
+    }
+
+    private fun clampToDisplay(window: View, params: WindowManager.LayoutParams) {
+        if (root !== window || lp !== params) return
+        val dm = context.resources.displayMetrics
+        val width = window.width.takeIf { it > 0 } ?: params.width
+        val height = window.height.takeIf { it > 0 } ?: dp(72)
+        params.x = params.x.coerceIn(0, (dm.widthPixels - width).coerceAtLeast(0))
+        params.y = params.y.coerceIn(0, (dm.heightPixels - height).coerceAtLeast(0))
+        runCatching { wm.updateViewLayout(window, params) }
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -67,6 +67,28 @@ object TranslationPlanStore {
     }
 
     @Synchronized
+    fun updateSaved(
+        context: Context,
+        mode: TranslationMode,
+        id: String,
+        name: String,
+        plan: TranslationPlan,
+    ): SavedTranslationPlan? {
+        backupCorruptSavedData(context, mode)
+        val items = listSaved(context, mode).toMutableList()
+        val index = items.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        val updated = SavedTranslationPlan(
+            id = id,
+            name = name.trim().ifEmpty { items[index].name },
+            plan = plan.copy(mode = mode).normalized(),
+        )
+        items[index] = updated
+        writeSavedPlans(context, mode, items)
+        return updated
+    }
+
+    @Synchronized
     fun deleteSavedPlan(context: Context, mode: TranslationMode, id: String) {
         backupCorruptSavedData(context, mode)
         writeSavedPlans(context, mode, listSaved(context, mode).filterNot { it.id == id })

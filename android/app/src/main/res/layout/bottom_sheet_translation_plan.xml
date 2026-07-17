@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="@color/surface_white"
     android:orientation="vertical"
     android:paddingBottom="@dimen/space_16">
@@ -14,12 +14,40 @@
         android:layout_marginTop="@dimen/space_12"
         android:background="@drawable/bg_sheet_handle" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="@dimen/space_8"
+        android:layout_marginTop="@dimen/space_8"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvPlanSheetTitle"
+            style="@style/PageTitle"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:text="同传方案" />
+
+        <ImageButton
+            android:id="@+id/btnClosePlanSheet"
+            android:layout_width="@dimen/touch_target"
+            android:layout_height="@dimen/touch_target"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="关闭"
+            android:padding="@dimen/space_12"
+            android:src="@drawable/ic_close_24" />
+    </LinearLayout>
+
     <TextView
-        android:id="@+id/tvPlanSheetTitle"
-        style="@style/PageTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="@dimen/space_16"
-        android:text="同传方案" />
+        android:layout_marginTop="@dimen/grid_4"
+        android:text="方案是长期配置；本场临时背景仍在业务主页填写"
+        android:textColor="@color/text_muted"
+        android:textSize="13sp" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -33,13 +61,17 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="20dp"
-            android:paddingTop="@dimen/space_12"
+            android:paddingTop="@dimen/space_16"
             android:paddingBottom="@dimen/space_12">
 
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Field"
-                android:hint="方案名称">
+            <TextView style="@style/LuminousSectionLabel" android:text="基础信息" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilPlanName"
+                style="@style/Field"
+                android:layout_marginTop="@dimen/space_8"
+                android:hint="方案名称"
+                app:helperText="填写名称后会同步保存到方案库">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPlanName"
                     android:layout_width="match_parent"
@@ -48,10 +80,59 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/grid_4"
+                    android:layout_weight="1"
+                    android:hint="源语言"
+                    app:boxBackgroundColor="@color/surface_low"
+                    app:boxCornerRadiusBottomEnd="@dimen/field_radius"
+                    app:boxCornerRadiusBottomStart="@dimen/field_radius"
+                    app:boxCornerRadiusTopEnd="@dimen/field_radius"
+                    app:boxCornerRadiusTopStart="@dimen/field_radius"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="1.5dp">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/acPlanSourceLanguage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/grid_4"
+                    android:layout_weight="1"
+                    android:hint="目标语言"
+                    app:boxBackgroundColor="@color/surface_low"
+                    app:boxCornerRadiusBottomEnd="@dimen/field_radius"
+                    app:boxCornerRadiusBottomStart="@dimen/field_radius"
+                    app:boxCornerRadiusTopEnd="@dimen/field_radius"
+                    app:boxCornerRadiusTopStart="@dimen/field_radius"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="1.5dp">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/acPlanTargetLanguage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
             <TextView
-                style="@style/FieldLabel"
-                android:layout_marginTop="@dimen/space_16"
-                android:text="场景预设" />
+                style="@style/LuminousSectionLabel"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="翻译场景" />
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroupPlanScenes"
@@ -66,10 +147,10 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPlanCustomScene"
                 style="@style/Field"
+                android:layout_marginTop="@dimen/space_12"
                 android:hint="自定义场景说明"
                 android:visibility="gone"
-                app:helperText="选择「自定义」时生效，会写入方案">
-
+                app:helperText="选择“自定义”时生效">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPlanCustomScene"
                     android:layout_width="match_parent"
@@ -80,21 +161,25 @@
                     android:maxLines="5" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <TextView
+                style="@style/LuminousSectionLabel"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="高级设置" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPlanCustom"
                 style="@style/Field"
-                android:layout_marginTop="@dimen/space_12"
-                android:hint="方案提示词"
-                app:helperText="长期保存在方案里：术语、口吻、专名译法、风格要求都写这里">
-
+                android:layout_marginTop="@dimen/space_8"
+                android:hint="长期提示词"
+                app:helperText="口吻、专名译法和表达风格会长期保存在方案里">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPlanCustom"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="top"
                     android:inputType="textMultiLine"
-                    android:minLines="5"
-                    android:maxLines="12" />
+                    android:minLines="4"
+                    android:maxLines="10" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -103,7 +188,7 @@
         android:id="@+id/btnSavePlan"
         style="@style/LuminousPrimaryButton"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="56dp"
         android:layout_marginHorizontal="20dp"
-        android:text="保存并应用" />
+        android:text="保存方案" />
 </LinearLayout>

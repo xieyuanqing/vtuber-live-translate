@@ -1,388 +1,506 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/pageVideo"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
     android:visibility="gone">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/videoIdleContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="@dimen/page_margin"
-        android:paddingTop="@dimen/space_16"
-        android:paddingBottom="@dimen/page_bottom_padding">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:overScrollMode="never">
 
-        <TextView
-            style="@style/PageTitle"
-            android:text="视频字幕" />
-
-        <!-- 语言胶囊 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            android:background="@drawable/bg_language_pill"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="@dimen/space_12"
-            android:paddingVertical="@dimen/space_8">
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/page_margin"
+            android:paddingTop="@dimen/space_16"
+            android:paddingBottom="@dimen/page_bottom_padding">
 
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="源语言"
-                app:boxBackgroundMode="none"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
-                app:endIconMode="none"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/acVideoSourceLang"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:gravity="center"
-                    android:inputType="none"
-                    android:padding="0dp"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/space_8"
-                android:text="→"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="目标语言"
-                app:boxBackgroundMode="none"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
-                app:endIconMode="none"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/acVideoTargetLang"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:gravity="center"
-                    android:inputType="none"
-                    android:padding="0dp"
-                    android:textColor="@color/brand"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
-
-        <!-- 当前方案 -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardVideoPlan"
-            style="@style/LuminousCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            android:clickable="true"
-            android:focusable="true"
-            android:minHeight="72dp"
-            app:cardCornerRadius="@dimen/card_radius">
+            <TextView style="@style/PageTitle" android:text="视频" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:background="@drawable/bg_language_pill"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_16">
+                android:paddingHorizontal="@dimen/space_12"
+                android:paddingVertical="@dimen/space_8">
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    app:boxBackgroundMode="none"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp"
+                    app:endIconMode="none"
+                    app:hintEnabled="false">
 
-                    <TextView
-                        style="@style/CardTitle"
-                        android:text="当前方案" />
-
-                    <TextView
-                        android:id="@+id/tvVideoPlanSummary"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/acVideoSourceLang"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:text="通用视频 · 自动 → 中文"
-                        android:textColor="@color/text_muted"
-                        android:textSize="13sp" />
+                        android:background="@android:color/transparent"
+                        android:gravity="center"
+                        android:inputType="none"
+                        android:padding="0dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:id="@+id/tvCurrentProfile"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:text="点击编辑场景与方案提示词"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <LinearLayout
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_marginHorizontal="@dimen/space_8"
+                    android:text="→"
+                    android:textColor="@color/brand"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:id="@+id/btnVideoOpenPlanLibrary"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="@dimen/space_8"
-                        android:text="方案库"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    app:boxBackgroundMode="none"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp"
+                    app:endIconMode="none"
+                    app:hintEnabled="false">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/acVideoTargetLang"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="@dimen/space_8"
-                        android:text="编辑"
+                        android:background="@android:color/transparent"
+                        android:gravity="center"
+                        android:inputType="none"
+                        android:padding="0dp"
                         android:textColor="@color/brand"
-                        android:textSize="13sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
-                </LinearLayout>
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 本场临时上下文：视频链接解析 + 本场背景，不进方案库 -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/LuminousCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            app:cardCornerRadius="@dimen/card_radius">
-
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardVideoPlan"
+                style="@style/LuminousCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/space_16">
-
-                <TextView
-                    style="@style/CardTitle"
-                    android:text="本场临时上下文" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/grid_4"
-                    android:text="只在本场生效，停止后清除；不会写入方案库"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Field"
-                    android:layout_marginTop="@dimen/space_12"
-                    android:hint="本场视频链接"
-                    app:helperText="支持 YouTube 链接；用于解析标题和频道">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etVideoSessionUrl"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textUri"
-                        android:maxLines="2" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Field"
-                    android:layout_marginTop="@dimen/space_12"
-                    android:hint="本场背景与资料"
-                    app:helperText="可手写，也可点下方按钮用 AI 解析视频">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etVideoSessionContext"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="top"
-                        android:inputType="textCapSentences|textMultiLine"
-                        android:minLines="3"
-                        android:maxLines="7" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnVideoAnalyzeContext"
-                    style="@style/LuminousSecondaryButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="AI 解析本场视频" />
-
-                <TextView
-                    android:id="@+id/tvVideoAnalyzeStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="会抓取标题/频道并整理成本场背景，不保存进方案"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 运行控制台 -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/LuminousCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            app:cardCornerRadius="@dimen/card_radius">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/space_16">
+                android:layout_marginTop="@dimen/space_16"
+                android:clickable="true"
+                android:focusable="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:padding="@dimen/space_16">
 
-                    <TextView
-                        android:id="@+id/tvHeroStatus"
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_status_pill"
-                        android:gravity="center"
-                        android:paddingHorizontal="@dimen/space_16"
-                        android:paddingVertical="@dimen/space_8"
-                        android:text="○ 待开始"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:orientation="vertical">
+
+                        <TextView style="@style/CardTitle" android:text="当前方案" />
+
+                        <TextView
+                            android:id="@+id/tvVideoPlanSummary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/grid_4"
+                            android:text="通用视频 · 自动 → 中文"
+                            android:textColor="@color/text_muted"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvCurrentProfile"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/grid_4"
+                            android:text="点击编辑场景与方案提示词"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
 
                     <TextView
-                        android:id="@+id/tvAudioLevel"
+                        android:id="@+id/btnVideoOpenPlanLibrary"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_12"
-                        android:fontFamily="monospace"
-                        android:text="0%"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="16sp"
+                        android:layout_height="48dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="@dimen/space_8"
+                        android:text="方案库"
+                        android:textColor="@color/brand"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <TextView
-                    android:id="@+id/tvHeroSubStatus"
+            <TextView
+                style="@style/LuminousSectionLabel"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="快捷场景" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupVideoHomeScenes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                app:chipSpacingHorizontal="@dimen/space_8"
+                app:chipSpacingVertical="@dimen/space_8"
+                app:singleSelection="true" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/LuminousCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="尚未开始翻译"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                    <TextView style="@style/CardTitle" android:text="本场视频" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="链接与背景只在本场生效，成功开始后清除"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Field"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:hint="YouTube 视频链接"
+                        app:helperText="用于解析标题、频道和内容背景">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etVideoSessionUrl"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textUri"
+                            android:maxLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Field"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:hint="本场背景与资料"
+                        app:helperText="可手写，也可用 AI 解析视频">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etVideoSessionContext"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="top"
+                            android:inputType="textCapSentences|textMultiLine"
+                            android:minLines="3"
+                            android:maxLines="7" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnVideoAnalyzeContext"
+                        style="@style/LuminousSecondaryButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="AI 解析本场视频" />
+
+                    <TextView
+                        android:id="@+id/tvVideoAnalyzeStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="解析结果会写入上方本场背景，不保存进方案"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/rowOverlayPermission"
+                style="@style/LuminousOutlinedCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_16"
-                    android:text="输入音量"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/space_16">
 
-                <ProgressBar
-                    android:id="@+id/pbAudio"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="8dp"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:max="100"
-                    android:progress="0"
-                    android:progressBackgroundTint="#2A000000"
-                    android:progressTint="?attr/colorPrimary" />
+                    <View
+                        android:id="@+id/viewOverlayPermissionDot"
+                        android:layout_width="@dimen/status_dot_size"
+                        android:layout_height="@dimen/status_dot_size"
+                        android:background="@drawable/bg_success_dot" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnToggle"
-                    style="@style/LuminousPrimaryButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/primary_action_height"
-                    android:layout_marginTop="@dimen/space_16"
-                    android:text="开始视频字幕"
-                    app:cornerRadius="28dp"
-                    app:icon="@drawable/ic_nav_video_24"
-                    app:iconGravity="textStart"
-                    app:iconPadding="8dp"
-                    app:iconTint="@color/brand_on" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-        <!-- 当前字幕 -->
-        <com.google.android.material.card.MaterialCardView
-            style="@style/LuminousOutlinedCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            app:cardCornerRadius="@dimen/card_radius">
+                        <TextView style="@style/CardTitle" android:text="悬浮字幕" />
+
+                        <TextView
+                            android:id="@+id/tvOverlayPermissionStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/grid_4"
+                            android:text="检查权限中"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btnOverlayPermissionSettings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="@dimen/space_8"
+                        android:text="去设置"
+                        android:textColor="@color/brand"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnToggle"
+                style="@style/LuminousPrimaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/primary_action_height"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="开始视频字幕"
+                app:icon="@drawable/ic_nav_video_24"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/space_8"
+                app:iconTint="@color/brand_on" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <LinearLayout
+        android:id="@+id/videoRunningContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/page_margin"
+        android:paddingTop="@dimen/space_16"
+        android:paddingBottom="@dimen/space_16"
+        android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/space_16">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView style="@style/PageTitle" android:text="视频字幕" />
 
                 <TextView
-                    style="@style/CardTitle"
-                    android:text="当前字幕" />
-
-                <TextView
-                    android:id="@+id/tvVideoTargetLanguageLabel"
-                    style="@style/FieldLabel"
-                    android:text="中文" />
-
-                <TextView
-                    android:id="@+id/tvLiveZh"
-                    android:layout_width="match_parent"
+                    android:id="@+id/tvVideoElapsed"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/grid_4"
-                    android:minHeight="52dp"
-                    android:text="等待译文…"
-                    android:textSize="18sp"
+                    android:layout_weight="1"
+                    android:fontFamily="monospace"
+                    android:gravity="end"
+                    android:text="00:00"
+                    android:textColor="@color/brand"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    style="@style/FieldLabel"
-                    android:text="原文" />
-
-                <TextView
-                    android:id="@+id/tvLiveJa"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/grid_4"
-                    android:minHeight="40dp"
-                    android:text="等待原文输入…"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tvTranscriptPath"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_12"
-                    android:text="自动保存到应用内历史"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:textSize="12sp" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/LuminousCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/viewVideoRunningStatusDot"
+                            android:layout_width="@dimen/status_dot_size"
+                            android:layout_height="@dimen/status_dot_size"
+                            android:background="@drawable/bg_success_dot" />
+
+                        <TextView
+                            android:id="@+id/tvHeroStatus"
+                            style="@style/LuminousStatusText"
+                            android:layout_marginStart="@dimen/space_8"
+                            android:text="准备连接" />
+
+                        <TextView
+                            android:id="@+id/tvAudioLevel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="monospace"
+                            android:gravity="end"
+                            android:text="0%"
+                            android:textColor="@color/brand"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvHeroSubStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="其他应用音频 · 悬浮字幕"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <ProgressBar
+                        android:id="@+id/pbAudio"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressBackgroundTint="@color/surface_high"
+                        android:progressTint="@color/brand" />
+
+                    <TextView
+                        android:id="@+id/tvVideoRunningMeta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="自动 → 中文 · 通用视频"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:overScrollMode="never">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/LuminousCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <TextView style="@style/CardTitle" android:text="实时字幕" />
+
+                    <LinearLayout
+                        android:id="@+id/videoConfirmedList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:orientation="vertical" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="2dp"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_transcript_accent" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_12"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvVideoTargetLanguageLabel"
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="0dp"
+                                android:text="中文" />
+
+                            <TextView
+                                android:id="@+id/tvLiveZh"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/grid_4"
+                                android:minHeight="56dp"
+                                android:text="等待译文…"
+                                android:textColor="@color/text_primary"
+                                android:textSize="24sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvLiveJa"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:minHeight="32dp"
+                                android:text="等待原文输入…"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="15sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvTranscriptPath"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16"
+                        android:text="自动保存到应用内历史"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </androidx.core.widget.NestedScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVideoStop"
+            style="@style/LuminousDangerButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/primary_action_height"
+            android:layout_marginTop="@dimen/space_12"
+            android:text="停止视频字幕"
+            app:icon="@drawable/ic_stop_white_24"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/space_8" />
     </LinearLayout>
-</ScrollView>
+</FrameLayout>

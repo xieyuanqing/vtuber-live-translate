@@ -92,4 +92,48 @@ class FinalDataModelTest {
         assertEquals("字幕 30", snapshot.confirmedTranslations.last())
         assertEquals("当前字幕", snapshot.currentTranslation)
     }
+
+    @Test
+    fun `session snapshot freezes language direction and scene`() {
+        val plan = TranslationPlan(
+            mode = TranslationMode.VIDEO,
+            sourceLanguageCode = "ja",
+            targetLanguageCode = "en",
+            scenePresetId = "livestream",
+        )
+
+        StatusBus.startSession(plan, 456L)
+        val snapshot = StatusBus.sessionSnapshot()
+
+        assertEquals(456L, snapshot.startedAtMs)
+        assertEquals("ja", snapshot.sourceLanguageCode)
+        assertEquals("en", snapshot.targetLanguageCode)
+        assertEquals("livestream", snapshot.scenePresetId)
+    }
+
+    @Test
+    fun `unfinished history uses last segment elapsed instead of wall clock`() {
+        val session = HistorySession(
+            id = "interrupted",
+            title = "异常中断",
+            mode = TranslationMode.VIDEO,
+            sourceLanguageCode = "ja",
+            targetLanguageCode = "zh-Hans",
+            scenePresetId = "general_video",
+            contextSummary = "",
+            startedAt = 1_000L,
+            endedAt = null,
+            segments = listOf(TranscriptSegment(7_000L, "source", "译文")),
+        )
+
+        assertEquals(7_000L, session.durationMs)
+    }
+
+    @Test
+    fun `elapsed formatter handles minute and hour boundaries`() {
+        assertEquals("00:59", formatElapsedDuration(59_000L))
+        assertEquals("01:00", formatElapsedDuration(60_000L))
+        assertEquals("59:59", formatElapsedDuration(3_599_000L))
+        assertEquals("01:00:00", formatElapsedDuration(3_600_000L))
+    }
 }

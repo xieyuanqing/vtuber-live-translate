@@ -1,165 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
-            <ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-                android:id="@+id/pageSettings"
+    android:id="@+id/pageSettings"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/page_margin"
+        android:paddingTop="@dimen/space_16"
+        android:paddingBottom="@dimen/page_bottom_padding">
+
+        <TextView style="@style/PageTitle" android:text="设置" />
+
+        <TextView
+            style="@style/LuminousSectionLabel"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="翻译" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:visibility="gone">
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="@dimen/page_margin"
-                    android:paddingTop="@dimen/space_24"
-                    android:paddingBottom="@dimen/page_bottom_padding">
-
-                    <TextView
-                        style="@style/PageTitle"
-                        android:text="设置" />
-
-                    <com.google.android.material.card.MaterialCardView
-                        style="@style/LuminousCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        app:cardCornerRadius="@dimen/card_radius">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <LinearLayout
-                                android:id="@+id/rowSetTranslate"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="翻译服务" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="Gemini Live、默认语言、连接轮换" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
-                                android:id="@+id/rowSetSubtitle"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="字幕与悬浮窗" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="悬浮窗样式、断句节奏" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
-                                android:id="@+id/rowSetPlanLibrary"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="方案库" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="同传 / 视频已保存方案" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
-                                android:id="@+id/rowSetProfileAi"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="内容分析 AI" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="业务页资料整理使用的独立 AI" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
-                                android:id="@+id/rowSetDiagnostics"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="诊断" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="运行状态、电池白名单" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-
-                            <com.google.android.material.divider.MaterialDivider
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <LinearLayout
-                                android:id="@+id/rowSetAbout"
-                                style="@style/SettingsRow">
-
-                                <LinearLayout style="@style/SettingsRowText">
-
-                                    <TextView
-                                        style="@style/SettingsRowTitle"
-                                        android:text="关于" />
-
-                                    <TextView
-                                        style="@style/SettingsRowDesc"
-                                        android:text="版本与项目信息" />
-                                </LinearLayout>
-
-                                <TextView style="@style/SettingsRowChevron" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                <LinearLayout android:id="@+id/rowSetTranslate" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge" android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                    <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="翻译服务" />
+                        <TextView style="@style/SettingsRowDesc" android:text="Gemini Live、API Key、连接轮换" />
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron" />
                 </LinearLayout>
-            </ScrollView>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginStart="68dp" />
+
+                <LinearLayout android:id="@+id/rowSetPlanLibrary" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge" android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_nav_history_24" app:tint="@color/brand" />
+                    <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="方案库" />
+                        <TextView style="@style/SettingsRowDesc" android:text="管理同传和视频的长期方案" />
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/LuminousSectionLabel"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="内容分析" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+
+            <LinearLayout android:id="@+id/rowSetProfileAi" style="@style/SettingsRow">
+                <ImageView
+                    android:layout_width="40dp" android:layout_height="40dp"
+                    android:background="@drawable/bg_history_badge" android:padding="8dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                    <TextView style="@style/SettingsRowTitle" android:text="AI 内容分析" />
+                    <TextView style="@style/SettingsRowDesc" android:text="解析视频资料、整理本场背景" />
+                </LinearLayout>
+                <TextView style="@style/SettingsRowChevron" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/LuminousSectionLabel"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="字幕与音频" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+
+            <LinearLayout android:id="@+id/rowSetSubtitle" style="@style/SettingsRow">
+                <ImageView
+                    android:layout_width="40dp" android:layout_height="40dp"
+                    android:background="@drawable/bg_history_badge" android:padding="8dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_stat_subtitle" app:tint="@color/brand" />
+                <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                    <TextView style="@style/SettingsRowTitle" android:text="字幕与悬浮窗" />
+                    <TextView style="@style/SettingsRowDesc" android:text="字号、透明度、断句节奏" />
+                </LinearLayout>
+                <TextView style="@style/SettingsRowChevron" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/LuminousSectionLabel"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="系统" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout android:id="@+id/rowSetDiagnostics" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge" android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_nav_settings_24" app:tint="@color/brand" />
+                    <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="诊断" />
+                        <TextView style="@style/SettingsRowDesc" android:text="运行状态、电池白名单" />
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron" />
+                </LinearLayout>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginStart="68dp" />
+
+                <LinearLayout android:id="@+id/rowSetAbout" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp" android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge" android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                    <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="关于" />
+                        <TextView style="@style/SettingsRowDesc" android:text="版本与项目信息" />
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>

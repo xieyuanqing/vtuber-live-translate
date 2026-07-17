@@ -164,7 +164,6 @@ class CaptureService : Service() {
 
         StatusBus.reset()
         StatusBus.captureMode = mode
-        StatusBus.startSession()
         zhLines.clear()
         sessionLines.clear()
         lastConfirmedZh = ""
@@ -183,6 +182,7 @@ class CaptureService : Service() {
                 ?.takeIf { it.isNotBlank() } ?: TranslationPlan.defaultSceneId(translationMode),
             glossaryKey = intent.getStringExtra(EXTRA_GLOSSARY_KEY).orEmpty(),
         ).normalized()
+        StatusBus.startSession(sessionPlan)
         val sessionContext = intent.getStringExtra(EXTRA_SESSION_CONTEXT).orEmpty()
         logger = TranscriptLogger(
             context = this,
@@ -207,7 +207,16 @@ class CaptureService : Service() {
             updateZhPanel(confirmed, current)
         }
         if (useOverlay) {
-            mainHandler.post { overlay?.show() }
+            mainHandler.post {
+                val shown = overlay?.show() == true
+                if (!shown) {
+                    overlay = null
+                    if (mode == StatusBus.MODE_VIDEO) {
+                        StatusBus.connState = "error:悬浮窗权限不可用"
+                        stopEverything()
+                    }
+                }
+            }
         }
 
         val c = GeminiLiveClient(

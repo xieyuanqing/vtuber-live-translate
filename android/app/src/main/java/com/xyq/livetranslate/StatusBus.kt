@@ -6,11 +6,23 @@ import java.util.concurrent.atomic.AtomicReference
 
 data class TranslationSessionSnapshot(
     val startedAtMs: Long = 0L,
+    val sourceLanguageCode: String = "",
+    val targetLanguageCode: String = "",
+    val scenePresetId: String = "",
     val confirmedTranslations: List<String> = emptyList(),
     val currentTranslation: String = "",
     val sourceTail: String = "",
 ) {
     val isActive: Boolean get() = startedAtMs > 0L
+}
+
+internal fun formatElapsedDuration(elapsedMs: Long): String {
+    val totalSeconds = elapsedMs.coerceAtLeast(0L) / 1000L
+    val hours = totalSeconds / 3600L
+    val minutes = totalSeconds % 3600L / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) "%02d:%02d:%02d".format(hours, minutes, seconds)
+    else "%02d:%02d".format(minutes, seconds)
 }
 
 /** 服务 → 界面 的进程内状态。复杂字幕使用不可变快照，标量保留给现有 UI。 */
@@ -38,6 +50,18 @@ object StatusBus {
 
     fun startSession(nowMs: Long = System.currentTimeMillis()) {
         sessionRef.set(TranslationSessionSnapshot(startedAtMs = nowMs))
+    }
+
+    fun startSession(plan: TranslationPlan, nowMs: Long = System.currentTimeMillis()) {
+        val normalized = plan.normalized()
+        sessionRef.set(
+            TranslationSessionSnapshot(
+                startedAtMs = nowMs,
+                sourceLanguageCode = normalized.sourceLanguageCode,
+                targetLanguageCode = normalized.targetLanguageCode,
+                scenePresetId = normalized.scenePresetId,
+            ),
+        )
     }
 
     fun updateSessionSubtitles(

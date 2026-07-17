@@ -38,11 +38,12 @@
                                 android:text="当前接入 Gemini Live Translate" />
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                                style="@style/Field"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_12"
                                 android:hint="Gemini API Key"
+                                app:endIconMode="password_toggle"
                                 app:helperText="多个 Key 用英文逗号分隔">
 
                                 <com.google.android.material.textfield.TextInputEditText
@@ -50,13 +51,13 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:importantForAutofill="no"
-                                    android:inputType="textVisiblePassword"
+                                    android:inputType="textPassword"
                                     android:maxLines="2"
                                     android:textSize="14sp" />
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                                style="@style/Field"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"

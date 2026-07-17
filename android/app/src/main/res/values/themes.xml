@@ -3,8 +3,8 @@
     <style name="Theme.LiveTranslate" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/brand</item>
         <item name="colorOnPrimary">@color/brand_on</item>
-        <item name="colorPrimaryContainer">@color/primary_fixed</item>
-        <item name="colorOnPrimaryContainer">@color/on_primary_fixed</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/brand_on</item>
         <item name="colorSurface">@color/app_background</item>
         <item name="colorSurfaceVariant">@color/surface_low</item>
         <item name="colorOnSurface">@color/text_primary</item>

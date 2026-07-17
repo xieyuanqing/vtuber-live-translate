@@ -22,7 +22,10 @@ data class HistorySession(
     val segments: List<TranscriptSegment> = emptyList(),
 ) {
     val durationMs: Long
-        get() = ((endedAt ?: System.currentTimeMillis()) - startedAt).coerceAtLeast(0L)
+        get() = endedAt
+            ?.let { (it - startedAt).coerceAtLeast(0L) }
+            ?: segments.lastOrNull()?.elapsedMs?.coerceAtLeast(0L)
+            ?: 0L
 
     val sceneLabel: String
         get() = ScenePromptCatalog.resolve(mode, scenePresetId).label
