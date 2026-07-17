@@ -28,6 +28,9 @@ object ContentContextAnalyzer {
         apiKey: String,
         model: String,
         format: AiTextClient.Format,
+        credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
+        deviceId: String = "",
+        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
     ): ContentAnalysisResult {
         val modeRequest = request.copy(
             video = request.video.takeIf { request.mode == TranslationMode.VIDEO },
@@ -42,6 +45,9 @@ object ContentContextAnalyzer {
             apiKey = apiKey,
             model = model,
             format = format,
+            credentialMode = credentialMode,
+            deviceId = deviceId,
+            requestSignatureProvider = requestSignatureProvider,
         )
         return parse(response)
     }

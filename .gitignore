@@ -1,2 +1,10 @@
 tools/
 *.apk
+
+# Python friend gateway runtime
+server/**/.venv/
+server/**/.pytest_cache/
+server/**/__pycache__/
+server/**/*.sqlite3
+server/**/*.sqlite3-*
+server/**/.env

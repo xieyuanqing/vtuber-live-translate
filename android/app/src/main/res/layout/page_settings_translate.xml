@@ -30,6 +30,87 @@
 
                             <TextView
                                 style="@style/CardTitle"
+                                android:text="接入方式" />
+
+                            <TextView
+                                style="@style/FieldLabel"
+                                android:layout_marginTop="@dimen/grid_4"
+                                android:text="不使用邀请码时，继续使用你自己的 API Key" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/swFriendGateway"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:text="使用好友测试通道（免填 API Key）"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:id="@+id/tvFriendGatewayStatus"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/grid_4"
+                                android:text="当前使用自己的 API Key"
+                                android:textColor="@color/text_muted"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                style="@style/Field"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_12"
+                                android:hint="好友邀请码"
+                                app:helperText="一个邀请码只能绑定一个 App 安装设备">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etFriendInviteCode"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:importantForAutofill="no"
+                                    android:inputType="textCapCharacters"
+                                    android:maxLines="1"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:gravity="end"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnClearFriendGateway"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="清除本机绑定" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnBindFriendGateway"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/space_8"
+                                    android:text="绑定并启用" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/LuminousCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_12"
+                        app:cardCornerRadius="@dimen/card_radius">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="@dimen/space_16">
+
+                            <TextView
+                                style="@style/CardTitle"
                                 android:text="翻译 API" />
 
                             <TextView

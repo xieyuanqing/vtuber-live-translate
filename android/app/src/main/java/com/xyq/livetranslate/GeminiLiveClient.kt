@@ -4,6 +4,7 @@ import android.util.Base64
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -37,12 +38,16 @@ class GeminiLiveClient(
     private val targetLang: String = TranslationPlan.DEFAULT_TARGET_LANGUAGE,
     private val echoTargetLanguage: Boolean = true,
     private val rotateAfterMs: Long = SettingsStore.DEFAULT_ROTATE_SECONDS * 1000L,
+    private val credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
+    private val deviceId: String = "",
+    private val requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
     private val listener: Listener,
 ) {
     interface Listener {
         fun onState(state: String)
         fun onInputText(text: String)
         fun onOutputText(text: String)
+        fun onTerminalError(reason: String)
     }
 
     companion object {
@@ -53,6 +58,19 @@ class GeminiLiveClient(
         private const val MAX_QUEUE = 200      // 约 20 秒积压上限，超出丢最旧
         private const val OVERLAP_CHUNKS = 10  // 异常断线重发最近 1 秒
         private const val HANDSHAKE_TIMEOUT_MS = 12_000L // 连上后多久没 setupComplete 就判握手卡死
+
+        internal fun gatewayCloseReason(code: Int): String? = when (code) {
+            4401, 4403 -> "好友测试资格失效，请重新绑定"
+            4429 -> "好友测试额度已用完"
+            4400 -> "好友服务器拒绝了当前实时配置"
+            else -> null
+        }
+
+        internal fun gatewayHttpFailureReason(status: Int?): String? = when (status) {
+            401, 403 -> "好友测试资格失效，请重新绑定"
+            429 -> "好友测试额度已用完"
+            else -> null
+        }
     }
 
     private val http = OkHttpClient.Builder()
@@ -96,7 +114,15 @@ class GeminiLiveClient(
     /** 把连接生命周期操作投递到 scheduler 单线程串行执行；停机或已关闭则安静丢弃。 */
     private fun runOnScheduler(block: () -> Unit) {
         if (!running.get()) return
-        runCatching { scheduler.execute { if (running.get()) block() } }
+        runCatching {
+            scheduler.execute {
+                if (!running.get()) return@execute
+                runCatching(block).onFailure { error ->
+                    listener.onState("error:${error.message ?: "connection setup failed"}")
+                    scheduleReconnect(abrupt = true)
+                }
+            }
+        }
     }
 
     /** 捕获线程调用：塞入一块 100ms/16k/mono 的 PCM。 */
@@ -120,9 +146,23 @@ class GeminiLiveClient(
             listener.onState("error:未配置 API key")
             return
         }
-        val url = baseUrl.trimEnd('/') + WS_PATH + "?key=" + key
-        val req = Request.Builder().url(url).build()
-        ws = http.newWebSocket(req, WsListener(gen))
+        val url = when (credentialMode) {
+            ApiCredentialMode.QUERY_API_KEY ->
+                baseUrl.trimEnd('/') + WS_PATH + "?key=" + key
+            ApiCredentialMode.BEARER_TOKEN ->
+                baseUrl.trimEnd('/') + WS_PATH
+        }
+        val request = Request.Builder().url(url).apply {
+            if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                header("Authorization", "Bearer $key")
+                if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
+                val path = url.toHttpUrl().encodedPath
+                requestSignatureProvider
+                    ?.invoke("GET", path, byteArrayOf(), key)
+                    ?.forEach(::header)
+            }
+        }.build()
+        ws = http.newWebSocket(request, WsListener(gen))
         armWatchdog(gen)
     }
 
@@ -167,6 +207,21 @@ class GeminiLiveClient(
         runCatching { scheduler.schedule({ if (running.get()) connect() }, d, TimeUnit.MILLISECONDS) }
     }
 
+    private fun terminateGatewaySession(reason: String) {
+        if (credentialMode != ApiCredentialMode.BEARER_TOKEN) return
+        if (!running.compareAndSet(true, false)) return
+        ready = false
+        rotateTask?.cancel(false)
+        watchdogTask?.cancel(false)
+        val socket = ws
+        ws = null
+        runCatching { socket?.cancel() }
+        senderThread?.interrupt()
+        scheduler.shutdownNow()
+        listener.onState("error:$reason")
+        listener.onTerminalError(reason)
+    }
+
     private fun prependOverlap() {
         synchronized(sentRing) {
             sentRing.reversed().forEach { queue.offerFirst(it) }
@@ -193,12 +248,31 @@ class GeminiLiveClient(
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             if (gen != generation.get() || !running.get()) return
             Log.w(TAG, "closed by server: $code $reason")
+            val terminalReason = if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                gatewayCloseReason(code)
+            } else {
+                null
+            }
+            if (terminalReason != null) {
+                terminateGatewaySession(terminalReason)
+                return
+            }
             scheduleReconnect(abrupt = false)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             if (gen != generation.get() || !running.get()) return
-            Log.w(TAG, "ws failure: ${t.message}")
+            val status = response?.code
+            runCatching { Log.w(TAG, "ws failure: ${t.message}") }
+            val terminalReason = if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                gatewayHttpFailureReason(status)
+            } else {
+                null
+            }
+            if (terminalReason != null) {
+                terminateGatewaySession(terminalReason)
+                return
+            }
             listener.onState("error:${t.message ?: "unknown"}")
             scheduleReconnect(abrupt = true)
         }

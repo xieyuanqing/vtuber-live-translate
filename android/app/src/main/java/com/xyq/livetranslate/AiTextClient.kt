@@ -5,6 +5,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -45,10 +46,29 @@ object AiTextClient {
         apiKey: String,
         model: String,
         format: Format,
+        credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
+        deviceId: String = "",
+        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
     ): JSONObject {
         when (format) {
-            Format.GEMINI -> return generateGemini(systemPrompt, userPrompt, baseUrl, apiKey, model)
-            Format.OPENAI -> return generateOpenAI(systemPrompt, userPrompt, baseUrl, apiKey, model)
+            Format.GEMINI -> return generateGemini(
+                systemPrompt,
+                userPrompt,
+                baseUrl,
+                apiKey,
+                model,
+                credentialMode,
+                deviceId,
+                requestSignatureProvider,
+            )
+            Format.OPENAI -> return generateOpenAI(
+                systemPrompt,
+                userPrompt,
+                baseUrl,
+                apiKey,
+                model,
+                deviceId,
+            )
         }
     }
 
@@ -60,9 +80,13 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
+        credentialMode: ApiCredentialMode,
+        deviceId: String,
+        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)?,
     ): JSONObject {
-        val url = baseUrl.trimEnd('/') +
-            "/v1beta/models/${model}:generateContent?key=$apiKey"
+        val modelId = model.removePrefix("models/")
+        val url = baseUrl.trimEnd('/') + "/v1beta/models/${modelId}:generateContent" +
+            if (credentialMode == ApiCredentialMode.QUERY_API_KEY) "?key=$apiKey" else ""
 
         val parts = org.json.JSONArray()
         parts.put(JSONObject().put("text", userPrompt))
@@ -83,7 +107,7 @@ object AiTextClient {
             // 开启 Google Search grounding，补充用户当前主题或视频的最新公开背景
             .put(
                 "tools", org.json.JSONArray()
-                    .put(JSONObject().put("google_search", JSONObject()))
+                    .put(JSONObject().put("googleSearch", JSONObject()))
             )
 
         if (systemPrompt.isNotBlank()) {
@@ -94,9 +118,20 @@ object AiTextClient {
         }
 
         val jsonMedia = "application/json; charset=utf-8".toMediaType()
+        val bodyBytes = bodyObj.toString().toByteArray(Charsets.UTF_8)
         val req = Request.Builder()
             .url(url)
-            .post(bodyObj.toString().toRequestBody(jsonMedia))
+            .apply {
+                if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                    header("Authorization", "Bearer $apiKey")
+                    if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
+                    val path = url.toHttpUrl().encodedPath
+                    requestSignatureProvider
+                        ?.invoke("POST", path, bodyBytes, apiKey)
+                        ?.forEach(::header)
+                }
+            }
+            .post(bodyBytes.toRequestBody(jsonMedia))
             .build()
 
         http.newCall(req).execute().use { resp ->
@@ -132,6 +167,7 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
+        deviceId: String,
     ): JSONObject {
         val url = baseUrl.trimEnd('/') + "/v1/chat/completions"
 
@@ -162,6 +198,9 @@ object AiTextClient {
         val req = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $apiKey")
+            .apply {
+                if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
+            }
             .post(bodyObj.toString().toRequestBody(jsonMedia))
             .build()
 

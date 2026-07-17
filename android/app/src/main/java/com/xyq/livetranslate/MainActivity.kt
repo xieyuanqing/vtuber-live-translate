@@ -30,6 +30,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     private companion object {
         const val STATE_PENDING_START_MODE = "pending_start_mode"
+        const val STATE_PENDING_CREDENTIAL_MODE = "pending_credential_mode"
         const val STATE_PERMISSION_REQUESTED = "permission_requested"
         const val STATE_PENDING_PROMPT = "pending_prompt"
         const val STATE_PENDING_SOURCE = "pending_source"
@@ -192,6 +194,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     // 设置页
     private lateinit var etApiKeys: EditText
     private lateinit var etBaseUrl: EditText
+    private lateinit var swFriendGateway: MaterialSwitch
+    private lateinit var etFriendInviteCode: EditText
+    private lateinit var tvFriendGatewayStatus: TextView
+    private lateinit var btnBindFriendGateway: Button
+    private lateinit var btnClearFriendGateway: Button
     private lateinit var slFont: Slider
     private lateinit var slOpacity: Slider
     private lateinit var slLines: Slider
@@ -232,7 +239,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private var latestVideoAnalysisRequestId = ""
     /** 权限回调后要启动的模式：video / mic */
     private var pendingStartMode: String = StatusBus.MODE_VIDEO
+    /** 权限回调期间冻结的凭据模式：只传模式，不传 Token。 */
+    private var pendingCredentialMode: String = FriendGatewayStore.MODE_PERSONAL
     private var syncingLanguageControls = false
+    private var syncingFriendGatewayUi = false
+    private lateinit var friendBindingViewModel: FriendGatewayBindingViewModel
 
     private data class LanguageControls(
         val sourceView: MaterialAutoCompleteTextView,
@@ -271,6 +282,12 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             ?.getString(STATE_PENDING_START_MODE)
             ?.takeIf { it == StatusBus.MODE_MIC || it == StatusBus.MODE_VIDEO }
             ?: StatusBus.MODE_VIDEO
+        pendingCredentialMode = savedInstanceState
+            ?.getString(STATE_PENDING_CREDENTIAL_MODE)
+            ?.takeIf {
+                it == FriendGatewayStore.MODE_PERSONAL || it == FriendGatewayStore.MODE_FRIEND
+            }
+            ?: FriendGatewayStore.MODE_PERSONAL
         permRequested = savedInstanceState?.getBoolean(STATE_PERMISSION_REQUESTED) ?: false
         pendingSessionPrompt = savedInstanceState?.getString(STATE_PENDING_PROMPT).orEmpty()
         pendingSessionSource = savedInstanceState?.getString(STATE_PENDING_SOURCE).orEmpty()
@@ -310,6 +327,8 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
+        friendBindingViewModel.state.observe(this, ::renderFriendBindingState)
         applyWindowInsets()
         setupBottomNav()
         setupHistoryPage()
@@ -365,6 +384,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString(STATE_PENDING_START_MODE, pendingStartMode)
+        outState.putString(STATE_PENDING_CREDENTIAL_MODE, pendingCredentialMode)
         outState.putBoolean(STATE_PERMISSION_REQUESTED, permRequested)
         outState.putString(STATE_PENDING_PROMPT, pendingSessionPrompt)
         outState.putString(STATE_PENDING_SOURCE, pendingSessionSource)
@@ -525,6 +545,11 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
         etApiKeys = findViewById(R.id.etApiKeys)
         etBaseUrl = findViewById(R.id.etBaseUrl)
+        swFriendGateway = findViewById(R.id.swFriendGateway)
+        etFriendInviteCode = findViewById(R.id.etFriendInviteCode)
+        tvFriendGatewayStatus = findViewById(R.id.tvFriendGatewayStatus)
+        btnBindFriendGateway = findViewById(R.id.btnBindFriendGateway)
+        btnClearFriendGateway = findViewById(R.id.btnClearFriendGateway)
         slFont = findViewById(R.id.slFont)
         slOpacity = findViewById(R.id.slOpacity)
         slLines = findViewById(R.id.slLines)
@@ -695,7 +720,12 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     }
 
     private fun analyzeSessionContext(mode: TranslationMode) {
-        val apiKey = SettingsStore.secondAiApiKey(this)
+        val friendAccess = FriendGatewayStore.isActive(this)
+        val apiKey = if (friendAccess) {
+            FriendGatewayStore.token(this)
+        } else {
+            SettingsStore.secondAiApiKey(this)
+        }
         val statusView = if (mode == TranslationMode.INTERPRETATION) {
             tvInterpAnalyzeStatus
         } else {
@@ -706,8 +736,19 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         } else {
             btnVideoAnalyzeContext
         }
+        if (
+            FriendGatewayStore.mode(this) == FriendGatewayStore.MODE_FRIEND &&
+            !friendAccess
+        ) {
+            statusView.text = "好友测试凭据已失效，请回到设置重新绑定"
+            return
+        }
         if (apiKey.isBlank()) {
-            statusView.text = "请先在设置 → 内容分析 AI 中填写 API Key"
+            statusView.text = if (friendAccess) {
+                "好友测试凭据已失效，请回到设置重新绑定"
+            } else {
+                "请先在设置 → 内容分析 AI 中填写 API Key"
+            }
             return
         }
         val material = when (mode) {
@@ -735,9 +776,31 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             latestVideoAnalysisRequestId = requestId
         }
         val plan = TranslationPlanStore.loadDraft(this, mode).normalized()
-        val baseUrl = SettingsStore.secondAiBaseUrl(this)
-        val model = SettingsStore.secondAiModel(this)
-        val format = AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(this))
+        val baseUrl = if (friendAccess) {
+            FriendGatewayStore.GATEWAY_BASE_URL + "/gateway"
+        } else {
+            SettingsStore.secondAiBaseUrl(this)
+        }
+        val model = if (friendAccess) "gemini-3.5-flash" else SettingsStore.secondAiModel(this)
+        val format = if (friendAccess) {
+            AiTextClient.Format.GEMINI
+        } else {
+            AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(this))
+        }
+        val credentialMode = if (friendAccess) {
+            ApiCredentialMode.BEARER_TOKEN
+        } else {
+            ApiCredentialMode.QUERY_API_KEY
+        }
+        val deviceId = if (friendAccess) FriendGatewayStore.deviceId(this) else ""
+        val requestSignatureProvider:
+            ((String, String, ByteArray, String) -> Map<String, String>)? = if (friendAccess) {
+                { method, path, body, token ->
+                    FriendDeviceIdentity.signRequest(this, method, path, body, token).asMap()
+                }
+            } else {
+                null
+            }
         button.isEnabled = false
         statusView.text = "正在整理，请稍候…"
         Thread({
@@ -761,6 +824,9 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                     apiKey = apiKey,
                     model = model,
                     format = format,
+                    credentialMode = credentialMode,
+                    deviceId = deviceId,
+                    requestSignatureProvider = requestSignatureProvider,
                 ) to videoInfo
             }.onSuccess { (result, videoInfo) ->
                 runOnUiThread {
@@ -960,6 +1026,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
         etApiKeys.setText(SettingsStore.apiKeysRaw(this))
         etBaseUrl.setText(SettingsStore.baseUrl(this))
+        setupFriendGatewayUi()
         etSecondAiKey.setText(SettingsStore.secondAiApiKey(this))
         etSecondAiUrl.setText(SettingsStore.secondAiBaseUrl(this))
         etSecondAiModel.setText(SettingsStore.secondAiModel(this))
@@ -979,6 +1046,113 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                 )
             }.onFailure { toast("没有可用的浏览器") }
         }
+    }
+
+    private fun setupFriendGatewayUi() {
+        swFriendGateway.setOnCheckedChangeListener { _, checked ->
+            if (syncingFriendGatewayUi) return@setOnCheckedChangeListener
+            if (checked) {
+                if (!FriendGatewayStore.useFriend(this)) {
+                    toast("请先输入邀请码并完成绑定")
+                }
+            } else {
+                FriendGatewayStore.usePersonal(this)
+            }
+            renderFriendGatewayUi()
+        }
+        btnBindFriendGateway.setOnClickListener { bindFriendGateway() }
+        btnClearFriendGateway.setOnClickListener {
+            friendBindingViewModel.clearBinding()
+            etFriendInviteCode.setText("")
+            toast("已清除本机好友凭据")
+        }
+        renderFriendGatewayUi()
+        if (FriendGatewayStore.isBound(this)) refreshFriendGatewayStatus()
+    }
+
+    private fun renderFriendGatewayUi(
+        remote: FriendGatewayStatus? = null,
+        bindingInProgress: Boolean = friendBindingViewModel.isBinding(),
+    ) {
+        val bound = FriendGatewayStore.isBound(this)
+        val active = FriendGatewayStore.isActive(this)
+        syncingFriendGatewayUi = true
+        swFriendGateway.isEnabled = bound && !bindingInProgress
+        swFriendGateway.isChecked = active
+        syncingFriendGatewayUi = false
+        etFriendInviteCode.isEnabled = !bindingInProgress
+        btnBindFriendGateway.isEnabled = !bindingInProgress
+        btnClearFriendGateway.visibility = if (bound) View.VISIBLE else View.GONE
+        btnClearFriendGateway.isEnabled = bound && !bindingInProgress
+        btnBindFriendGateway.text = if (bound) "重新绑定" else "绑定并启用"
+        tvFriendGatewayStatus.text = when {
+            remote != null && active -> {
+                val name = remote.label.ifBlank { "好友测试" }
+                "$name 已启用 · 今日实时 ${remote.liveSessions} 次 · 内容分析 ${remote.textRequests} 次"
+            }
+            active -> "好友测试通道已启用，翻译和内容分析均由服务器提供"
+            bound -> "邀请码已绑定，当前仍使用你自己的 API Key"
+            else -> "当前使用你自己的 API Key"
+        }
+    }
+
+    private fun renderFriendBindingState(state: FriendGatewayBindingState) {
+        val binding = state.phase == FriendGatewayBindingPhase.BINDING
+        renderFriendGatewayUi(bindingInProgress = binding)
+        when (state.phase) {
+            FriendGatewayBindingPhase.BINDING -> {
+                tvFriendGatewayStatus.text = "正在验证邀请码并绑定当前设备…"
+            }
+            FriendGatewayBindingPhase.SUCCESS -> {
+                etFriendInviteCode.setText("")
+                if (FriendGatewayStore.isBound(this)) refreshFriendGatewayStatus()
+            }
+            FriendGatewayBindingPhase.FAILURE -> {
+                tvFriendGatewayStatus.text = state.message
+            }
+            FriendGatewayBindingPhase.IDLE -> Unit
+        }
+    }
+
+    private fun bindFriendGateway() {
+        val code = etFriendInviteCode.text?.toString().orEmpty().trim()
+        if (code.isBlank()) {
+            toast("请输入好友邀请码")
+            return
+        }
+        val version = runCatching {
+            val info = packageManager.getPackageInfo(packageName, 0)
+            "${info.versionName}(${info.longVersionCode})"
+        }.getOrDefault("unknown")
+        val enableFriendOnSuccess =
+            !FriendGatewayStore.isBound(this) || FriendGatewayStore.isActive(this)
+        friendBindingViewModel.bind(code, version, enableFriendOnSuccess)
+    }
+
+    private fun refreshFriendGatewayStatus() {
+        val token = FriendGatewayStore.token(this)
+        if (token.isBlank()) return
+        Thread({
+            runCatching { FriendGatewayClient(this).status(token) }
+                .onSuccess { status ->
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed && !friendBindingViewModel.isBinding()) {
+                            renderFriendGatewayUi(status)
+                        }
+                    }
+                }
+                .onFailure { error ->
+                    runOnUiThread {
+                        if (
+                            !isFinishing && !isDestroyed && !friendBindingViewModel.isBinding() &&
+                            FriendGatewayStore.isActive(this)
+                        ) {
+                            tvFriendGatewayStatus.text =
+                                "好友通道验证失败：${error.message ?: "未知错误"}"
+                        }
+                    }
+                }
+        }, "friend-gateway-status").start()
     }
 
     private fun secondAiFormat(): AiTextClient.Format =
@@ -1578,7 +1752,20 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         )
         saveSecondAiSettings()
         val plan = TranslationPlanStore.loadDraft(this, mode)
-        if (SettingsStore.apiKeyList(this).isEmpty()) {
+        val friendSelected = FriendGatewayStore.mode(this) == FriendGatewayStore.MODE_FRIEND
+        val friendAccess = FriendGatewayStore.isActive(this)
+        pendingCredentialMode = if (friendSelected) {
+            FriendGatewayStore.MODE_FRIEND
+        } else {
+            FriendGatewayStore.MODE_PERSONAL
+        }
+        if (friendSelected && !friendAccess) {
+            toast("好友测试凭据已失效，请重新绑定邀请码")
+            bottomNav.selectedItemId = R.id.nav_settings
+            openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
+            return false
+        }
+        if (!friendAccess && SettingsStore.apiKeyList(this).isEmpty()) {
             toast("请先填 Gemini API Key")
             bottomNav.selectedItemId = R.id.nav_settings
             openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
@@ -1606,6 +1793,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         Intent(this, CaptureService::class.java)
             .setAction(CaptureService.ACTION_START)
             .putExtra(CaptureService.EXTRA_MODE, captureMode)
+            .putExtra(CaptureService.EXTRA_CREDENTIAL_MODE, pendingCredentialMode)
             .putExtra(CaptureService.EXTRA_SESSION_PROMPT, pendingSessionPrompt)
             .putExtra(CaptureService.EXTRA_SOURCE_LANGUAGE, pendingSessionSource)
             .putExtra(CaptureService.EXTRA_TARGET_LANGUAGE, pendingSessionTarget)

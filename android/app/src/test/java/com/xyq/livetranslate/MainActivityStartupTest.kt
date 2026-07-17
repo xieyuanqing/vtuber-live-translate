@@ -215,6 +215,42 @@ class MainActivityStartupTest {
         }
     }
 
+    @Test
+    fun captureIntentCarriesFrozenCredentialMode() = withActivity { activity ->
+        MainActivity::class.java.getDeclaredField("pendingCredentialMode").apply {
+            isAccessible = true
+            set(activity, FriendGatewayStore.MODE_FRIEND)
+        }
+        val intent = MainActivity::class.java.getDeclaredMethod(
+            "captureStartIntent",
+            String::class.java,
+        ).apply {
+            isAccessible = true
+        }.invoke(activity, StatusBus.MODE_MIC) as android.content.Intent
+
+        assertEquals(
+            FriendGatewayStore.MODE_FRIEND,
+            intent.getStringExtra(CaptureService.EXTRA_CREDENTIAL_MODE),
+        )
+    }
+
+    @Test
+    fun friendBindingDisablesAllMutableControls() = withActivity { activity ->
+        MainActivity::class.java.getDeclaredMethod(
+            "renderFriendGatewayUi",
+            FriendGatewayStatus::class.java,
+            Boolean::class.javaPrimitiveType,
+        ).apply {
+            isAccessible = true
+            invoke(activity, null, true)
+        }
+
+        assertFalse(activity.findViewById<View>(R.id.swFriendGateway).isEnabled)
+        assertFalse(activity.findViewById<View>(R.id.etFriendInviteCode).isEnabled)
+        assertFalse(activity.findViewById<View>(R.id.btnBindFriendGateway).isEnabled)
+        assertFalse(activity.findViewById<View>(R.id.btnClearFriendGateway).isEnabled)
+    }
+
     private fun withActivity(block: (MainActivity) -> Unit) {
         val controller: ActivityController<MainActivity> =
             Robolectric.buildActivity(MainActivity::class.java).setup()
