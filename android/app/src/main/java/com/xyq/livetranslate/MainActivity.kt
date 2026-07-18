@@ -1,13 +1,7 @@
 package com.xyq.livetranslate
 
-import android.Manifest
-
-import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.media.projection.MediaProjectionManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -42,20 +36,14 @@ import com.xyq.livetranslate.ui.FriendGatewayBindingActions
 import com.xyq.livetranslate.ui.SettingsController
 import com.xyq.livetranslate.ui.SettingsDiagnosticsState
 import com.xyq.livetranslate.ui.SettingsViews
+import com.xyq.livetranslate.ui.PendingSessionSnapshot
+import com.xyq.livetranslate.ui.SessionContextAccess
+import com.xyq.livetranslate.ui.SessionCoordinator
+import com.xyq.livetranslate.ui.SessionHost
 
 class MainActivity : AppCompatActivity() {
 
     private companion object {
-        const val STATE_PENDING_START_MODE = "pending_start_mode"
-        const val STATE_PENDING_CREDENTIAL_MODE = "pending_credential_mode"
-        const val STATE_PERMISSION_REQUESTED = "permission_requested"
-        const val STATE_PENDING_PROMPT = "pending_prompt"
-        const val STATE_PENDING_SOURCE = "pending_source"
-        const val STATE_PENDING_TARGET = "pending_target"
-        const val STATE_PENDING_SCENE = "pending_scene"
-        const val STATE_PENDING_SCENE_LABEL = "pending_scene_label"
-        const val STATE_PENDING_TITLE = "pending_title"
-        const val STATE_PENDING_CONTEXT = "pending_context"
         const val STATE_INTERPRETATION_CONTEXT = "interpretation_context"
         const val STATE_VIDEO_CONTEXT = "video_context"
         const val STATE_VIDEO_URL = "video_url"
@@ -78,6 +66,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyController: HistoryController
     private lateinit var sceneLibraryController: SceneLibraryController
     private lateinit var settingsController: SettingsController
+    private lateinit var sessionCoordinator: SessionCoordinator
 
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
@@ -146,20 +135,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnVideoAnalyzeContext: com.google.android.material.button.MaterialButton
     private lateinit var tvVideoAnalyzeStatus: TextView
 
-    private var pendingSessionPrompt = ""
-    private var pendingSessionSource = ""
-    private var pendingSessionTarget = ""
-    private var pendingSessionScene = ""
-    private var pendingSessionSceneLabel = ""
-    private var pendingSessionTitle = ""
-    private var pendingSessionContext = ""
-    private var permRequested = false
     private var latestInterpAnalysisRequestId = ""
     private var latestVideoAnalysisRequestId = ""
-    /** 权限回调后要启动的模式：video / mic */
-    private var pendingStartMode: String = StatusBus.MODE_VIDEO
-    /** 权限回调期间冻结的凭据模式：只传模式，不传 Token。 */
-    private var pendingCredentialMode: String = FriendGatewayStore.MODE_PERSONAL
     private var syncingLanguageControls = false
     private lateinit var friendBindingViewModel: FriendGatewayBindingViewModel
 
@@ -178,42 +155,16 @@ class MainActivity : AppCompatActivity() {
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            startCapture(pendingStartMode)
+            sessionCoordinator.onAudioPermissionResult()
         }
 
     private val projLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            if (res.resultCode == Activity.RESULT_OK && res.data != null) {
-                val i = captureStartIntent(StatusBus.MODE_VIDEO)
-                    .putExtra(CaptureService.EXTRA_RESULT_CODE, res.resultCode)
-                    .putExtra(CaptureService.EXTRA_RESULT_DATA, res.data)
-                startForegroundService(i)
-                consumeStartedSession(StatusBus.MODE_VIDEO)
-            } else {
-                toast("未获得屏幕捕获授权，无法内录")
-            }
+            sessionCoordinator.onProjectionResult(res.resultCode, res.data)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pendingStartMode = savedInstanceState
-            ?.getString(STATE_PENDING_START_MODE)
-            ?.takeIf { it == StatusBus.MODE_MIC || it == StatusBus.MODE_VIDEO }
-            ?: StatusBus.MODE_VIDEO
-        pendingCredentialMode = savedInstanceState
-            ?.getString(STATE_PENDING_CREDENTIAL_MODE)
-            ?.takeIf {
-                it == FriendGatewayStore.MODE_PERSONAL || it == FriendGatewayStore.MODE_FRIEND
-            }
-            ?: FriendGatewayStore.MODE_PERSONAL
-        permRequested = savedInstanceState?.getBoolean(STATE_PERMISSION_REQUESTED) ?: false
-        pendingSessionPrompt = savedInstanceState?.getString(STATE_PENDING_PROMPT).orEmpty()
-        pendingSessionSource = savedInstanceState?.getString(STATE_PENDING_SOURCE).orEmpty()
-        pendingSessionTarget = savedInstanceState?.getString(STATE_PENDING_TARGET).orEmpty()
-        pendingSessionScene = savedInstanceState?.getString(STATE_PENDING_SCENE).orEmpty()
-        pendingSessionSceneLabel = savedInstanceState?.getString(STATE_PENDING_SCENE_LABEL).orEmpty()
-        pendingSessionTitle = savedInstanceState?.getString(STATE_PENDING_TITLE).orEmpty()
-        pendingSessionContext = savedInstanceState?.getString(STATE_PENDING_CONTEXT).orEmpty()
         val mainTabs = setOf(R.id.nav_interp, R.id.nav_video, R.id.nav_history, R.id.nav_settings)
         val restorableSubPages = setOf(
             R.id.pageSettingsTranslate,
@@ -295,10 +246,76 @@ class MainActivity : AppCompatActivity() {
             savedInstanceState?.getString(STATE_VIDEO_URL).orEmpty(),
         )
 
-        btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
-        btnVideoStop.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
-        btnInterpToggle.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
-        btnInterpStop.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
+        sessionCoordinator = SessionCoordinator(
+            context = this,
+            persistDraftInputs = settingsController::persistDraftInputs,
+            sessionContextAccess = object : SessionContextAccess {
+                override fun current(mode: TranslationMode): SessionPromptContext {
+                    val manual = when (mode) {
+                        TranslationMode.INTERPRETATION ->
+                            etInterpSessionContext.text?.toString().orEmpty()
+                        TranslationMode.VIDEO ->
+                            etVideoSessionContext.text?.toString().orEmpty()
+                    }.trim()
+                    return SessionPromptContext(manualContext = manual)
+                }
+
+                override fun clearAfterSuccessfulStart(mode: TranslationMode) {
+                    when (mode) {
+                        TranslationMode.INTERPRETATION -> etInterpSessionContext.setText("")
+                        TranslationMode.VIDEO -> {
+                            etVideoSessionContext.setText("")
+                            etVideoSessionUrl.setText("")
+                        }
+                    }
+                }
+            },
+            host = object : SessionHost {
+                override fun checkPermission(permission: String): Boolean =
+                    checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                override fun requestPermissions(permissions: Array<String>) {
+                    permLauncher.launch(permissions)
+                }
+
+                override fun canDrawOverlays(): Boolean = Settings.canDrawOverlays(this@MainActivity)
+
+                override fun openOverlaySettings() {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:$packageName"),
+                        ),
+                    )
+                }
+
+                override fun launchProjection(intent: Intent) {
+                    projLauncher.launch(intent)
+                }
+
+                override fun startForegroundService(intent: Intent) {
+                    this@MainActivity.startForegroundService(intent)
+                }
+
+                override fun startService(intent: Intent) {
+                    this@MainActivity.startService(intent)
+                }
+
+                override fun openTranslationSettings() {
+                    bottomNav.selectedItemId = R.id.nav_settings
+                    openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
+                }
+
+                override fun toast(message: String) {
+                    this@MainActivity.toast(message)
+                }
+            },
+        ).also { it.restoreState(savedInstanceState) }
+
+        btnToggle.setOnClickListener { sessionCoordinator.onModeToggle(StatusBus.MODE_VIDEO) }
+        btnVideoStop.setOnClickListener { sessionCoordinator.onModeToggle(StatusBus.MODE_VIDEO) }
+        btnInterpToggle.setOnClickListener { sessionCoordinator.onModeToggle(StatusBus.MODE_MIC) }
+        btnInterpStop.setOnClickListener { sessionCoordinator.onModeToggle(StatusBus.MODE_MIC) }
         val openOverlaySettings = View.OnClickListener {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
         }
@@ -325,16 +342,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(STATE_PENDING_START_MODE, pendingStartMode)
-        outState.putString(STATE_PENDING_CREDENTIAL_MODE, pendingCredentialMode)
-        outState.putBoolean(STATE_PERMISSION_REQUESTED, permRequested)
-        outState.putString(STATE_PENDING_PROMPT, pendingSessionPrompt)
-        outState.putString(STATE_PENDING_SOURCE, pendingSessionSource)
-        outState.putString(STATE_PENDING_TARGET, pendingSessionTarget)
-        outState.putString(STATE_PENDING_SCENE, pendingSessionScene)
-        outState.putString(STATE_PENDING_SCENE_LABEL, pendingSessionSceneLabel)
-        outState.putString(STATE_PENDING_TITLE, pendingSessionTitle)
-        outState.putString(STATE_PENDING_CONTEXT, pendingSessionContext)
+        sessionCoordinator.saveState(outState)
         outState.putString(STATE_INTERPRETATION_CONTEXT, etInterpSessionContext.text?.toString().orEmpty())
         outState.putString(STATE_VIDEO_CONTEXT, etVideoSessionContext.text?.toString().orEmpty())
         outState.putString(STATE_VIDEO_URL, etVideoSessionUrl.text?.toString().orEmpty())
@@ -531,42 +539,6 @@ class MainActivity : AppCompatActivity() {
             showPage(returnTab)
         }
         currentMainTabId = returnTab
-    }
-
-    private fun consumeStartedSession(captureMode: String) {
-        when (promptMode(captureMode)) {
-            TranslationMode.INTERPRETATION -> etInterpSessionContext.setText("")
-            TranslationMode.VIDEO -> {
-                etVideoSessionContext.setText("")
-                etVideoSessionUrl.setText("")
-            }
-        }
-        pendingSessionPrompt = ""
-        pendingSessionSource = ""
-        pendingSessionTarget = ""
-        pendingSessionScene = ""
-        pendingSessionSceneLabel = ""
-        pendingSessionTitle = ""
-        pendingSessionContext = ""
-    }
-
-    private fun currentSessionContext(mode: TranslationMode): SessionPromptContext {
-        val manual = when (mode) {
-            TranslationMode.INTERPRETATION -> etInterpSessionContext.text?.toString().orEmpty()
-            TranslationMode.VIDEO -> etVideoSessionContext.text?.toString().orEmpty()
-        }.trim()
-        // 视频元数据在 AI 解析时写入 manual 文本；启动时只传 manual 即可。
-        return SessionPromptContext(manualContext = manual)
-    }
-
-    private fun composeSessionPrompt(mode: TranslationMode): String {
-        val plan = TranslationPlanStore.loadDraft(this, mode)
-        val scene = SceneLibraryStore.resolve(this, mode, plan.scenePresetId)
-        return PromptBuilder.build(
-            scene = scene,
-            context = currentSessionContext(mode),
-            plan = plan,
-        )
     }
 
     private fun setupSessionContextUi() {
@@ -772,6 +744,16 @@ class MainActivity : AppCompatActivity() {
         settingsController.renderFriendGatewayUiForTest(bindingInProgress)
     }
 
+    internal fun installPendingSessionForTest(snapshot: PendingSessionSnapshot) {
+        sessionCoordinator.installPendingSnapshotForTest(snapshot)
+    }
+
+    internal fun captureStartIntentForTest(): Intent =
+        sessionCoordinator.captureStartIntentForTest()
+
+    internal fun prepareSessionSettingsForTest(captureMode: String): Boolean =
+        sessionCoordinator.prepareSessionSettingsForTest(captureMode)
+
     private fun setupHomeSceneChips(mode: TranslationMode) {
         val group = if (mode == TranslationMode.INTERPRETATION) {
             chipGroupInterpHomeScenes
@@ -900,122 +882,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ---------- 启动流程 ----------
-
-    /** 同传 / 视频 共用开停入口：已在跑则停止；否则按 mode 启动。 */
-    private fun onModeToggle(mode: String) {
-        if (StatusBus.serviceRunning) {
-            if (StatusBus.captureMode.isNotEmpty() && StatusBus.captureMode != mode) {
-                val other = if (StatusBus.captureMode == StatusBus.MODE_MIC) "同传" else "视频字幕"
-                toast("当前正在运行「$other」，请先停止后再切换")
-                return
-            }
-            startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP))
-            return
-        }
-        startCapture(mode)
-    }
-
-    private fun promptMode(captureMode: String): TranslationMode =
-        if (captureMode == StatusBus.MODE_MIC) TranslationMode.INTERPRETATION else TranslationMode.VIDEO
-
-    private fun prepareSessionSettings(captureMode: String): Boolean {
-        val mode = promptMode(captureMode)
-        settingsController.persistDraftInputs()
-        val plan = TranslationPlanStore.loadDraft(this, mode)
-        val friendSelected = FriendGatewayStore.mode(this) == FriendGatewayStore.MODE_FRIEND
-        val friendAccess = FriendGatewayStore.isActive(this)
-        pendingCredentialMode = if (friendSelected) {
-            FriendGatewayStore.MODE_FRIEND
-        } else {
-            FriendGatewayStore.MODE_PERSONAL
-        }
-        if (friendSelected && !friendAccess) {
-            toast("好友测试凭据已失效，请重新绑定邀请码")
-            bottomNav.selectedItemId = R.id.nav_settings
-            openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
-            return false
-        }
-        if (!friendAccess && SettingsStore.apiKeyList(this).isEmpty()) {
-            toast("请先填 Gemini API Key")
-            bottomNav.selectedItemId = R.id.nav_settings
-            openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
-            return false
-        }
-        val scene = SceneLibraryStore.resolve(this, mode, plan.scenePresetId)
-        pendingSessionPrompt = PromptBuilder.build(
-            scene = scene,
-            context = currentSessionContext(mode),
-            plan = plan,
-        )
-        pendingSessionSource = plan.sourceLanguageCode
-        pendingSessionTarget = plan.targetLanguageCode
-        pendingSessionScene = scene.id
-        pendingSessionSceneLabel = scene.label
-        pendingSessionContext = currentSessionContext(mode).manualContext.trim()
-        pendingSessionTitle = when (mode) {
-            TranslationMode.INTERPRETATION -> "同传记录"
-            TranslationMode.VIDEO -> "视频翻译"
-        }
-        return true
-    }
-
-    private fun captureStartIntent(captureMode: String): Intent =
-        Intent(this, CaptureService::class.java)
-            .setAction(CaptureService.ACTION_START)
-            .putExtra(CaptureService.EXTRA_MODE, captureMode)
-            .putExtra(CaptureService.EXTRA_CREDENTIAL_MODE, pendingCredentialMode)
-            .putExtra(CaptureService.EXTRA_SESSION_PROMPT, pendingSessionPrompt)
-            .putExtra(CaptureService.EXTRA_SOURCE_LANGUAGE, pendingSessionSource)
-            .putExtra(CaptureService.EXTRA_TARGET_LANGUAGE, pendingSessionTarget)
-            .putExtra(CaptureService.EXTRA_SCENE_PRESET, pendingSessionScene)
-            .putExtra(CaptureService.EXTRA_SCENE_LABEL, pendingSessionSceneLabel)
-            .putExtra(CaptureService.EXTRA_SESSION_TITLE, pendingSessionTitle)
-            .putExtra(CaptureService.EXTRA_SESSION_CONTEXT, pendingSessionContext)
-
-    private fun startCapture(mode: String) {
-        val reusePendingSnapshot = permRequested &&
-            pendingStartMode == mode &&
-            pendingSessionPrompt.isNotBlank()
-        pendingStartMode = mode
-        if (!reusePendingSnapshot && !prepareSessionSettings(mode)) return
-
-        val missingAudioPermission =
-            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-        if (missingAudioPermission) {
-            if (permRequested) {
-                permRequested = false
-                toast("缺少录音权限，请在系统设置中授予")
-                return
-            }
-            val request = mutableListOf(Manifest.permission.RECORD_AUDIO)
-            if (
-                Build.VERSION.SDK_INT >= 33 &&
-                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) {
-                request += Manifest.permission.POST_NOTIFICATIONS
-            }
-            permRequested = true
-            permLauncher.launch(request.toTypedArray())
-            return
-        }
-        permRequested = false
-
-        if (mode == StatusBus.MODE_VIDEO) {
-            if (!Settings.canDrawOverlays(this)) {
-                toast("请开启悬浮窗权限，开启后回到本页再点开始")
-                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-                return
-            }
-            val mpm = getSystemService(MediaProjectionManager::class.java)
-            projLauncher.launch(mpm.createScreenCaptureIntent())
-            return
-        }
-
-        // 麦克风同传：不强制悬浮窗；有权限就顺带挂，没有就只在 App 内看字幕。
-        startForegroundService(captureStartIntent(StatusBus.MODE_MIC))
-        consumeStartedSession(StatusBus.MODE_MIC)
-    }
 
     private fun renderConfirmedTranslations(container: LinearLayout, translations: List<String>) {
         val visible = translations.map(String::trim).filter(String::isNotEmpty).takeLast(6)

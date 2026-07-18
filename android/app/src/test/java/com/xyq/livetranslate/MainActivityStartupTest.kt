@@ -3,6 +3,7 @@ package com.xyq.livetranslate
 import android.content.Context
 import android.content.Intent
 import android.view.View
+import com.xyq.livetranslate.ui.PendingSessionSnapshot
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,7 +24,12 @@ class MainActivityStartupTest {
         StatusBus.captureMode = ""
         StatusBus.reset()
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
-        listOf("scene_library_v1", "translation_plans_v3").forEach { name ->
+        listOf(
+            "scene_library_v1",
+            "translation_plans_v3",
+            "settings",
+            "friend_gateway_v1",
+        ).forEach { name ->
             context.getSharedPreferences(name, Context.MODE_PRIVATE)
                 .edit()
                 .clear()
@@ -344,13 +350,7 @@ class MainActivityStartupTest {
         activity.findViewById<android.widget.EditText>(R.id.etBaseUrl)
             .setText("https://draft.example.test")
 
-        MainActivity::class.java.getDeclaredMethod(
-            "prepareSessionSettings",
-            String::class.java,
-        ).run {
-            isAccessible = true
-            invoke(activity, StatusBus.MODE_MIC)
-        }
+        activity.prepareSessionSettingsForTest(StatusBus.MODE_MIC)
 
         // Robolectric 没有 AndroidKeyStore；这里只验证保存入口写入了加密偏好项。
         assertTrue(settingsPrefs.contains("apiKeysEnc"))
@@ -395,90 +395,52 @@ class MainActivityStartupTest {
         }
     }
 
-    private data class PendingSnapshot(
-        val startMode: String,
-        val credentialMode: String,
-        val prompt: String,
-        val source: String,
-        val target: String,
-        val scene: String,
-        val sceneLabel: String,
-        val title: String,
-        val context: String,
-    )
-
-    private fun distinctPendingSnapshot(): PendingSnapshot = PendingSnapshot(
-        startMode = StatusBus.MODE_MIC,
+    private fun distinctPendingSnapshot(): PendingSessionSnapshot = PendingSessionSnapshot(
+        captureMode = StatusBus.MODE_MIC,
         credentialMode = FriendGatewayStore.MODE_FRIEND,
         prompt = "frozen-prompt",
-        source = "ja",
-        target = "zh",
-        scene = "frozen-scene-id",
+        sourceLanguageCode = "ja",
+        targetLanguageCode = "zh",
+        scenePresetId = "frozen-scene-id",
         sceneLabel = "frozen-scene-label",
-        title = "frozen-session-title",
-        context = "frozen-session-context",
+        sessionTitle = "frozen-session-title",
+        sessionContext = "frozen-session-context",
     ).also { snapshot ->
         val values = listOf(
-            snapshot.startMode,
+            snapshot.captureMode,
             snapshot.credentialMode,
             snapshot.prompt,
-            snapshot.source,
-            snapshot.target,
-            snapshot.scene,
+            snapshot.sourceLanguageCode,
+            snapshot.targetLanguageCode,
+            snapshot.scenePresetId,
             snapshot.sceneLabel,
-            snapshot.title,
-            snapshot.context,
+            snapshot.sessionTitle,
+            snapshot.sessionContext,
         )
         check(values.distinct().size == values.size)
     }
 
-    private fun setPendingSnapshot(activity: MainActivity, snapshot: PendingSnapshot) {
-        mapOf(
-            "pendingStartMode" to snapshot.startMode,
-            "pendingCredentialMode" to snapshot.credentialMode,
-            "pendingSessionPrompt" to snapshot.prompt,
-            "pendingSessionSource" to snapshot.source,
-            "pendingSessionTarget" to snapshot.target,
-            "pendingSessionScene" to snapshot.scene,
-            "pendingSessionSceneLabel" to snapshot.sceneLabel,
-            "pendingSessionTitle" to snapshot.title,
-            "pendingSessionContext" to snapshot.context,
-        ).forEach { (name, value) ->
-            MainActivity::class.java.getDeclaredField(name).apply {
-                isAccessible = true
-                set(activity, value)
-            }
-        }
+    private fun setPendingSnapshot(activity: MainActivity, snapshot: PendingSessionSnapshot) {
+        activity.installPendingSessionForTest(snapshot)
     }
 
-    private fun captureStartIntentForPendingMode(activity: MainActivity): Intent {
-        val pendingMode = MainActivity::class.java.getDeclaredField("pendingStartMode").run {
-            isAccessible = true
-            get(activity) as String
-        }
-        return MainActivity::class.java.getDeclaredMethod(
-            "captureStartIntent",
-            String::class.java,
-        ).run {
-            isAccessible = true
-            invoke(activity, pendingMode) as Intent
-        }
-    }
+    private fun captureStartIntentForPendingMode(activity: MainActivity): Intent =
+        activity.captureStartIntentForTest()
 
-    private fun assertCaptureIntentMatches(snapshot: PendingSnapshot, intent: Intent) {
+    private fun assertCaptureIntentMatches(snapshot: PendingSessionSnapshot, intent: Intent) {
         assertEquals(CaptureService.ACTION_START, intent.action)
-        assertEquals(snapshot.startMode, intent.getStringExtra(CaptureService.EXTRA_MODE))
+        assertEquals(snapshot.captureMode, intent.getStringExtra(CaptureService.EXTRA_MODE))
         assertEquals(
             snapshot.credentialMode,
             intent.getStringExtra(CaptureService.EXTRA_CREDENTIAL_MODE),
         )
         assertEquals(snapshot.prompt, intent.getStringExtra(CaptureService.EXTRA_SESSION_PROMPT))
-        assertEquals(snapshot.source, intent.getStringExtra(CaptureService.EXTRA_SOURCE_LANGUAGE))
-        assertEquals(snapshot.target, intent.getStringExtra(CaptureService.EXTRA_TARGET_LANGUAGE))
-        assertEquals(snapshot.scene, intent.getStringExtra(CaptureService.EXTRA_SCENE_PRESET))
+        assertEquals(snapshot.sourceLanguageCode, intent.getStringExtra(CaptureService.EXTRA_SOURCE_LANGUAGE))
+        assertEquals(snapshot.targetLanguageCode, intent.getStringExtra(CaptureService.EXTRA_TARGET_LANGUAGE))
+        assertEquals(snapshot.scenePresetId, intent.getStringExtra(CaptureService.EXTRA_SCENE_PRESET))
         assertEquals(snapshot.sceneLabel, intent.getStringExtra(CaptureService.EXTRA_SCENE_LABEL))
-        assertEquals(snapshot.title, intent.getStringExtra(CaptureService.EXTRA_SESSION_TITLE))
-        assertEquals(snapshot.context, intent.getStringExtra(CaptureService.EXTRA_SESSION_CONTEXT))
+        assertEquals(snapshot.sessionTitle, intent.getStringExtra(CaptureService.EXTRA_SESSION_TITLE))
+        assertEquals(snapshot.sessionContext, intent.getStringExtra(CaptureService.EXTRA_SESSION_CONTEXT))
 
         val extraKeys = requireNotNull(intent.extras).keySet()
         assertEquals(
