@@ -1,6 +1,6 @@
 # 07 · MainActivity 拆分重构施工文档
 
-> **基线**：分支 `claude/saas-architecture-review-bkde2s`，文档修订基线 `90bf642`。
+> **锁定方式**：以本文件所在提交中的内容为施工真源；分支为 `claude/saas-architecture-review-bkde2s`，修订起点为 `90bf642`。不要按修订起点读取旧版文档。
 >
 > **状态**：待执行。执行者必须按步骤顺序施工；每一步都要独立编译、独立测试、独立提交。
 
@@ -274,6 +274,7 @@ git diff --check
 - 迁移 `setupSceneLibraryPage`、`reloadSceneLibrary`、`buildSceneCard`、`showSceneEditor`；
 - controller 负责 `STATE_SCENE_LIBRARY_MODE` 的读写；
 - 保留 `MainActivity.internal fun openSceneLibrary(...)` 作为窄测试/兼容入口，但内部只委托 controller 设 mode 并请求打开页面；
+- `openSettingsSub(pageSceneLibrary)` 的临时分支改调 `sceneLibraryController.reload()`；设置首页的场景库入口改调 `openSceneLibrary(TranslationMode.INTERPRETATION)`，不得继续直接读写 `sceneLibraryMode`；
 - `onSceneChanged(mode)` 暂时回调 Activity 仍存在的 `refreshSceneDependents`；
 - 删除 Activity 中已迁移字段、方法和直接 View 访问。
 
@@ -331,6 +332,7 @@ git diff --check
 - coordinator 负责所有 pending snapshot saved-state key；
 - 注入第 4.3 节全部 host 能力，特别是 `requestPermissions`、`launchProjection`、`startForegroundService`、`startService`、`checkPermission`、`openSystemSettings` 和导航；
 - 两个 launchers 仍由 Activity 无条件注册，结果回调只转发；
+- 四个开始/停止按钮在本步骤先改为委托 `sessionCoordinator.onModeToggle(mode)`，不得继续引用已经迁走的 Activity 方法；步骤 5 再把四个 listener 的所有权整体迁入两个 mode controller；
 - 本步骤仍可通过 Activity 的临时 `SessionContextAccess` lambda 读取/清空主页上下文；步骤 5 替换成 `SessionContextController`，但本步骤自身必须编译；
 - `SettingsController.persistDraftInputs()` 是启动设置保存的唯一入口；
 - 个人 Key 缺失或好友凭据失效时经 `openTranslationSettings()` 导航，不直接访问 bottomNav；
