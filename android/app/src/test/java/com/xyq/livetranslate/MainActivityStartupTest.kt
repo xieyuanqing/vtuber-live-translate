@@ -168,6 +168,37 @@ class MainActivityStartupTest {
     }
 
     @Test
+    fun sceneUseRefreshesHomeDependentsThroughControllerCallback() = withActivity { activity ->
+        val mode = TranslationMode.INTERPRETATION
+        val created = requireNotNull(
+            SceneLibraryStore.create(activity, mode, "回调接线场景", "验证场景变更会刷新主页"),
+        )
+        activity.openSceneLibrary(mode, R.id.nav_interp)
+
+        val list = activity.findViewById<android.widget.LinearLayout>(R.id.sceneLibraryList)
+        val card = (0 until list.childCount)
+            .map(list::getChildAt)
+            .first {
+                it.findViewById<android.widget.TextView>(R.id.tvSceneName).text.toString() == created.label
+            }
+        card.findViewById<View>(R.id.btnUseScene).performClick()
+
+        assertEquals(created.id, TranslationPlanStore.loadDraft(activity, mode).scenePresetId)
+        val group = activity.findViewById<com.google.android.material.chip.ChipGroup>(
+            R.id.chipGroupInterpHomeScenes,
+        )
+        assertEquals(
+            created.label,
+            group.findViewById<com.google.android.material.chip.Chip>(group.checkedChipId).text.toString(),
+        )
+        assertTrue(
+            activity.findViewById<android.widget.TextView>(R.id.tvInterpPlanSummary)
+                .text
+                .startsWith(created.label),
+        )
+    }
+
+    @Test
     fun videoSceneLibrarySurvivesRecreateAndReturnsToVideoHome() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {

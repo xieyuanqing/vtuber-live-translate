@@ -28,19 +28,17 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
-import com.google.android.material.textfield.TextInputLayout
 import com.xyq.livetranslate.ui.HistoryController
 import com.xyq.livetranslate.ui.HistoryViews
+import com.xyq.livetranslate.ui.SceneLibraryController
+import com.xyq.livetranslate.ui.SceneLibraryViews
 
 class MainActivity : AppCompatActivity() {
 
@@ -61,7 +59,6 @@ class MainActivity : AppCompatActivity() {
         const val STATE_MAIN_TAB = "main_tab"
         const val STATE_SETTINGS_SUB = "settings_sub"
         const val STATE_SETTINGS_RETURN_TAB = "settings_return_tab"
-        const val STATE_SCENE_LIBRARY_MODE = "scene_library_mode"
     }
 
     // 壳子：底部 4 Tab
@@ -76,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pageSettings: View
     private var currentMainTabId = R.id.nav_interp
     private lateinit var historyController: HistoryController
+    private lateinit var sceneLibraryController: SceneLibraryController
 
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
@@ -94,14 +92,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rowSetDiagnostics: View
     private lateinit var rowSetAbout: View
 
-    // 场景库（唯一的可复用配置库）
-    private lateinit var toggleSceneLibraryMode: MaterialButtonToggleGroup
-    private lateinit var btnSceneLibraryInterp: MaterialButton
-    private lateinit var btnSceneLibraryVideo: MaterialButton
-    private lateinit var sceneLibraryList: LinearLayout
-    private lateinit var btnResetSceneLibrary: MaterialButton
-    private lateinit var fabNewScene: ExtendedFloatingActionButton
-    private var sceneLibraryMode: TranslationMode = TranslationMode.INTERPRETATION
 
     // 同传页（麦克风）
     private lateinit var interpIdleContent: View
@@ -280,9 +270,6 @@ class MainActivity : AppCompatActivity() {
         settingsReturnTabId = savedInstanceState?.getInt(STATE_SETTINGS_RETURN_TAB)
             ?.takeIf { it in mainTabs }
             ?: R.id.nav_settings
-        sceneLibraryMode = savedInstanceState?.getString(STATE_SCENE_LIBRARY_MODE)
-            ?.let { key -> TranslationMode.entries.firstOrNull { it.storageKey == key } }
-            ?: TranslationMode.INTERPRETATION
         TranslationPlanStore.migrateLegacySavedPlans(this)
         setContentView(R.layout.activity_main)
 
@@ -296,12 +283,22 @@ class MainActivity : AppCompatActivity() {
             toast = ::toast,
         )
         historyController.setup()
+        sceneLibraryController = SceneLibraryController(
+            context = this,
+            views = SceneLibraryViews.bind(pageSceneLibrary),
+            openPage = { returnTabId ->
+                openSettingsSub(R.id.pageSceneLibrary, "场景库", returnTabId)
+            },
+            onSceneChanged = ::refreshSceneDependents,
+            toast = ::toast,
+        )
+        sceneLibraryController.restoreState(savedInstanceState)
+        sceneLibraryController.setup()
         friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
         friendBindingViewModel.state.observe(this, ::renderFriendBindingState)
         applyWindowInsets()
         setupBottomNav()
         setupSettings()
-        setupSceneLibraryPage()
         setupStyleSliders()
         setupParamControls()
         setupFinalPlanUi()
@@ -365,7 +362,7 @@ class MainActivity : AppCompatActivity() {
         outState.putInt(STATE_MAIN_TAB, currentMainTabId)
         outState.putInt(STATE_SETTINGS_SUB, settingsSubId)
         outState.putInt(STATE_SETTINGS_RETURN_TAB, settingsReturnTabId)
-        outState.putString(STATE_SCENE_LIBRARY_MODE, sceneLibraryMode.storageKey)
+        sceneLibraryController.saveState(outState)
         super.onSaveInstanceState(outState)
     }
 
@@ -422,13 +419,6 @@ class MainActivity : AppCompatActivity() {
         rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
         rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
         rowSetAbout = findViewById(R.id.rowSetAbout)
-
-        toggleSceneLibraryMode = findViewById(R.id.toggleSceneLibraryMode)
-        btnSceneLibraryInterp = findViewById(R.id.btnSceneLibraryInterp)
-        btnSceneLibraryVideo = findViewById(R.id.btnSceneLibraryVideo)
-        sceneLibraryList = findViewById(R.id.sceneLibraryList)
-        btnResetSceneLibrary = findViewById(R.id.btnResetSceneLibrary)
-        fabNewScene = findViewById(R.id.fabNewScene)
 
         interpIdleContent = findViewById(R.id.interpIdleContent)
         interpRunningContent = findViewById(R.id.interpRunningContent)
@@ -580,7 +570,7 @@ class MainActivity : AppCompatActivity() {
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
         bottomNav.visibility = View.GONE
         if (pageId == R.id.pageSceneLibrary) {
-            reloadSceneLibrary()
+            sceneLibraryController.reload()
         }
     }
 
@@ -820,8 +810,7 @@ class MainActivity : AppCompatActivity() {
         rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
         rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
         rowSetSceneLibrary.setOnClickListener {
-            sceneLibraryMode = TranslationMode.INTERPRETATION
-            openSettingsSub(R.id.pageSceneLibrary, "场景库")
+            openSceneLibrary(TranslationMode.INTERPRETATION)
         }
         rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "内容分析 AI") }
         rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
@@ -1036,8 +1025,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun openSceneLibrary(mode: TranslationMode, returnTabId: Int = R.id.nav_settings) {
-        sceneLibraryMode = mode
-        openSettingsSub(R.id.pageSceneLibrary, "场景库", returnTabId)
+        sceneLibraryController.open(mode, returnTabId)
     }
 
     private fun setupHomeSceneChips(mode: TranslationMode) {
@@ -1069,170 +1057,6 @@ class MainActivity : AppCompatActivity() {
                 }
             })
         }
-    }
-
-    private fun setupSceneLibraryPage() {
-        toggleSceneLibraryMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            sceneLibraryMode = when (checkedId) {
-                R.id.btnSceneLibraryVideo -> TranslationMode.VIDEO
-                else -> TranslationMode.INTERPRETATION
-            }
-            reloadSceneLibrary()
-        }
-        fabNewScene.setOnClickListener { showSceneEditor() }
-        btnResetSceneLibrary.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle("恢复默认场景？")
-                .setMessage("会替换当前模式的全部场景和默认选择；正在使用已删除场景的模式会回退到默认场景。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("恢复") { _, _ ->
-                    SceneLibraryStore.reset(this, sceneLibraryMode)
-                    refreshSceneDependents(sceneLibraryMode)
-                    reloadSceneLibrary()
-                    toast("已恢复${sceneLibraryMode.label}默认场景")
-                }
-                .show()
-        }
-    }
-
-    private fun reloadSceneLibrary() {
-        val checkedId = if (sceneLibraryMode == TranslationMode.VIDEO) {
-            R.id.btnSceneLibraryVideo
-        } else {
-            R.id.btnSceneLibraryInterp
-        }
-        if (toggleSceneLibraryMode.checkedButtonId != checkedId) {
-            toggleSceneLibraryMode.check(checkedId)
-        }
-        val items = SceneLibraryStore.list(this, sceneLibraryMode)
-        val defaultId = SceneLibraryStore.default(this, sceneLibraryMode).id
-        val inUseId = SceneLibraryStore.resolve(
-            this,
-            sceneLibraryMode,
-            TranslationPlanStore.loadDraft(this, sceneLibraryMode).scenePresetId,
-        ).id
-        sceneLibraryList.removeAllViews()
-        items.forEach { scene ->
-            sceneLibraryList.addView(
-                buildSceneCard(scene, scene.id == defaultId, scene.id == inUseId),
-            )
-        }
-    }
-
-    private fun buildSceneCard(
-        scene: ScenePromptPreset,
-        isDefault: Boolean,
-        isInUse: Boolean,
-    ): View {
-        val card = layoutInflater.inflate(R.layout.item_scene_preset, sceneLibraryList, false)
-        card.findViewById<TextView>(R.id.tvSceneIcon).text =
-            scene.label.firstOrNull()?.toString() ?: "场"
-        card.findViewById<TextView>(R.id.tvSceneName).text = scene.label
-        card.findViewById<TextView>(R.id.tvSceneInstruction).text = scene.instruction
-        card.findViewById<Chip>(R.id.chipSceneDefault).visibility =
-            if (isDefault) View.VISIBLE else View.GONE
-        card.findViewById<Chip>(R.id.chipSceneInUse).visibility =
-            if (isInUse) View.VISIBLE else View.GONE
-        card.findViewById<MaterialButton>(R.id.btnUseScene).apply {
-            visibility = if (isInUse) View.GONE else View.VISIBLE
-            setOnClickListener {
-                val draft = TranslationPlanStore.loadDraft(this@MainActivity, sceneLibraryMode)
-                TranslationPlanStore.saveDraft(
-                    this@MainActivity,
-                    draft.copy(scenePresetId = scene.id),
-                )
-                refreshSceneDependents(sceneLibraryMode)
-                reloadSceneLibrary()
-                toast("已使用：${scene.label}")
-            }
-        }
-        card.findViewById<MaterialButton>(R.id.btnSetDefaultScene).apply {
-            visibility = if (isDefault) View.GONE else View.VISIBLE
-            setOnClickListener {
-                if (SceneLibraryStore.setDefault(this@MainActivity, sceneLibraryMode, scene.id)) {
-                    val draft = TranslationPlanStore.loadDraft(this@MainActivity, sceneLibraryMode)
-                    TranslationPlanStore.saveDraft(
-                        this@MainActivity,
-                        draft.copy(scenePresetId = scene.id),
-                    )
-                    refreshSceneDependents(sceneLibraryMode)
-                    reloadSceneLibrary()
-                    toast("已设为${sceneLibraryMode.label}默认场景")
-                } else {
-                    toast("场景库数据异常，请先恢复模板")
-                }
-            }
-        }
-        card.findViewById<MaterialButton>(R.id.btnEditScene).setOnClickListener {
-            showSceneEditor(scene)
-        }
-        card.findViewById<MaterialButton>(R.id.btnDeleteScene).setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle("删除“${scene.label}”？")
-                .setMessage("正在使用该场景的模式下次启动会回退到当前默认场景。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("删除") { _, _ ->
-                    if (SceneLibraryStore.delete(this, sceneLibraryMode, scene.id)) {
-                        refreshSceneDependents(sceneLibraryMode)
-                        reloadSceneLibrary()
-                        toast("已删除：${scene.label}")
-                    } else {
-                        val message = if (SceneLibraryStore.list(this, sceneLibraryMode).size <= 1) {
-                            "每种模式至少保留一个场景"
-                        } else {
-                            "场景库数据异常，请先恢复模板"
-                        }
-                        toast(message)
-                    }
-                }
-                .show()
-        }
-        return card
-    }
-
-    private fun showSceneEditor(existing: ScenePromptPreset? = null) {
-        val content = layoutInflater.inflate(R.layout.dialog_scene_editor, null, false)
-        val nameLayout = content.findViewById<TextInputLayout>(R.id.tilSceneName)
-        val promptLayout = content.findViewById<TextInputLayout>(R.id.tilSceneInstruction)
-        val name = content.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSceneName)
-        val prompt = content.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSceneInstruction)
-        name.setText(existing?.label.orEmpty())
-        prompt.setText(existing?.instruction.orEmpty())
-
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setTitle(if (existing == null) "新建${sceneLibraryMode.label}场景" else "编辑场景")
-            .setView(content)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("保存", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val label = name.text?.toString().orEmpty().trim()
-                val instruction = prompt.text?.toString().orEmpty().trim()
-                nameLayout.error = if (label.isEmpty()) "请填写场景名称" else null
-                promptLayout.error = if (instruction.isEmpty()) "请填写场景提示词" else null
-                if (label.isEmpty() || instruction.isEmpty()) return@setOnClickListener
-
-                val saved = if (existing == null) {
-                    SceneLibraryStore.create(this, sceneLibraryMode, label, instruction)
-                } else {
-                    if (SceneLibraryStore.update(
-                        this,
-                        sceneLibraryMode,
-                        existing.copy(label = label, instruction = instruction),
-                    )) existing else null
-                }
-                if (saved == null) {
-                    promptLayout.error = "场景库数据异常，请先恢复模板"
-                    return@setOnClickListener
-                }
-                refreshSceneDependents(sceneLibraryMode)
-                reloadSceneLibrary()
-                dialog.dismiss()
-            }
-        }
-        dialog.show()
     }
 
     private fun refreshSceneDependents(mode: TranslationMode) {
