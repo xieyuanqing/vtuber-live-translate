@@ -56,7 +56,8 @@ CaptureService
 
 | 文件 | 职责 |
 |---|---|
-| `MainActivity.kt` | 四个主页面、设置子页、权限流程、会话快照与 UI 状态 |
+| `MainActivity.kt` | 页面壳:生命周期、ActivityResult 启动器注册与 controller 接线 |
+| `ui/`(8 个协作类) | 页面逻辑:`MainNavigator` 导航壳、`ModeHomePages` 同传/视频主页、`SessionCoordinator` 启动快照与权限流、`SessionContextController` 本场上下文与 AI 解析、`HistoryController`、`SceneLibraryController`、`SettingsController`、`UiRuntimeStatus` 不可变渲染快照 |
 | `CaptureService.kt` | 前台服务和完整实时音频管线 |
 | `GeminiLiveClient.kt` | Gemini Live setup、WebSocket、主动轮换与断线重连 |
 | `PcmProcessor.kt` | 音频重采样和分块 |

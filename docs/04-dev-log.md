@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-18 · v2.3.1 MainActivity 拆分为 ui/ 包协作类（行为等价重构）
+
+`MainActivity.kt` 从约 1850 行缩减到 269 行，页面逻辑按 `docs/07-mainactivity-refactor.md` 施工文档拆入 `ui/` 包 8 个协作类：`MainNavigator`（导航壳）、`ModeHomePages`（同传/视频主页统一渲染）、`SessionCoordinator`（启动快照与权限流）、`SessionContextController`（本场上下文与 AI 解析）、`HistoryController`、`SceneLibraryController`、`SettingsController`、`UiRuntimeStatus`（每 300ms 一次采集的不可变渲染快照）。
+
+- **原因**：为后续演进减债——未来新增页面走「新 controller + 新子页」，不再膨胀 MainActivity。
+- **行为等价**：不改布局与 View ID、不动 Store/Service/实时管线;语言胶囊手动 `showDropDown` 接线、空闲/运行态整根显隐、`showPage` 防重入等既有约束全部保留。
+- **快照升级**：松散的 `pendingSession*` 字段改为不可变 `PendingSessionSnapshot` + 阶段机（就绪/等录音权限/等投屏授权），恢复时校验完整性;权限与投屏回调仍只消费冻结快照（边界 7）。
+- **测试**：`MainActivityStartupTest` 从 12 个用例扩到 19 个，反射调用改为窄 `internal` 测试入口;新增 `MainNavigatorTest`、`SessionCoordinatorTest`。
+- **文档**：CLAUDE.md 关键文件表同步更新（本条与该更新为审查后补记）。
+
+**版本**：versionCode 34 / versionName 2.3.1 不变（纯内部重构）。
+
+**验证**：单元测试、Lint、`assembleDebug` 由 GitHub Actions 在 main 头提交 `bca032c` 全绿;持有者真机验证功能一切正常。
+
+---
+
 ## 2026-07-18 · v2.3.1 修复语言胶囊点击不弹、无法切换语言
 
 现场发现主页语言胶囊点了没反应，源/目标语言根本切不了。排查确认是**历史遗留缺陷**（`8ea4faa` 基线即存在，非本轮合并引入）：
