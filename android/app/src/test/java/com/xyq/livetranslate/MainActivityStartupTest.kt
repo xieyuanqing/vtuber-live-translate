@@ -45,8 +45,22 @@ class MainActivityStartupTest {
     @Test
     fun launchesWithoutCrashingAndBindsFinalUi() = withActivity { activity ->
         listOf(
-            R.id.rowSetSceneLibrary,
+            // MainNavigatorViews.bind(root) 必须覆盖完整 shell，且每个 page root 只有这一处绑定真源。
+            R.id.toolbar,
+            R.id.bottomNav,
+            R.id.pageInterp,
+            R.id.pageVideo,
+            R.id.pageHistory,
+            R.id.pageSettings,
+            R.id.pageHistoryDetail,
+            R.id.pageSettingsTranslate,
+            R.id.pageSettingsSubtitle,
+            R.id.pageSettingsProfileAi,
+            R.id.pageSettingsDiagnostics,
+            R.id.pageSettingsAbout,
             R.id.pageSceneLibrary,
+            // 各 controller 的关键控件仍必须可绑定。
+            R.id.rowSetSceneLibrary,
             R.id.sceneLibraryList,
             R.id.fabNewScene,
             R.id.btnInterpOpenPlanLibrary,
@@ -55,7 +69,6 @@ class MainActivityStartupTest {
             R.id.videoIdleContent,
             R.id.videoRunningContent,
             R.id.etHistorySearch,
-            R.id.pageHistoryDetail,
             R.id.viewInterpRunningStatusDot,
             R.id.viewVideoRunningStatusDot,
         ).forEach { id ->
@@ -467,7 +480,7 @@ class MainActivityStartupTest {
         FriendGatewayStore.usePersonal(activity)
         val settingsPrefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
         settingsPrefs.edit().remove("apiKeysEnc").commit()
-        activity.findViewById<android.widget.EditText>(R.id.etApiKeys).setText("draft-api-key")
+        activity.findViewById<android.widget.EditText>(R.id.etApiKeys).setText("[REDACTED]")
         activity.findViewById<android.widget.EditText>(R.id.etBaseUrl)
             .setText("https://draft.example.test")
 

@@ -10,15 +10,12 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.xyq.livetranslate.ui.FriendGatewayBindingActions
 import com.xyq.livetranslate.ui.HistoryController
 import com.xyq.livetranslate.ui.HistoryViews
+import com.xyq.livetranslate.ui.MainNavigator
+import com.xyq.livetranslate.ui.MainNavigatorViews
 import com.xyq.livetranslate.ui.ModeHomeController
 import com.xyq.livetranslate.ui.ModeHomeViews
 import com.xyq.livetranslate.ui.PendingSessionSnapshot
@@ -32,32 +29,7 @@ import com.xyq.livetranslate.ui.SettingsViews
 import com.xyq.livetranslate.ui.UiRuntimeStatus
 
 class MainActivity : AppCompatActivity() {
-    private companion object {
-        const val STATE_MAIN_TAB = "main_tab"
-        const val STATE_SETTINGS_SUB = "settings_sub"
-        const val STATE_SETTINGS_RETURN_TAB = "settings_return_tab"
-    }
-
-    // 壳导航（步骤 6 再整体抽出 MainNavigator）。
-    private lateinit var rootLayout: View
-    private lateinit var bottomNav: BottomNavigationView
-    private lateinit var toolbar: MaterialToolbar
-    private lateinit var pageInterp: View
-    private lateinit var pageVideo: View
-    private lateinit var pageHistory: View
-    private lateinit var pageHistoryDetail: View
-    private lateinit var pageSettings: View
-    private lateinit var pageSettingsTranslate: View
-    private lateinit var pageSettingsSubtitle: View
-    private lateinit var pageSettingsProfileAi: View
-    private lateinit var pageSettingsDiagnostics: View
-    private lateinit var pageSettingsAbout: View
-    private lateinit var pageSceneLibrary: View
-    private lateinit var settingsSubViews: List<View>
-    private var currentMainTabId = R.id.nav_interp
-    private var settingsSubId = 0
-    private var settingsReturnTabId = R.id.nav_settings
-
+    private lateinit var navigator: MainNavigator
     private lateinit var historyController: HistoryController
     private lateinit var sceneLibraryController: SceneLibraryController
     private lateinit var settingsController: SettingsController
@@ -86,48 +58,44 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val mainTabs = setOf(R.id.nav_interp, R.id.nav_video, R.id.nav_history, R.id.nav_settings)
-        val restorableSubPages = setOf(
-            R.id.pageSettingsTranslate,
-            R.id.pageSettingsSubtitle,
-            R.id.pageSettingsProfileAi,
-            R.id.pageSettingsDiagnostics,
-            R.id.pageSettingsAbout,
-            R.id.pageSceneLibrary,
-        )
-        val restoredMainTabId = savedInstanceState?.getInt(STATE_MAIN_TAB)
-            ?.takeIf { it in mainTabs }
-            ?: R.id.nav_interp
-        val restoredSettingsSubId = savedInstanceState?.getInt(STATE_SETTINGS_SUB)
-            ?.takeIf { it in restorableSubPages }
-            ?: 0
-        settingsReturnTabId = savedInstanceState?.getInt(STATE_SETTINGS_RETURN_TAB)
-            ?.takeIf { it in mainTabs }
-            ?: R.id.nav_settings
-
         TranslationPlanStore.migrateLegacySavedPlans(this)
         setContentView(R.layout.activity_main)
-        bindShellViews()
         friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
+        val root = findViewById<View>(R.id.rootLayout)
+        val navigatorViews = MainNavigatorViews.bind(root)
+
+        // Navigator 可先构造，但 setup 必须最后执行，避免恢复动作早于 controller 初始化。
+        navigator = MainNavigator(
+            views = navigatorViews,
+            onMainPageShown = { pageId ->
+                if (pageId == R.id.nav_history) historyController.reload()
+            },
+            onSubPageShown = { pageId ->
+                if (pageId == R.id.pageSceneLibrary) sceneLibraryController.reload()
+            },
+            beforeSubPageClosed = { pageId ->
+                if (pageId == R.id.pageSettingsProfileAi) settingsController.persistSecondAiInputs()
+            },
+        )
 
         // 两个模式各 bind 一次；主页与本场上下文 controller 共享这两个对象。
-        val interpViews = ModeHomeViews.bind(rootLayout, TranslationMode.INTERPRETATION)
-        val videoViews = ModeHomeViews.bind(rootLayout, TranslationMode.VIDEO)
+        val interpViews = ModeHomeViews.bind(root, TranslationMode.INTERPRETATION)
+        val videoViews = ModeHomeViews.bind(root, TranslationMode.VIDEO)
         val homeControllers = mutableMapOf<TranslationMode, ModeHomeController>()
 
         historyController = HistoryController(
             context = this,
-            views = HistoryViews.bind(rootLayout),
+            views = HistoryViews.bind(root),
             openDetailPage = { returnTabId ->
-                openSettingsSub(R.id.pageHistoryDetail, "历史详情", returnTabId)
+                navigator.openSub(R.id.pageHistoryDetail, returnTabId)
             },
             toast = ::toast,
         )
         sceneLibraryController = SceneLibraryController(
             context = this,
-            views = SceneLibraryViews.bind(pageSceneLibrary),
+            views = SceneLibraryViews.bind(navigatorViews.pageSceneLibrary),
             openPage = { returnTabId ->
-                openSettingsSub(R.id.pageSceneLibrary, "场景库", returnTabId)
+                navigator.openSub(R.id.pageSceneLibrary, returnTabId)
             },
             onSceneChanged = { mode -> homeControllers[mode]?.refreshConfiguration() },
             toast = ::toast,
@@ -136,7 +104,7 @@ class MainActivity : AppCompatActivity() {
 
         settingsController = SettingsController(
             context = this,
-            views = SettingsViews.bind(rootLayout),
+            views = SettingsViews.bind(root),
             friendActions = FriendGatewayBindingActions(
                 bind = { code, version, enableOnSuccess ->
                     friendBindingViewModel.bind(code, version, enableOnSuccess)
@@ -144,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 clear = friendBindingViewModel::clearBinding,
                 isBinding = friendBindingViewModel::isBinding,
             ),
-            openSubPage = { pageId, title -> openSettingsSub(pageId, title) },
+            openSubPage = { pageId -> navigator.openSub(pageId) },
             openSceneLibrary = { mode -> openSceneLibrary(mode) },
             onTranslateParamsReset = {
                 homeControllers.values.forEach(ModeHomeController::refreshConfiguration)
@@ -198,35 +166,14 @@ class MainActivity : AppCompatActivity() {
         modeHomeControllers.values.forEach(ModeHomeController::setup)
         friendBindingViewModel.state.observe(this, settingsController::renderFriendBindingState)
 
-        applyWindowInsets()
-        setupBottomNav()
         renderStatus()
-
-        if (bottomNav.selectedItemId != restoredMainTabId) {
-            bottomNav.selectedItemId = restoredMainTabId
-        } else {
-            showPage(restoredMainTabId)
-        }
-        if (restoredSettingsSubId != 0) {
-            val title = when (restoredSettingsSubId) {
-                R.id.pageSettingsTranslate -> "翻译服务"
-                R.id.pageSettingsSubtitle -> "字幕与悬浮窗"
-                R.id.pageSettingsProfileAi -> "内容分析 AI"
-                R.id.pageSettingsDiagnostics -> "诊断"
-                R.id.pageSettingsAbout -> "关于"
-                R.id.pageSceneLibrary -> "场景库"
-                else -> "流译"
-            }
-            openSettingsSub(restoredSettingsSubId, title, settingsReturnTabId)
-        }
+        navigator.setup(savedInstanceState)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         sessionCoordinator.saveState(outState)
         sessionContextController.saveState(outState)
-        outState.putInt(STATE_MAIN_TAB, currentMainTabId)
-        outState.putInt(STATE_SETTINGS_SUB, settingsSubId)
-        outState.putInt(STATE_SETTINGS_RETURN_TAB, settingsReturnTabId)
+        navigator.saveState(outState)
         sceneLibraryController.saveState(outState)
         super.onSaveInstanceState(outState)
     }
@@ -248,115 +195,10 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        if (settingsSubId != 0) {
-            closeSettingsSub()
-        } else {
+        if (!navigator.handleBack()) {
             @Suppress("DEPRECATION")
             super.onBackPressed()
         }
-    }
-
-    private fun bindShellViews() {
-        rootLayout = findViewById(R.id.rootLayout)
-        bottomNav = findViewById(R.id.bottomNav)
-        toolbar = findViewById(R.id.toolbar)
-        pageInterp = findViewById(R.id.pageInterp)
-        pageVideo = findViewById(R.id.pageVideo)
-        pageHistory = findViewById(R.id.pageHistory)
-        pageHistoryDetail = findViewById(R.id.pageHistoryDetail)
-        pageSettings = findViewById(R.id.pageSettings)
-        pageSettingsTranslate = findViewById(R.id.pageSettingsTranslate)
-        pageSettingsSubtitle = findViewById(R.id.pageSettingsSubtitle)
-        pageSettingsProfileAi = findViewById(R.id.pageSettingsProfileAi)
-        pageSettingsDiagnostics = findViewById(R.id.pageSettingsDiagnostics)
-        pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
-        pageSceneLibrary = findViewById(R.id.pageSceneLibrary)
-        settingsSubViews = listOf(
-            pageHistoryDetail,
-            pageSceneLibrary,
-            pageSettingsTranslate,
-            pageSettingsSubtitle,
-            pageSettingsProfileAi,
-            pageSettingsDiagnostics,
-            pageSettingsAbout,
-        )
-    }
-
-    private fun applyWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = bars.top)
-            insets
-        }
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(bottom = bars.bottom)
-            insets
-        }
-    }
-
-    private fun setupBottomNav() {
-        toolbar.setNavigationOnClickListener {
-            if (settingsSubId != 0) closeSettingsSub()
-        }
-        toolbar.navigationIcon = null
-        bottomNav.setOnItemSelectedListener { item ->
-            showPage(item.itemId)
-            true
-        }
-    }
-
-    private fun showPage(itemId: Int) {
-        settingsSubId = 0
-        settingsSubViews.forEach { it.visibility = View.GONE }
-        pageInterp.visibility = if (itemId == R.id.nav_interp) View.VISIBLE else View.GONE
-        pageVideo.visibility = if (itemId == R.id.nav_video) View.VISIBLE else View.GONE
-        pageHistory.visibility = if (itemId == R.id.nav_history) View.VISIBLE else View.GONE
-        pageSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
-        toolbar.title = "流译"
-        toolbar.setLogo(R.drawable.ic_brand_translate_24)
-        toolbar.navigationIcon = null
-        bottomNav.visibility = View.VISIBLE
-        // 不得在选中回调内再次写 selectedItemId，Material 会无限重入。
-        currentMainTabId = itemId
-        if (itemId == R.id.nav_history) historyController.reload()
-    }
-
-    private fun openSettingsSub(
-        pageId: Int,
-        title: String,
-        returnTabId: Int = R.id.nav_settings,
-    ) {
-        settingsSubId = pageId
-        settingsReturnTabId = returnTabId
-        pageInterp.visibility = View.GONE
-        pageVideo.visibility = View.GONE
-        pageHistory.visibility = View.GONE
-        pageSettings.visibility = View.GONE
-        settingsSubViews.forEach { it.visibility = if (it.id == pageId) View.VISIBLE else View.GONE }
-        toolbar.title = title
-        toolbar.logo = null
-        toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
-        bottomNav.visibility = View.GONE
-        if (pageId == R.id.pageSceneLibrary) sceneLibraryController.reload()
-    }
-
-    private fun closeSettingsSub() {
-        if (settingsSubId == R.id.pageSettingsProfileAi) settingsController.persistSecondAiInputs()
-        settingsSubId = 0
-        settingsSubViews.forEach { it.visibility = View.GONE }
-        val returnTab = settingsReturnTabId
-        settingsReturnTabId = R.id.nav_settings
-        toolbar.title = "流译"
-        toolbar.setLogo(R.drawable.ic_brand_translate_24)
-        toolbar.navigationIcon = null
-        bottomNav.visibility = View.VISIBLE
-        if (bottomNav.selectedItemId != returnTab) {
-            bottomNav.selectedItemId = returnTab
-        } else {
-            showPage(returnTab)
-        }
-        currentMainTabId = returnTab
     }
 
     private fun createSessionHost(): SessionHost = object : SessionHost {
@@ -374,8 +216,9 @@ class MainActivity : AppCompatActivity() {
             this@MainActivity.startService(intent)
         }
         override fun openTranslationSettings() {
-            bottomNav.selectedItemId = R.id.nav_settings
-            openSettingsSub(R.id.pageSettingsTranslate, "翻译服务")
+            if (navigator.showMain(R.id.nav_settings)) {
+                navigator.openSub(R.id.pageSettingsTranslate)
+            }
         }
         override fun toast(message: String) = this@MainActivity.toast(message)
     }

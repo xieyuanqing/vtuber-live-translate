@@ -140,7 +140,7 @@ internal class SettingsController(
     private val context: Context,
     private val views: SettingsViews,
     private val friendActions: FriendGatewayBindingActions,
-    private val openSubPage: (pageId: Int, title: String) -> Unit,
+    private val openSubPage: (pageId: Int) -> Unit,
     private val openSceneLibrary: (mode: TranslationMode) -> Unit,
     private val onTranslateParamsReset: () -> Unit,
     private val postToUi: (() -> Unit) -> Unit,
@@ -151,12 +151,12 @@ internal class SettingsController(
     private var syncingFriendGatewayUi = false
 
     fun setup() {
-        views.rowSetTranslate.setOnClickListener { openSubPage(R.id.pageSettingsTranslate, "翻译服务") }
-        views.rowSetSubtitle.setOnClickListener { openSubPage(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
+        views.rowSetTranslate.setOnClickListener { openSubPage(R.id.pageSettingsTranslate) }
+        views.rowSetSubtitle.setOnClickListener { openSubPage(R.id.pageSettingsSubtitle) }
         views.rowSetSceneLibrary.setOnClickListener { openSceneLibrary(TranslationMode.INTERPRETATION) }
-        views.rowSetProfileAi.setOnClickListener { openSubPage(R.id.pageSettingsProfileAi, "内容分析 AI") }
-        views.rowSetDiagnostics.setOnClickListener { openSubPage(R.id.pageSettingsDiagnostics, "诊断") }
-        views.rowSetAbout.setOnClickListener { openSubPage(R.id.pageSettingsAbout, "关于") }
+        views.rowSetProfileAi.setOnClickListener { openSubPage(R.id.pageSettingsProfileAi) }
+        views.rowSetDiagnostics.setOnClickListener { openSubPage(R.id.pageSettingsDiagnostics) }
+        views.rowSetAbout.setOnClickListener { openSubPage(R.id.pageSettingsAbout) }
 
         views.etApiKeys.setText(SettingsStore.apiKeysRaw(context))
         views.etBaseUrl.setText(SettingsStore.baseUrl(context))
