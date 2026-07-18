@@ -3,9 +3,6 @@ package com.xyq.livetranslate
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -29,7 +26,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -43,6 +39,8 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
+import com.xyq.livetranslate.ui.HistoryController
+import com.xyq.livetranslate.ui.HistoryViews
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pageHistoryDetail: View
     private lateinit var pageSettings: View
     private var currentMainTabId = R.id.nav_interp
+    private lateinit var historyController: HistoryController
 
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
@@ -157,25 +156,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etVideoSessionContext: com.google.android.material.textfield.TextInputEditText
     private lateinit var btnVideoAnalyzeContext: com.google.android.material.button.MaterialButton
     private lateinit var tvVideoAnalyzeStatus: TextView
-
-    // 历史页
-    private lateinit var btnRefreshHistory: Button
-    private lateinit var etHistorySearch: EditText
-    private lateinit var chipHistoryAll: Chip
-    private lateinit var chipHistoryInterp: Chip
-    private lateinit var chipHistoryVideo: Chip
-    private lateinit var tvHistoryEmpty: TextView
-    private lateinit var historyList: LinearLayout
-    private lateinit var cardHistoryDetail: View
-    private lateinit var tvHistoryTitle: TextView
-    private lateinit var btnCopyHistory: Button
-    private lateinit var tvHistoryDetail: TextView
-    private lateinit var tvHistoryDetailMeta: TextView
-    private lateinit var tvHistoryDetailContext: TextView
-    private lateinit var tvHistoryDetailEmpty: TextView
-    private lateinit var historyDetailSegments: LinearLayout
-    private var allHistoryItems: List<HistoryStore.HistoryItem> = emptyList()
-    private var historyModeFilter: TranslationMode? = null
 
     // 设置页
     private lateinit var etApiKeys: EditText
@@ -307,11 +287,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        historyController = HistoryController(
+            context = this,
+            views = HistoryViews.bind(rootLayout),
+            openDetailPage = { returnTabId ->
+                openSettingsSub(R.id.pageHistoryDetail, "历史详情", returnTabId)
+            },
+            toast = ::toast,
+        )
+        historyController.setup()
         friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
         friendBindingViewModel.state.observe(this, ::renderFriendBindingState)
         applyWindowInsets()
         setupBottomNav()
-        setupHistoryPage()
         setupSettings()
         setupSceneLibraryPage()
         setupStyleSliders()
@@ -494,22 +482,6 @@ class MainActivity : AppCompatActivity() {
         btnVideoAnalyzeContext = findViewById(R.id.btnVideoAnalyzeContext)
         tvVideoAnalyzeStatus = findViewById(R.id.tvVideoAnalyzeStatus)
 
-        btnRefreshHistory = findViewById(R.id.btnRefreshHistory)
-        etHistorySearch = findViewById(R.id.etHistorySearch)
-        chipHistoryAll = findViewById(R.id.chipHistoryAll)
-        chipHistoryInterp = findViewById(R.id.chipHistoryInterp)
-        chipHistoryVideo = findViewById(R.id.chipHistoryVideo)
-        tvHistoryEmpty = findViewById(R.id.tvHistoryEmpty)
-        historyList = findViewById(R.id.historyList)
-        cardHistoryDetail = findViewById(R.id.cardHistoryDetail)
-        tvHistoryTitle = findViewById(R.id.tvHistoryTitle)
-        btnCopyHistory = findViewById(R.id.btnCopyHistory)
-        tvHistoryDetail = findViewById(R.id.tvHistoryDetail)
-        tvHistoryDetailMeta = findViewById(R.id.tvHistoryDetailMeta)
-        tvHistoryDetailContext = findViewById(R.id.tvHistoryDetailContext)
-        tvHistoryDetailEmpty = findViewById(R.id.tvHistoryDetailEmpty)
-        historyDetailSegments = findViewById(R.id.historyDetailSegments)
-
         etApiKeys = findViewById(R.id.etApiKeys)
         etBaseUrl = findViewById(R.id.etBaseUrl)
         swFriendGateway = findViewById(R.id.swFriendGateway)
@@ -587,7 +559,7 @@ class MainActivity : AppCompatActivity() {
         // 这里不能再写 bottomNav.selectedItemId：showPage 本身就在选中回调里，
         // Material 会在回调返回后才更新 selectedItemId；回调内重设会无限重入并栈溢出。
         currentMainTabId = itemId
-        if (itemId == R.id.nav_history) reloadHistory()
+        if (itemId == R.id.nav_history) historyController.reload()
     }
 
     /** 打开设置二级页：工具栏变返回箭头，标题换成子页名；隐藏底部导航。 */
@@ -840,126 +812,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }, "session-context-${mode.storageKey}").start()
-    }
-
-    // ---------- 历史记录 ----------
-
-    private fun setupHistoryPage() {
-        btnRefreshHistory.setOnClickListener { reloadHistory() }
-        etHistorySearch.doAfterTextChanged { renderHistoryList() }
-        chipHistoryAll.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                historyModeFilter = null
-                renderHistoryList()
-            }
-        }
-        chipHistoryInterp.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                historyModeFilter = TranslationMode.INTERPRETATION
-                renderHistoryList()
-            }
-        }
-        chipHistoryVideo.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                historyModeFilter = TranslationMode.VIDEO
-                renderHistoryList()
-            }
-        }
-        btnCopyHistory.setOnClickListener {
-            val text = tvHistoryDetail.text.toString()
-            if (text.isBlank()) return@setOnClickListener
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText("transcript", text))
-            toast("已复制全文")
-        }
-    }
-
-    private fun reloadHistory() {
-        allHistoryItems = HistoryStore.list(this)
-        renderHistoryList()
-    }
-
-    private fun renderHistoryList() {
-        val query = etHistorySearch.text?.toString().orEmpty().trim().lowercase()
-        val items = allHistoryItems.filter { item ->
-            val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
-                TranslationLanguageCatalog.target(item.targetLanguageCode).label
-            val scene = item.sceneLabel
-            val matchesMode = historyModeFilter == null || item.mode == historyModeFilter
-            val haystack = listOf(item.title, item.summary, direction, scene).joinToString(" ").lowercase()
-            matchesMode && (query.isEmpty() || query in haystack)
-        }
-        historyList.removeAllViews()
-        tvHistoryEmpty.text = if (allHistoryItems.isEmpty()) "暂无历史记录" else "没有匹配的记录"
-        tvHistoryEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-        items.forEach { item ->
-            val card = layoutInflater.inflate(R.layout.item_history_session, historyList, false)
-            val icon = card.findViewById<TextView>(R.id.tvHistoryItemIcon)
-            val mode = card.findViewById<TextView>(R.id.tvHistoryItemMode)
-            val title = card.findViewById<TextView>(R.id.tvHistoryItemTitle)
-            val time = card.findViewById<TextView>(R.id.tvHistoryItemTime)
-            val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
-            val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
-            val isInterpretation = item.mode == TranslationMode.INTERPRETATION
-            icon.text = if (isInterpretation) "麦" else "播"
-            icon.setTextColor(getColor(if (isInterpretation) R.color.brand else R.color.warning))
-            ViewCompat.setBackgroundTintList(
-                icon,
-                getColorStateList(if (isInterpretation) R.color.primary_fixed else R.color.warning_container),
-            )
-            mode.text = item.mode.label
-            mode.setTextColor(getColor(if (isInterpretation) R.color.brand else R.color.warning))
-            title.text = item.title
-            time.text = HistoryStore.formatTime(item.updatedAt)
-            val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
-                TranslationLanguageCatalog.target(item.targetLanguageCode).label
-            val scene = item.sceneLabel
-            meta.text = "$direction · $scene · ${HistoryStore.formatDuration(item.durationMs)}"
-            summary.text = item.summary.trim().replace('\n', ' ').ifBlank { "暂无字幕摘要" }
-            card.setOnClickListener { showHistoryDetail(item) }
-            card.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_12) }
-            historyList.addView(card)
-        }
-    }
-
-    private fun showHistoryDetail(item: HistoryStore.HistoryItem) {
-        val session = HistoryStore.load(this, item.fileName)
-        if (session == null) {
-            toast("记录不存在或已损坏")
-            reloadHistory()
-            return
-        }
-        tvHistoryTitle.text = session.title
-        tvHistoryDetail.text = HistoryStore.toMarkdown(session)
-        tvHistoryDetailMeta.text = buildString {
-            append(session.mode.label).append(" · ").append(session.directionLabel)
-            append("\n").append(session.sceneLabel)
-            append(" · ").append(HistoryStore.formatTime(session.startedAt))
-            append(" · ").append(HistoryStore.formatDuration(session.durationMs))
-        }
-        tvHistoryDetailContext.text = "本场背景\n${session.contextSummary}"
-        tvHistoryDetailContext.visibility = if (session.contextSummary.isBlank()) View.GONE else View.VISIBLE
-        historyDetailSegments.removeAllViews()
-        tvHistoryDetailEmpty.visibility = if (session.segments.isEmpty()) View.VISIBLE else View.GONE
-        session.segments.forEach { segment ->
-            val row = layoutInflater.inflate(R.layout.item_history_segment, historyDetailSegments, false)
-            val elapsed = row.findViewById<TextView>(R.id.tvHistorySegmentTime)
-            val source = row.findViewById<TextView>(R.id.tvHistorySegmentSource)
-            val translation = row.findViewById<TextView>(R.id.tvHistorySegmentTranslation)
-            elapsed.text = HistoryStore.formatDuration(segment.elapsedMs)
-            source.text = segment.sourceText
-            source.visibility = if (segment.sourceText.isBlank()) View.GONE else View.VISIBLE
-            translation.text = segment.translatedText
-            row.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = resources.getDimensionPixelSize(R.dimen.space_12) }
-            historyDetailSegments.addView(row)
-        }
-        openSettingsSub(R.id.pageHistoryDetail, "历史详情", returnTabId = R.id.nav_history)
     }
 
     // ---------- 设置 ----------

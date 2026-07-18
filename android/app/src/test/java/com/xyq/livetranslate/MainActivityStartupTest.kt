@@ -22,13 +22,14 @@ class MainActivityStartupTest {
         StatusBus.serviceRunning = false
         StatusBus.captureMode = ""
         StatusBus.reset()
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
         listOf("scene_library_v1", "translation_plans_v3").forEach { name ->
-            androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
-                .getSharedPreferences(name, Context.MODE_PRIVATE)
+            context.getSharedPreferences(name, Context.MODE_PRIVATE)
                 .edit()
                 .clear()
                 .commit()
         }
+        HistoryStore.list(context).forEach { HistoryStore.delete(context, it.fileName) }
     }
 
     @Test
@@ -50,6 +51,44 @@ class MainActivityStartupTest {
         ).forEach { id ->
             require(activity.findViewById<View>(id) != null) { "缺少视图 id=$id" }
         }
+    }
+
+    @Test
+    fun historyTabReloadsSessionsCreatedAfterStartup() = withActivity { activity ->
+        val historyList = activity.findViewById<android.widget.LinearLayout>(R.id.historyList)
+        assertEquals(0, historyList.childCount)
+
+        HistoryStore.save(
+            activity,
+            HistorySession(
+                id = "reload-after-startup",
+                title = "切入历史后可见",
+                mode = TranslationMode.INTERPRETATION,
+                sourceLanguageCode = "ja",
+                targetLanguageCode = "zh",
+                scenePresetId = "scene-history-test",
+                sceneLabel = "历史测试场景",
+                contextSummary = "",
+                startedAt = 1_000L,
+                endedAt = 2_000L,
+                segments = listOf(TranscriptSegment(500L, "こんにちは", "你好")),
+            ),
+        )
+
+        activity.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+            R.id.bottomNav,
+        ).selectedItemId = R.id.nav_history
+
+        assertEquals(1, historyList.childCount)
+        assertEquals(
+            "切入历史后可见",
+            historyList.getChildAt(0).findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
+        )
+
+        historyList.getChildAt(0).performClick()
+        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
+        activity.onBackPressed()
+        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistory).visibility)
     }
 
     @Test
