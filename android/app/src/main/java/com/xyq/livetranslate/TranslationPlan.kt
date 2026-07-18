@@ -1,12 +1,14 @@
 package com.xyq.livetranslate
 
-/** 可复用翻译方案：语言方向 + 场景引用 + 方案级额外提示词。 */
+/**
+ * 每模式运行时草稿：语言方向 + 场景引用。
+ * 场景库是唯一的可复用配置；语言随时可调，不属于任何库条目。
+ */
 data class TranslationPlan(
     val mode: TranslationMode,
     val sourceLanguageCode: String = DEFAULT_SOURCE_LANGUAGE,
     val targetLanguageCode: String = DEFAULT_TARGET_LANGUAGE,
     val scenePresetId: String = defaultSceneId(mode),
-    val advancedInstruction: String = "",
 ) {
     fun normalized(): TranslationPlan {
         val source = sourceLanguageCode.takeIf { code ->
@@ -21,7 +23,6 @@ data class TranslationPlan(
             sourceLanguageCode = source,
             targetLanguageCode = target,
             scenePresetId = sceneId,
-            advancedInstruction = advancedInstruction.trim(),
         )
     }
 
@@ -37,10 +38,3 @@ data class TranslationPlan(
         fun defaultSceneId(mode: TranslationMode): String = DefaultSceneCatalog.fallbackId(mode)
     }
 }
-
-/** 用户保存的长期方案。 */
-data class SavedTranslationPlan(
-    val id: String,
-    val name: String,
-    val plan: TranslationPlan,
-)

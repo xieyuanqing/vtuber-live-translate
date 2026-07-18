@@ -58,24 +58,7 @@
                         android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
                     <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="场景库" />
-                        <TextView style="@style/SettingsRowDesc" android:text="编辑场景提示词和每种模式的默认场景" />
-                    </LinearLayout>
-                    <TextView style="@style/SettingsRowChevron" />
-                </LinearLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginStart="68dp" />
-
-                <LinearLayout android:id="@+id/rowSetPlanLibrary" style="@style/SettingsRow">
-                    <ImageView
-                        android:layout_width="40dp" android:layout_height="40dp"
-                        android:background="@drawable/bg_history_badge" android:padding="8dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_nav_history_24" app:tint="@color/brand" />
-                    <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="方案库" />
-                        <TextView style="@style/SettingsRowDesc" android:text="管理同传和视频的长期方案" />
+                        <TextView style="@style/SettingsRowDesc" android:text="同传和视频的场景提示词、使用与默认选择" />
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron" />
                 </LinearLayout>

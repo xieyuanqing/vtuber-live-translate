@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-18 · v2.3.0 方案库并入场景库，场景成为唯一长期配置
+
+语言解绑后方案只剩「名字 + 场景引用 + 额外提示词」，与场景（名字 + 提示词）高度重复。本次把两者合并：
+
+- **数据层**：`TranslationPlan` 移除 `advancedInstruction`，草稿 = 语言 + 场景引用；`TranslationPlanStore` 删除命名方案 CRUD（`SavedTranslationPlan`/`saveAs`/`updateSaved`/`applySaved`/`deleteSavedPlan`），新增一次性迁移 `migrateLegacySavedPlans`：带额外提示词的旧方案折算为场景（提示词 = 原场景提示词 + 方案额外提示词），纯别名不生成重复场景，迁移后清空旧存储。
+- **Prompt**：`PromptBuilder` 移除【方案提示词】段，长期偏好统一写进场景提示词。
+- **UI**：删除方案库页、方案编辑器 BottomSheet 与相关布局；场景库升级为统一入口——场景卡新增「使用」按钮与「使用中」标识，动作为 使用 / 设为默认 / 编辑 / 删除；主页「当前方案」卡改为「当前场景」，点击直达场景库并按模式预选；设置页只保留场景库一行。保留 `cardInterpPlan`/`btnInterpOpenPlanLibrary` 等既有 View ID 复用绑定。
+- **文档**：CLAUDE.md 边界第 2/4/5/8 条改写（场景库是唯一可复用配置层，不要恢复方案层），README 同步。
+- **测试**：重写 `TranslationPlanStoreTest`（草稿隔离、场景引用回退、迁移一次性与旧字段忽略），`MainActivityStartupTest` 移除方案页用例、新增主页卡直达场景库用例，`PromptBuilderTest` 移除方案提示词断言。
+
+**版本**：versionCode 33 / versionName 2.3.0。
+
+**验证**：`git diff --check` 通过；本容器无 Android SDK，单测与 `assembleDebug` 由 CI 执行（结果见提交后 CI Run）。
+
+---
+
 ## 2026-07-18 · 语言方向与方案解绑，随时可调
 
 把语言方向从翻译方案里解耦，让它成为每模式独立、随时可调的运行时选择，不再被套用方案覆盖：

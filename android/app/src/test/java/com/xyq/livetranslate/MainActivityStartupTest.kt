@@ -33,8 +33,6 @@ class MainActivityStartupTest {
     @Test
     fun launchesWithoutCrashingAndBindsFinalUi() = withActivity { activity ->
         listOf(
-            R.id.pagePlanLibrary,
-            R.id.fabNewPlan,
             R.id.rowSetSceneLibrary,
             R.id.pageSceneLibrary,
             R.id.sceneLibraryList,
@@ -96,29 +94,19 @@ class MainActivityStartupTest {
     }
 
     @Test
-    fun manageScenesConfirmsBeforeDiscardingEditedPlan() = withActivity { activity ->
+    fun homeCardOpensUnifiedSceneLibrary() = withActivity { activity ->
         activity.findViewById<View>(R.id.cardInterpPlan).performClick()
-        activity.supportFragmentManager.executePendingTransactions()
-        val sheet = activity.supportFragmentManager.findFragmentByTag("plan_interpretation")
-            as TranslationPlanBottomSheet
-        sheet.requireView().findViewById<android.widget.EditText>(R.id.etPlanName).setText("未保存方案")
 
-        sheet.requireView().findViewById<View>(R.id.btnManageScenes).performClick()
-
-        assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing)
-        assertTrue(sheet.isAdded)
-        assertEquals(View.GONE, activity.findViewById<View>(R.id.pageSceneLibrary).visibility)
-    }
-
-    @Test
-    fun sceneLibraryOpenedFromPlanLibraryReturnsToPlanLibrary() = withActivity { activity ->
-        activity.findViewById<View>(R.id.rowSetPlanLibrary).performClick()
-        activity.onSceneLibraryRequested(TranslationMode.INTERPRETATION)
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageSceneLibrary).visibility)
+        assertEquals(
+            R.id.btnSceneLibraryInterp,
+            activity.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(
+                R.id.toggleSceneLibraryMode,
+            ).checkedButtonId,
+        )
 
         activity.onBackPressed()
-
-        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pagePlanLibrary).visibility)
+        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageInterp).visibility)
         assertEquals(View.GONE, activity.findViewById<View>(R.id.pageSceneLibrary).visibility)
     }
 
@@ -129,7 +117,7 @@ class MainActivityStartupTest {
             controller.get().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
                 R.id.bottomNav,
             ).selectedItemId = R.id.nav_video
-            controller.get().onSceneLibraryRequested(TranslationMode.VIDEO)
+            controller.get().openSceneLibrary(TranslationMode.VIDEO, R.id.nav_video)
 
             controller.recreate()
             val recreated = controller.get()
@@ -143,31 +131,6 @@ class MainActivityStartupTest {
 
             recreated.onBackPressed()
             assertEquals(View.VISIBLE, recreated.findViewById<View>(R.id.pageVideo).visibility)
-        } finally {
-            controller.pause().stop().destroy()
-        }
-    }
-
-    @Test
-    fun sceneLibraryParentPlanSurvivesRecreate() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
-        try {
-            controller.get().findViewById<View>(R.id.rowSetPlanLibrary).performClick()
-            controller.get().findViewById<View>(R.id.btnPlanLibraryVideo).performClick()
-            controller.get().onSceneLibraryRequested(TranslationMode.VIDEO)
-
-            controller.recreate()
-            val recreated = controller.get()
-            recreated.onBackPressed()
-
-            assertEquals(View.VISIBLE, recreated.findViewById<View>(R.id.pagePlanLibrary).visibility)
-            assertEquals(View.GONE, recreated.findViewById<View>(R.id.pageSceneLibrary).visibility)
-            assertEquals(
-                R.id.btnPlanLibraryVideo,
-                recreated.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(
-                    R.id.togglePlanLibraryMode,
-                ).checkedButtonId,
-            )
         } finally {
             controller.pause().stop().destroy()
         }

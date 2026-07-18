@@ -55,7 +55,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_12"
-                android:text="这里的场景提示词会被方案引用。修改场景会影响下次启动的相关方案，正在运行的会话不变。"
+                android:text="场景是唯一的长期配置：名称 + 提示词，按模式各自维护。点「使用」立即切换当前场景；修改提示词对下次启动生效，正在运行的会话不变。"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 

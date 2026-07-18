@@ -3,16 +3,17 @@ package com.xyq.livetranslate
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
 
 /**
- * v3 翻译方案存储。方案只引用场景 ID，场景内容由 SceneLibraryStore 统一管理。
+ * v3 草稿存储：每模式一份运行时草稿（语言 + 场景引用）。
+ * 可复用配置统一放在 SceneLibraryStore；旧的命名方案已并入场景库。
  */
 object TranslationPlanStore {
     private const val PREFS = "translation_plans_v3"
     private const val KEY_DRAFT_PREFIX = "draft_"
     private const val KEY_SAVED_PREFIX = "saved_"
     private const val KEY_CORRUPT_BACKUP_PREFIX = "corrupt_saved_backup_"
+    private const val KEY_PLANS_MERGED = "plans_merged_into_scenes"
 
     fun loadDraft(context: Context, mode: TranslationMode): TranslationPlan {
         val raw = prefs(context).getString(KEY_DRAFT_PREFIX + mode.storageKey, null)
@@ -34,80 +35,40 @@ object TranslationPlanStore {
             .apply()
     }
 
-    fun listSaved(context: Context, mode: TranslationMode): List<SavedTranslationPlan> =
-        readSavedRaw(context, mode)
-
-    private fun readSavedRaw(context: Context, mode: TranslationMode): List<SavedTranslationPlan> {
-        val raw = prefs(context).getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return emptyList()
-        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
-        return buildList {
-            for (index in 0 until array.length()) {
-                decodeSavedItem(array, index, mode).getOrNull()?.let(::add)
+    /**
+     * 一次性迁移：把旧方案库中带额外提示词的命名方案折算成场景库条目
+     * （场景提示词 = 原引用场景提示词 + 方案额外提示词），然后清空方案存储。
+     * 纯场景别名（无额外提示词）不生成重复场景。
+     */
+    @Synchronized
+    fun migrateLegacySavedPlans(context: Context) {
+        val storage = prefs(context)
+        if (storage.getBoolean(KEY_PLANS_MERGED, false)) return
+        val editor = storage.edit()
+        TranslationMode.entries.forEach { mode ->
+            val raw = storage.getString(KEY_SAVED_PREFIX + mode.storageKey, null)
+            if (raw != null) {
+                val array = runCatching { JSONArray(raw) }.getOrNull() ?: JSONArray()
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val name = item.optString("name").trim()
+                    val plan = item.optJSONObject("plan") ?: continue
+                    val extra = plan.optString("advancedInstruction").trim()
+                    if (name.isEmpty() || extra.isEmpty()) continue
+                    val sceneId = plan.optString("scenePresetId").trim()
+                    val base = SceneLibraryStore.resolve(context, mode, sceneId)
+                    SceneLibraryStore.create(
+                        context,
+                        mode,
+                        name,
+                        (base.instruction + "\n" + extra).trim(),
+                    )
+                }
+                editor.remove(KEY_SAVED_PREFIX + mode.storageKey)
             }
+            editor.remove(KEY_CORRUPT_BACKUP_PREFIX + mode.storageKey)
         }
-    }
-
-    @Synchronized
-    fun saveAs(
-        context: Context,
-        mode: TranslationMode,
-        name: String,
-        plan: TranslationPlan,
-    ): SavedTranslationPlan {
-        backupCorruptSavedData(context, mode)
-        val saved = SavedTranslationPlan(
-            id = UUID.randomUUID().toString(),
-            name = name.trim().ifEmpty { "未命名方案" },
-            plan = normalizeForStorage(context, plan.copy(mode = mode)),
-        )
-        val updated = readSavedRaw(context, mode).toMutableList().apply { add(saved) }
-        writeSavedPlans(context, mode, updated)
-        return saved
-    }
-
-    @Synchronized
-    fun updateSaved(
-        context: Context,
-        mode: TranslationMode,
-        id: String,
-        name: String,
-        plan: TranslationPlan,
-    ): SavedTranslationPlan? {
-        backupCorruptSavedData(context, mode)
-        val items = readSavedRaw(context, mode).toMutableList()
-        val index = items.indexOfFirst { it.id == id }
-        if (index < 0) return null
-        val updated = SavedTranslationPlan(
-            id = id,
-            name = name.trim().ifEmpty { items[index].name },
-            plan = normalizeForStorage(context, plan.copy(mode = mode)),
-        )
-        items[index] = updated
-        writeSavedPlans(context, mode, items)
-        return updated
-    }
-
-    @Synchronized
-    fun deleteSavedPlan(context: Context, mode: TranslationMode, id: String) {
-        backupCorruptSavedData(context, mode)
-        writeSavedPlans(context, mode, readSavedRaw(context, mode).filterNot { it.id == id })
-    }
-
-    fun applySaved(
-        context: Context,
-        mode: TranslationMode,
-        id: String,
-    ): TranslationPlan? {
-        val plan = listSaved(context, mode).firstOrNull { it.id == id }?.plan ?: return null
-        // 语言方向不被方案绑定：套用方案只更新场景与长期提示词，保留当前草稿的语言方向。
-        // 语言由主页语言胶囊随时调整，不受方案库覆盖（见 CLAUDE.md 边界第 4 条）。
-        val current = loadDraft(context, mode)
-        val merged = plan.copy(
-            sourceLanguageCode = current.sourceLanguageCode,
-            targetLanguageCode = current.targetLanguageCode,
-        )
-        saveDraft(context, merged)
-        return merged
+        editor.putBoolean(KEY_PLANS_MERGED, true).apply()
     }
 
     internal fun encodePlan(plan: TranslationPlan): JSONObject = JSONObject().apply {
@@ -115,13 +76,12 @@ object TranslationPlanStore {
         put("sourceLanguageCode", plan.sourceLanguageCode)
         put("targetLanguageCode", plan.targetLanguageCode)
         put("scenePresetId", plan.scenePresetId)
-        put("advancedInstruction", plan.advancedInstruction)
     }
 
     internal fun decodePlan(json: JSONObject, expectedMode: TranslationMode): TranslationPlan {
         val storedMode = json.optString("mode")
         require(storedMode.isEmpty() || storedMode == expectedMode.storageKey) {
-            "方案模式与存储分区不一致"
+            "草稿模式与存储分区不一致"
         }
         return TranslationPlan(
             mode = expectedMode,
@@ -137,54 +97,7 @@ object TranslationPlanStore {
                 "scenePresetId",
                 TranslationPlan.defaultSceneId(expectedMode),
             ),
-            advancedInstruction = json.optString("advancedInstruction", ""),
         ).normalized()
-    }
-
-    private fun writeSavedPlans(
-        context: Context,
-        mode: TranslationMode,
-        plans: List<SavedTranslationPlan>,
-    ) {
-        val array = JSONArray()
-        plans.forEach { saved ->
-            array.put(JSONObject().apply {
-                put("id", saved.id)
-                put("name", saved.name)
-                put("plan", encodePlan(saved.plan))
-            })
-        }
-        prefs(context).edit()
-            .putString(KEY_SAVED_PREFIX + mode.storageKey, array.toString())
-            .apply()
-    }
-
-    private fun decodeSavedItem(
-        array: JSONArray,
-        index: Int,
-        mode: TranslationMode,
-    ): Result<SavedTranslationPlan> = runCatching {
-        val item = array.getJSONObject(index)
-        val id = item.getString("id").trim()
-        val name = item.getString("name").trim()
-        require(id.isNotEmpty() && name.isNotEmpty())
-        SavedTranslationPlan(
-            id = id,
-            name = name,
-            plan = decodePlan(item.getJSONObject("plan"), mode),
-        )
-    }
-
-    private fun backupCorruptSavedData(context: Context, mode: TranslationMode) {
-        val storage = prefs(context)
-        val raw = storage.getString(KEY_SAVED_PREFIX + mode.storageKey, null) ?: return
-        val array = runCatching { JSONArray(raw) }.getOrNull()
-        val isCorrupt = array == null ||
-            (0 until array.length()).any { decodeSavedItem(array, it, mode).isFailure }
-        if (!isCorrupt) return
-        storage.edit()
-            .putString(KEY_CORRUPT_BACKUP_PREFIX + mode.storageKey, raw)
-            .apply()
     }
 
     private fun defaultPlan(context: Context, mode: TranslationMode) =

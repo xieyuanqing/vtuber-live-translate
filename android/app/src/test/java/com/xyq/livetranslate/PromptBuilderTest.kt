@@ -7,23 +7,22 @@ import org.junit.Test
 class PromptBuilderTest {
 
     @Test
-    fun `prompt combines concise base rules scene and plan instruction`() {
+    fun `prompt combines concise base rules language direction and scene`() {
         val scene = DefaultSceneCatalog.resolve(TranslationMode.INTERPRETATION, "meeting")
         val plan = TranslationPlan(
             mode = TranslationMode.INTERPRETATION,
             sourceLanguageCode = "en",
             targetLanguageCode = "zh-Hans",
             scenePresetId = scene.id,
-            advancedInstruction = "专名保留日文；语气正式。",
         )
 
         val prompt = PromptBuilder.build(scene = scene, plan = plan)
 
         assertTrue(prompt.contains("忠实翻译，不回答、解释、总结、续写或编造"))
+        assertTrue(prompt.contains("英语"))
         assertTrue(prompt.contains("【场景：会议】"))
         assertTrue(prompt.contains(scene.instruction))
-        assertTrue(prompt.contains("【方案提示词】"))
-        assertTrue(prompt.contains("专名保留日文"))
+        assertFalse(prompt.contains("【方案提示词】"))
         assertFalse(prompt.contains("Glossary"))
     }
 
@@ -66,14 +65,12 @@ class PromptBuilderTest {
         val plan = TranslationPlan(
             mode = TranslationMode.VIDEO,
             scenePresetId = scene.id,
-            advancedInstruction = "CT 读作西梯。",
         )
 
         val prompt = PromptBuilder.build(scene = scene, plan = plan)
 
         assertTrue(prompt.contains("【场景：医学课程】"))
         assertTrue(prompt.contains("注意药物名称和剂量"))
-        assertTrue(prompt.contains("CT 读作西梯"))
     }
 
     @Test

@@ -44,7 +44,7 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
 
-class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
+class MainActivity : AppCompatActivity() {
 
     private companion object {
         const val STATE_PENDING_START_MODE = "pending_start_mode"
@@ -63,9 +63,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         const val STATE_MAIN_TAB = "main_tab"
         const val STATE_SETTINGS_SUB = "settings_sub"
         const val STATE_SETTINGS_RETURN_TAB = "settings_return_tab"
-        const val STATE_SCENE_LIBRARY_PARENT = "scene_library_parent"
         const val STATE_SCENE_LIBRARY_MODE = "scene_library_mode"
-        const val STATE_PLAN_LIBRARY_MODE = "plan_library_mode"
     }
 
     // 壳子：底部 4 Tab
@@ -83,33 +81,21 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
     private var settingsReturnTabId = R.id.nav_settings
-    private var sceneLibraryParentPageId = 0
     private lateinit var pageSettingsTranslate: View
     private lateinit var pageSettingsSubtitle: View
     private lateinit var pageSettingsProfileAi: View
     private lateinit var pageSettingsDiagnostics: View
     private lateinit var pageSettingsAbout: View
     private lateinit var pageSceneLibrary: View
-    private lateinit var pagePlanLibrary: View
     private lateinit var settingsSubViews: List<View>
     private lateinit var rowSetTranslate: View
     private lateinit var rowSetSubtitle: View
     private lateinit var rowSetSceneLibrary: View
-    private lateinit var rowSetPlanLibrary: View
     private lateinit var rowSetProfileAi: View
     private lateinit var rowSetDiagnostics: View
     private lateinit var rowSetAbout: View
 
-    // 方案库
-    private lateinit var togglePlanLibraryMode: MaterialButtonToggleGroup
-    private lateinit var btnPlanLibraryInterp: MaterialButton
-    private lateinit var btnPlanLibraryVideo: MaterialButton
-    private lateinit var tvPlanLibraryEmpty: TextView
-    private lateinit var planLibraryList: LinearLayout
-    private lateinit var fabNewPlan: ExtendedFloatingActionButton
-    private var planLibraryMode: TranslationMode = TranslationMode.INTERPRETATION
-
-    // 场景库
+    // 场景库（唯一的可复用配置库）
     private lateinit var toggleSceneLibraryMode: MaterialButtonToggleGroup
     private lateinit var btnSceneLibraryInterp: MaterialButton
     private lateinit var btnSceneLibraryVideo: MaterialButton
@@ -304,7 +290,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
             R.id.pageSettingsDiagnostics,
             R.id.pageSettingsAbout,
             R.id.pageSceneLibrary,
-            R.id.pagePlanLibrary,
         )
         val restoredMainTabId = savedInstanceState?.getInt(STATE_MAIN_TAB)
             ?.takeIf { it in mainTabs }
@@ -315,15 +300,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         settingsReturnTabId = savedInstanceState?.getInt(STATE_SETTINGS_RETURN_TAB)
             ?.takeIf { it in mainTabs }
             ?: R.id.nav_settings
-        sceneLibraryParentPageId = savedInstanceState?.getInt(STATE_SCENE_LIBRARY_PARENT)
-            ?.takeIf { it == R.id.pagePlanLibrary }
-            ?: 0
         sceneLibraryMode = savedInstanceState?.getString(STATE_SCENE_LIBRARY_MODE)
             ?.let { key -> TranslationMode.entries.firstOrNull { it.storageKey == key } }
             ?: TranslationMode.INTERPRETATION
-        planLibraryMode = savedInstanceState?.getString(STATE_PLAN_LIBRARY_MODE)
-            ?.let { key -> TranslationMode.entries.firstOrNull { it.storageKey == key } }
-            ?: TranslationMode.INTERPRETATION
+        TranslationPlanStore.migrateLegacySavedPlans(this)
         setContentView(R.layout.activity_main)
 
         bindViews()
@@ -334,7 +314,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         setupHistoryPage()
         setupSettings()
         setupSceneLibraryPage()
-        setupPlanLibraryPage()
         setupStyleSliders()
         setupParamControls()
         setupFinalPlanUi()
@@ -375,7 +354,6 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
                 R.id.pageSettingsDiagnostics -> "诊断"
                 R.id.pageSettingsAbout -> "关于"
                 R.id.pageSceneLibrary -> "场景库"
-                R.id.pagePlanLibrary -> "方案库"
                 else -> "流译"
             }
             openSettingsSub(restoredSettingsSubId, title, settingsReturnTabId)
@@ -399,9 +377,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         outState.putInt(STATE_MAIN_TAB, currentMainTabId)
         outState.putInt(STATE_SETTINGS_SUB, settingsSubId)
         outState.putInt(STATE_SETTINGS_RETURN_TAB, settingsReturnTabId)
-        outState.putInt(STATE_SCENE_LIBRARY_PARENT, sceneLibraryParentPageId)
         outState.putString(STATE_SCENE_LIBRARY_MODE, sceneLibraryMode.storageKey)
-        outState.putString(STATE_PLAN_LIBRARY_MODE, planLibraryMode.storageKey)
         super.onSaveInstanceState(outState)
     }
 
@@ -447,26 +423,17 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         pageSettingsDiagnostics = findViewById(R.id.pageSettingsDiagnostics)
         pageSettingsAbout = findViewById(R.id.pageSettingsAbout)
         pageSceneLibrary = findViewById(R.id.pageSceneLibrary)
-        pagePlanLibrary = findViewById(R.id.pagePlanLibrary)
         settingsSubViews = listOf(
-            pageHistoryDetail, pageSceneLibrary, pagePlanLibrary,
+            pageHistoryDetail, pageSceneLibrary,
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
         )
         rowSetTranslate = findViewById(R.id.rowSetTranslate)
         rowSetSubtitle = findViewById(R.id.rowSetSubtitle)
         rowSetSceneLibrary = findViewById(R.id.rowSetSceneLibrary)
-        rowSetPlanLibrary = findViewById(R.id.rowSetPlanLibrary)
         rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
         rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
         rowSetAbout = findViewById(R.id.rowSetAbout)
-
-        togglePlanLibraryMode = findViewById(R.id.togglePlanLibraryMode)
-        btnPlanLibraryInterp = findViewById(R.id.btnPlanLibraryInterp)
-        btnPlanLibraryVideo = findViewById(R.id.btnPlanLibraryVideo)
-        tvPlanLibraryEmpty = findViewById(R.id.tvPlanLibraryEmpty)
-        planLibraryList = findViewById(R.id.planLibraryList)
-        fabNewPlan = findViewById(R.id.fabNewPlan)
 
         toggleSceneLibraryMode = findViewById(R.id.toggleSceneLibraryMode)
         btnSceneLibraryInterp = findViewById(R.id.btnSceneLibraryInterp)
@@ -640,24 +607,13 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         toolbar.logo = null
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
         bottomNav.visibility = View.GONE
-        if (pageId == R.id.pagePlanLibrary) {
-            reloadPlanLibrary()
-        } else if (pageId == R.id.pageSceneLibrary) {
+        if (pageId == R.id.pageSceneLibrary) {
             reloadSceneLibrary()
         }
     }
 
     private fun closeSettingsSub() {
         if (settingsSubId == R.id.pageSettingsProfileAi) saveSecondAiSettings()
-        if (
-            settingsSubId == R.id.pageSceneLibrary &&
-            sceneLibraryParentPageId == R.id.pagePlanLibrary
-        ) {
-            sceneLibraryParentPageId = 0
-            openSettingsSub(R.id.pagePlanLibrary, "方案库", settingsReturnTabId)
-            return
-        }
-        sceneLibraryParentPageId = 0
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
         val returnTab = settingsReturnTabId
@@ -1012,13 +968,8 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
         rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
         rowSetSceneLibrary.setOnClickListener {
-            sceneLibraryParentPageId = 0
             sceneLibraryMode = TranslationMode.INTERPRETATION
             openSettingsSub(R.id.pageSceneLibrary, "场景库")
-        }
-        rowSetPlanLibrary.setOnClickListener {
-            planLibraryMode = TranslationMode.INTERPRETATION
-            openSettingsSub(R.id.pagePlanLibrary, "方案库")
         }
         rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "内容分析 AI") }
         rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
@@ -1215,23 +1166,26 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
 
     private fun setupFinalPlanUi() {
         findViewById<View>(R.id.cardInterpPlan).setOnClickListener {
-            openPlanEditor(TranslationMode.INTERPRETATION)
+            openSceneLibrary(TranslationMode.INTERPRETATION, returnTabId = R.id.nav_interp)
         }
         findViewById<View>(R.id.cardVideoPlan).setOnClickListener {
-            openPlanEditor(TranslationMode.VIDEO)
+            openSceneLibrary(TranslationMode.VIDEO, returnTabId = R.id.nav_video)
         }
         findViewById<View>(R.id.btnInterpOpenPlanLibrary).setOnClickListener {
-            planLibraryMode = TranslationMode.INTERPRETATION
-            openSettingsSub(R.id.pagePlanLibrary, "方案库", returnTabId = R.id.nav_interp)
+            openSceneLibrary(TranslationMode.INTERPRETATION, returnTabId = R.id.nav_interp)
         }
         findViewById<View>(R.id.btnVideoOpenPlanLibrary).setOnClickListener {
-            planLibraryMode = TranslationMode.VIDEO
-            openSettingsSub(R.id.pagePlanLibrary, "方案库", returnTabId = R.id.nav_video)
+            openSceneLibrary(TranslationMode.VIDEO, returnTabId = R.id.nav_video)
         }
         setupHomeSceneChips(TranslationMode.INTERPRETATION)
         setupHomeSceneChips(TranslationMode.VIDEO)
         updatePlanSummary(TranslationMode.INTERPRETATION)
         updatePlanSummary(TranslationMode.VIDEO)
+    }
+
+    internal fun openSceneLibrary(mode: TranslationMode, returnTabId: Int = R.id.nav_settings) {
+        sceneLibraryMode = mode
+        openSettingsSub(R.id.pageSceneLibrary, "场景库", returnTabId)
     }
 
     private fun setupHomeSceneChips(mode: TranslationMode) {
@@ -1278,7 +1232,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         btnResetSceneLibrary.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("恢复默认场景？")
-                .setMessage("会替换当前模式的全部场景和默认选择，引用已删除场景的方案会回退到默认场景。")
+                .setMessage("会替换当前模式的全部场景和默认选择；正在使用已删除场景的模式会回退到默认场景。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("恢复") { _, _ ->
                     SceneLibraryStore.reset(this, sceneLibraryMode)
@@ -1301,13 +1255,24 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         }
         val items = SceneLibraryStore.list(this, sceneLibraryMode)
         val defaultId = SceneLibraryStore.default(this, sceneLibraryMode).id
+        val inUseId = SceneLibraryStore.resolve(
+            this,
+            sceneLibraryMode,
+            TranslationPlanStore.loadDraft(this, sceneLibraryMode).scenePresetId,
+        ).id
         sceneLibraryList.removeAllViews()
         items.forEach { scene ->
-            sceneLibraryList.addView(buildSceneCard(scene, scene.id == defaultId))
+            sceneLibraryList.addView(
+                buildSceneCard(scene, scene.id == defaultId, scene.id == inUseId),
+            )
         }
     }
 
-    private fun buildSceneCard(scene: ScenePromptPreset, isDefault: Boolean): View {
+    private fun buildSceneCard(
+        scene: ScenePromptPreset,
+        isDefault: Boolean,
+        isInUse: Boolean,
+    ): View {
         val card = layoutInflater.inflate(R.layout.item_scene_preset, sceneLibraryList, false)
         card.findViewById<TextView>(R.id.tvSceneIcon).text =
             scene.label.firstOrNull()?.toString() ?: "场"
@@ -1315,6 +1280,21 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         card.findViewById<TextView>(R.id.tvSceneInstruction).text = scene.instruction
         card.findViewById<Chip>(R.id.chipSceneDefault).visibility =
             if (isDefault) View.VISIBLE else View.GONE
+        card.findViewById<Chip>(R.id.chipSceneInUse).visibility =
+            if (isInUse) View.VISIBLE else View.GONE
+        card.findViewById<MaterialButton>(R.id.btnUseScene).apply {
+            visibility = if (isInUse) View.GONE else View.VISIBLE
+            setOnClickListener {
+                val draft = TranslationPlanStore.loadDraft(this@MainActivity, sceneLibraryMode)
+                TranslationPlanStore.saveDraft(
+                    this@MainActivity,
+                    draft.copy(scenePresetId = scene.id),
+                )
+                refreshSceneDependents(sceneLibraryMode)
+                reloadSceneLibrary()
+                toast("已使用：${scene.label}")
+            }
+        }
         card.findViewById<MaterialButton>(R.id.btnSetDefaultScene).apply {
             visibility = if (isDefault) View.GONE else View.VISIBLE
             setOnClickListener {
@@ -1338,7 +1318,7 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         card.findViewById<MaterialButton>(R.id.btnDeleteScene).setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("删除“${scene.label}”？")
-                .setMessage("引用该场景的方案下次使用时会回退到当前默认场景。")
+                .setMessage("正在使用该场景的模式下次启动会回退到当前默认场景。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("删除") { _, _ ->
                     if (SceneLibraryStore.delete(this, sceneLibraryMode, scene.id)) {
@@ -1406,162 +1386,14 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
     private fun refreshSceneDependents(mode: TranslationMode) {
         setupHomeSceneChips(mode)
         updatePlanSummary(mode)
-        if (settingsSubId == R.id.pagePlanLibrary) reloadPlanLibrary()
-    }
-
-    private fun setupPlanLibraryPage() {
-        togglePlanLibraryMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            planLibraryMode = when (checkedId) {
-                R.id.btnPlanLibraryVideo -> TranslationMode.VIDEO
-                else -> TranslationMode.INTERPRETATION
-            }
-            reloadPlanLibrary()
-        }
-        fabNewPlan.setOnClickListener {
-            openPlanEditor(planLibraryMode)
-        }
-    }
-
-    private fun openPlanEditor(
-        mode: TranslationMode,
-        planName: String = "",
-        savedPlanId: String = "",
-    ) {
-        TranslationPlanBottomSheet.newInstance(
-            mode,
-            planName = planName,
-            savedPlanId = savedPlanId,
-        ).also { sheet ->
-            sheet.listener = this
-            sheet.show(supportFragmentManager, "plan_${mode.storageKey}")
-        }
-    }
-
-    private fun reloadPlanLibrary() {
-        val checkedId = if (planLibraryMode == TranslationMode.VIDEO) {
-            R.id.btnPlanLibraryVideo
-        } else {
-            R.id.btnPlanLibraryInterp
-        }
-        if (togglePlanLibraryMode.checkedButtonId != checkedId) {
-            togglePlanLibraryMode.check(checkedId)
-        }
-        val items = TranslationPlanStore.listSaved(this, planLibraryMode)
-        planLibraryList.removeAllViews()
-        tvPlanLibraryEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-        items.forEach { saved ->
-            planLibraryList.addView(buildSavedPlanCard(saved))
-        }
-    }
-
-    private fun buildSavedPlanCard(saved: SavedTranslationPlan): View {
-        val card = layoutInflater.inflate(R.layout.item_saved_plan, planLibraryList, false)
-        val plan = saved.plan.normalized()
-        val icon = card.findViewById<TextView>(R.id.tvPlanIcon)
-        val name = card.findViewById<TextView>(R.id.tvPlanName)
-        val meta = card.findViewById<TextView>(R.id.tvPlanMeta)
-        val tags = card.findViewById<ChipGroup>(R.id.chipGroupPlanTags)
-        val apply = card.findViewById<MaterialButton>(R.id.btnApplyPlan)
-        val edit = card.findViewById<MaterialButton>(R.id.btnEditPlan)
-        val delete = card.findViewById<MaterialButton>(R.id.btnDeletePlan)
-        val scene = SceneLibraryStore.resolve(this, plan.mode, plan.scenePresetId)
-        icon.text = saved.name.trim().firstOrNull()?.toString() ?: "方"
-        name.text = saved.name
-        // 语言方向不再随方案绑定，方案卡只展示场景；语言由主页语言胶囊随时调整。
-        meta.text = scene.label
-        tags.removeAllViews()
-        listOf(scene.label).forEach { label ->
-            tags.addView(Chip(this).apply {
-                text = label
-                isClickable = false
-                isCheckable = false
-                isFocusable = false
-                minHeight = resources.getDimensionPixelSize(R.dimen.touch_target) / 2
-                chipBackgroundColor = getColorStateList(R.color.primary_fixed)
-                setTextColor(getColor(R.color.brand))
-                chipStrokeWidth = 0f
-            })
-        }
-
-        apply.setOnClickListener {
-            val applied = TranslationPlanStore.applySaved(this, planLibraryMode, saved.id)
-            if (applied == null) {
-                toast("方案不存在或已损坏")
-                reloadPlanLibrary()
-                return@setOnClickListener
-            }
-            onTranslationPlanApplied(
-                mode = planLibraryMode,
-                plan = applied,
-                sessionContext = "",
-                videoUrl = "",
-            )
-            toast("已应用：${saved.name}")
-        }
-        edit.setOnClickListener {
-            openPlanEditor(
-                mode = planLibraryMode,
-                planName = saved.name,
-                savedPlanId = saved.id,
-            )
-        }
-        delete.setOnClickListener {
-            TranslationPlanStore.deleteSavedPlan(this, planLibraryMode, saved.id)
-            toast("已删除：${saved.name}")
-            reloadPlanLibrary()
-        }
-        return card
-    }
-
-    override fun onSceneLibraryRequested(mode: TranslationMode) {
-        val previousSubId = settingsSubId
-        val returnTabId = if (previousSubId == 0) currentMainTabId else settingsReturnTabId
-        sceneLibraryParentPageId = if (previousSubId == R.id.pagePlanLibrary) {
-            R.id.pagePlanLibrary
-        } else {
-            0
-        }
-        sceneLibraryMode = mode
-        openSettingsSub(R.id.pageSceneLibrary, "场景库", returnTabId)
-    }
-
-    override fun onTranslationPlanApplied(
-        mode: TranslationMode,
-        plan: TranslationPlan,
-        sessionContext: String,
-        videoUrl: String,
-    ) {
-        when (mode) {
-            TranslationMode.INTERPRETATION -> {
-                renderModeLanguageControls(
-                    mode,
-                    LanguageControls(acInterpSourceLang, acInterpTargetLang),
-                )
-            }
-            TranslationMode.VIDEO -> {
-                renderModeLanguageControls(
-                    mode,
-                    LanguageControls(acVideoSourceLang, acVideoTargetLang),
-                )
-            }
-        }
-        updatePlanSummary(mode)
-        setupHomeSceneChips(mode)
-        if (settingsSubId == R.id.pagePlanLibrary) {
-            reloadPlanLibrary()
-        }
     }
 
     private fun updatePlanSummary(mode: TranslationMode) {
         val plan = TranslationPlanStore.loadDraft(this, mode)
         val scene = SceneLibraryStore.resolve(this, mode, plan.scenePresetId)
         val summary = "${scene.label} · ${plan.directionLabel}"
-        val detail = if (plan.advancedInstruction.isNotBlank()) {
-            plan.advancedInstruction.replace('\n', ' ').take(48)
-        } else {
-            "点击编辑长期方案；本场上下文在主页填写"
-        }
+        val detail = scene.instruction.replace('\n', ' ').take(48)
+            .ifEmpty { "点击管理场景库；本场上下文在主页填写" }
         if (mode == TranslationMode.INTERPRETATION) {
             findViewById<TextView>(R.id.tvInterpPlanSummary)?.text = summary
             findViewById<TextView>(R.id.tvInterpProfile)?.text = detail

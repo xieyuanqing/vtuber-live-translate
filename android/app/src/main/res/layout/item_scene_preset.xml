@@ -42,19 +42,40 @@
                     style="@style/CardTitle"
                     android:text="场景名称" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipSceneDefault"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/grid_4"
-                    android:checkable="false"
-                    android:clickable="false"
-                    android:text="默认"
-                    android:textColor="@color/brand"
-                    android:visibility="gone"
-                    app:chipBackgroundColor="@color/primary_fixed"
-                    app:chipMinHeight="24dp"
-                    app:chipStrokeWidth="0dp" />
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSceneInUse"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:checkable="false"
+                        android:clickable="false"
+                        android:text="使用中"
+                        android:textColor="@color/brand_on"
+                        android:visibility="gone"
+                        app:chipBackgroundColor="@color/brand"
+                        app:chipMinHeight="24dp"
+                        app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSceneDefault"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/grid_4"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:checkable="false"
+                        android:clickable="false"
+                        android:text="默认"
+                        android:textColor="@color/brand"
+                        android:visibility="gone"
+                        app:chipBackgroundColor="@color/primary_fixed"
+                        app:chipMinHeight="24dp"
+                        app:chipStrokeWidth="0dp" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
@@ -81,6 +102,16 @@
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUseScene"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
+                android:text="使用"
+                android:textAllCaps="false"
+                android:textColor="@color/brand" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSetDefaultScene"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
@@ -88,7 +119,7 @@
                 android:minHeight="@dimen/touch_target"
                 android:text="设为默认"
                 android:textAllCaps="false"
-                android:textColor="@color/brand" />
+                android:textColor="@color/text_secondary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnEditScene"

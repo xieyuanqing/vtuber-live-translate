@@ -2,10 +2,13 @@ package com.xyq.livetranslate
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,33 +33,24 @@ class TranslationPlanStoreTest {
     }
 
     @Test
-    fun editingSavedPlanUpdatesInPlaceWithoutChangingDraft() {
+    fun draftKeepsLanguageAndSceneIndependentlyPerMode() {
         clearStore()
-        val mode = TranslationMode.VIDEO
-        val originalDraft = TranslationPlan.default(mode)
-        TranslationPlanStore.saveDraft(context, originalDraft)
-        val saved = TranslationPlanStore.saveAs(
-            context,
-            mode,
-            "直播方案",
-            originalDraft.copy(scenePresetId = "livestream"),
+        val interp = TranslationPlan.default(TranslationMode.INTERPRETATION).copy(
+            sourceLanguageCode = "ja",
+            targetLanguageCode = "zh",
         )
-
-        val updated = TranslationPlanStore.updateSaved(
-            context,
-            mode,
-            saved.id,
-            "动漫方案",
-            saved.plan.copy(scenePresetId = "anime"),
+        val video = TranslationPlan.default(TranslationMode.VIDEO).copy(
+            sourceLanguageCode = "en",
+            scenePresetId = "livestream",
         )
+        TranslationPlanStore.saveDraft(context, interp)
+        TranslationPlanStore.saveDraft(context, video)
 
-        assertNotNull(updated)
-        val all = TranslationPlanStore.listSaved(context, mode)
-        assertEquals(1, all.size)
-        assertEquals(saved.id, all.single().id)
-        assertEquals("动漫方案", all.single().name)
-        assertEquals("anime", all.single().plan.scenePresetId)
-        assertEquals(originalDraft, TranslationPlanStore.loadDraft(context, mode))
+        val loadedInterp = TranslationPlanStore.loadDraft(context, TranslationMode.INTERPRETATION)
+        val loadedVideo = TranslationPlanStore.loadDraft(context, TranslationMode.VIDEO)
+        assertEquals("ja", loadedInterp.sourceLanguageCode)
+        assertEquals("en", loadedVideo.sourceLanguageCode)
+        assertEquals("livestream", loadedVideo.scenePresetId)
     }
 
     @Test
@@ -66,108 +60,93 @@ class TranslationPlanStoreTest {
         val custom = requireNotNull(SceneLibraryStore.create(context, mode, "临时", "临时场景"))
         val plan = TranslationPlan.default(mode).copy(scenePresetId = custom.id)
         TranslationPlanStore.saveDraft(context, plan)
-        val saved = TranslationPlanStore.saveAs(context, mode, "临时方案", plan)
 
         SceneLibraryStore.delete(context, mode, custom.id)
 
         val draft = TranslationPlanStore.loadDraft(context, mode)
-        val stored = TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan
         val fallbackId = SceneLibraryStore.default(context, mode).id
         assertEquals(custom.id, draft.scenePresetId)
-        assertEquals(custom.id, stored.scenePresetId)
         assertEquals(fallbackId, SceneLibraryStore.resolve(context, mode, draft.scenePresetId).id)
-        assertEquals(fallbackId, SceneLibraryStore.resolve(context, mode, stored.scenePresetId).id)
     }
 
     @Test
-    fun fallbackDoesNotRewriteReferencesDuringUnrelatedCrud() {
+    fun sceneResetDoesNotRewriteDraftReference() {
         clearStore()
         val mode = TranslationMode.VIDEO
         val original = TranslationPlan.default(mode).copy(scenePresetId = "anime")
         TranslationPlanStore.saveDraft(context, original)
-        val saved = TranslationPlanStore.saveAs(context, mode, "动漫方案", original)
 
         SceneLibraryStore.delete(context, mode, "anime")
         val fallbackId = SceneLibraryStore.default(context, mode).id
         assertEquals("anime", TranslationPlanStore.loadDraft(context, mode).scenePresetId)
-        assertEquals("anime", TranslationPlanStore.listSaved(context, mode).single().plan.scenePresetId)
-        assertEquals(
-            fallbackId,
-            SceneLibraryStore.resolve(context, mode, original.scenePresetId).id,
-        )
+        assertEquals(fallbackId, SceneLibraryStore.resolve(context, mode, "anime").id)
 
-        val renamed = TranslationPlanStore.updateSaved(
-            context,
-            mode,
-            saved.id,
-            "动漫方案（改名）",
-            TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan,
-        )
-        assertEquals("anime", renamed?.plan?.scenePresetId)
-        TranslationPlanStore.saveAs(context, mode, "无关方案", TranslationPlan.default(mode))
         SceneLibraryStore.reset(context, mode)
-
         assertEquals("anime", TranslationPlanStore.loadDraft(context, mode).scenePresetId)
-        assertEquals(
-            "anime",
-            TranslationPlanStore.listSaved(context, mode).single { it.id == saved.id }.plan.scenePresetId,
-        )
+        assertEquals("anime", SceneLibraryStore.resolve(context, mode, "anime").id)
     }
 
     @Test
-    fun applyingSavedPlanKeepsCurrentLanguageAndOnlyTakesSceneAndPrompt() {
+    fun legacySavedPlansWithExtraPromptFoldIntoSceneLibraryOnce() {
         clearStore()
         val mode = TranslationMode.VIDEO
-        // 当前草稿使用日→中；用户随时可调的语言。
-        val currentDraft = TranslationPlan.default(mode).copy(
-            sourceLanguageCode = "ja",
-            targetLanguageCode = "zh",
-        )
-        TranslationPlanStore.saveDraft(context, currentDraft)
-        // 一个存了不同语言（英→中）的方案。
-        val saved = TranslationPlanStore.saveAs(
-            context,
-            mode,
-            "英文直播",
-            TranslationPlan.default(mode).copy(
-                sourceLanguageCode = "en",
-                targetLanguageCode = "zh",
-                scenePresetId = "livestream",
-                advancedInstruction = "保留主播口头禅",
-            ),
-        )
+        val baseScene = SceneLibraryStore.resolve(context, mode, "livestream")
+        // 手写旧版方案库 JSON：一条带额外提示词、一条纯别名。
+        val legacy = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", "plan-1")
+                put("name", "英文直播")
+                put("plan", JSONObject().apply {
+                    put("mode", mode.storageKey)
+                    put("scenePresetId", "livestream")
+                    put("advancedInstruction", "保留主播口头禅")
+                })
+            })
+            put(JSONObject().apply {
+                put("id", "plan-2")
+                put("name", "纯别名方案")
+                put("plan", JSONObject().apply {
+                    put("mode", mode.storageKey)
+                    put("scenePresetId", "anime")
+                    put("advancedInstruction", "")
+                })
+            })
+        }
+        val prefs = context.getSharedPreferences("translation_plans_v3", Context.MODE_PRIVATE)
+        prefs.edit().putString("saved_" + mode.storageKey, legacy.toString()).commit()
 
-        val applied = requireNotNull(TranslationPlanStore.applySaved(context, mode, saved.id))
+        TranslationPlanStore.migrateLegacySavedPlans(context)
 
-        // 语言保留当前草稿（日→中），不被方案里的英文覆盖。
-        assertEquals("ja", applied.sourceLanguageCode)
-        assertEquals("zh", applied.targetLanguageCode)
-        // 场景与长期提示词按方案套用。
-        assertEquals("livestream", applied.scenePresetId)
-        assertEquals("保留主播口头禅", applied.advancedInstruction)
-        // 写回草稿的也保持当前语言。
-        val draft = TranslationPlanStore.loadDraft(context, mode)
-        assertEquals("ja", draft.sourceLanguageCode)
-        assertEquals("livestream", draft.scenePresetId)
+        val scenes = SceneLibraryStore.list(context, mode)
+        val migrated = scenes.single { it.label == "英文直播" }
+        assertTrue(migrated.instruction.contains(baseScene.instruction))
+        assertTrue(migrated.instruction.contains("保留主播口头禅"))
+        // 纯别名不生成重复场景。
+        assertFalse(scenes.any { it.label == "纯别名方案" })
+        // 旧方案数据清空，且迁移只执行一次。
+        assertNull(prefs.getString("saved_" + mode.storageKey, null))
+        TranslationPlanStore.migrateLegacySavedPlans(context)
+        assertEquals(1, SceneLibraryStore.list(context, mode).count { it.label == "英文直播" })
     }
 
     @Test
-    fun updatingMissingSavedPlanReturnsNullWithoutChangingStore() {
+    fun draftDecodingIgnoresLegacyAdvancedInstructionField() {
         clearStore()
         val mode = TranslationMode.INTERPRETATION
-        val draft = TranslationPlan.default(mode)
-        TranslationPlanStore.saveDraft(context, draft)
+        val legacyDraft = JSONObject().apply {
+            put("mode", mode.storageKey)
+            put("sourceLanguageCode", "ja")
+            put("targetLanguageCode", "zh")
+            put("scenePresetId", "meeting")
+            put("advancedInstruction", "旧字段")
+        }
+        context.getSharedPreferences("translation_plans_v3", Context.MODE_PRIVATE)
+            .edit()
+            .putString("draft_" + mode.storageKey, legacyDraft.toString())
+            .commit()
 
-        val updated = TranslationPlanStore.updateSaved(
-            context,
-            mode,
-            "missing-id",
-            "不存在的方案",
-            draft.copy(scenePresetId = "meeting"),
-        )
-
-        assertNull(updated)
-        assertEquals(emptyList<SavedTranslationPlan>(), TranslationPlanStore.listSaved(context, mode))
-        assertEquals(draft, TranslationPlanStore.loadDraft(context, mode))
+        val draft = TranslationPlanStore.loadDraft(context, mode)
+        assertEquals("ja", draft.sourceLanguageCode)
+        assertEquals("meeting", draft.scenePresetId)
     }
 }

@@ -33,7 +33,6 @@
 
         <!-- 设置二级页继续独立承载，进入时隐藏底栏并显示返回箭头。 -->
         <include layout="@layout/page_scene_library" />
-        <include layout="@layout/page_plan_library" />
         <include layout="@layout/page_settings_translate" />
         <include layout="@layout/page_settings_subtitle" />
         <include layout="@layout/page_settings_ai" />

@@ -172,11 +172,6 @@ object PromptBuilder {
             appendLine("【场景：${scene.label}】")
             appendLine(scene.instruction)
             appendSessionContext(modeContext)
-            if (normalized.advancedInstruction.isNotBlank()) {
-                appendLine()
-                appendLine("【方案提示词】")
-                appendLine(normalized.advancedInstruction)
-            }
         }.trim()
     }
 
@@ -194,11 +189,6 @@ object PromptBuilder {
             appendLine("场景：${scene.label}")
             appendLine("场景要求：${scene.instruction}")
             appendSessionContext(modeContext)
-            if (normalized.advancedInstruction.isNotBlank()) {
-                appendLine()
-                appendLine("【方案提示词】")
-                appendLine(normalized.advancedInstruction)
-            }
         }.trim()
     }
 

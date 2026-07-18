@@ -175,7 +175,7 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView style="@style/CardTitle" android:text="当前方案" />
+                        <TextView style="@style/CardTitle" android:text="当前场景" />
 
                         <TextView
                             android:id="@+id/tvInterpPlanSummary"
@@ -191,7 +191,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/grid_4"
-                            android:text="点击编辑场景与方案提示词"
+                            android:text="点击管理场景库"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -202,7 +202,7 @@
                         android:layout_height="48dp"
                         android:gravity="center"
                         android:paddingHorizontal="@dimen/space_8"
-                        android:text="方案库"
+                        android:text="场景库"
                         android:textColor="@color/brand"
                         android:textSize="13sp"
                         android:textStyle="bold" />
