@@ -1413,6 +1413,12 @@ class MainActivity : AppCompatActivity() {
         val targetLabels = TranslationLanguageCatalog.targets.map { it.label }.toTypedArray()
         controls.sourceView.setSimpleItems(sourceLabels)
         controls.targetView.setSimpleItems(targetLabels)
+        // 语言胶囊用 endIconMode=none（规避旧的 ExposedDropdownMenu 启动闪退），
+        // 因此没有下拉委托来响应点击；这里手动接上「点击即弹出选项」，否则不可编辑
+        // 的下拉框点了没反应、语言无法切换。
+        listOf(controls.sourceView, controls.targetView).forEach { dropdown ->
+            dropdown.setOnClickListener { dropdown.showDropDown() }
+        }
         controls.sourceView.setOnItemClickListener { _, _, position, _ ->
             val code = TranslationLanguageCatalog.sources.getOrNull(position)?.code
                 ?: return@setOnItemClickListener

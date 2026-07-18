@@ -52,6 +52,23 @@ class MainActivityStartupTest {
     }
 
     @Test
+    fun languageDropdownsOpenOnTap() = withActivity { activity ->
+        // endIconMode=none 的下拉没有下拉委托，必须自己接 onClick → showDropDown，
+        // 否则语言胶囊点了没反应、根本切换不了语言。
+        listOf(
+            R.id.acInterpSourceLang,
+            R.id.acInterpTargetLang,
+            R.id.acVideoSourceLang,
+            R.id.acVideoTargetLang,
+        ).forEach { id ->
+            assertTrue(
+                "语言下拉 id=$id 缺少点击监听，点击无法弹出选项",
+                activity.findViewById<View>(id).hasOnClickListeners(),
+            )
+        }
+    }
+
+    @Test
     fun homeSceneGroupsAlwaysKeepOneSelection() = withActivity { activity ->
         listOf(R.id.chipGroupInterpHomeScenes, R.id.chipGroupVideoHomeScenes).forEach { id ->
             val group = activity.findViewById<com.google.android.material.chip.ChipGroup>(id)

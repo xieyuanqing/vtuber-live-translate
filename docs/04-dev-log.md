@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-18 · v2.3.1 修复语言胶囊点击不弹、无法切换语言
+
+现场发现主页语言胶囊点了没反应，源/目标语言根本切不了。排查确认是**历史遗留缺陷**（`8ea4faa` 基线即存在，非本轮合并引入）：
+
+- 语言胶囊为规避旧的 `ExposedDropdownMenu + boxBackgroundMode=none` 启动 `InflateException`，改用 `OutlinedBox.Dense + endIconMode=none`。代价是没有 `DropdownMenuEndIconDelegate` 来响应点击，而 `MaterialAutoCompleteTextView` 又是 `inputType=none` 不可编辑，于是点击既不弹下拉也无法输入，语言被“锁死”。
+- 修复：在 `bindModeLanguageControls` 里为四个下拉手动接 `setOnClickListener { showDropDown() }`，恢复“点击即弹出选项”，不改动会闪退的样式组合。
+- 新增回归测试 `languageDropdownsOpenOnTap` 断言四个语言下拉都挂了点击监听。
+- CLAUDE.md 踩坑条目补充说明：`endIconMode=none` 必须配手动 `showDropDown`，勿删。
+
+**版本**：versionCode 34 / versionName 2.3.1。
+
+**验证**：`git diff --check` 通过；单测与 `assembleDebug` 由 CI 执行。注意：这是触摸交互修复，CI 只能验证编译、启动与点击监听存在，**下拉真正弹出需真机/模拟器确认**。
+
+---
+
 ## 2026-07-18 · v2.3.0 方案库并入场景库，场景成为唯一长期配置
 
 语言解绑后方案只剩「名字 + 场景引用 + 额外提示词」，与场景（名字 + 提示词）高度重复。本次把两者合并：

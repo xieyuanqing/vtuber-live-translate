@@ -12,7 +12,7 @@
 - 默认运行形态仍是纯本地：用户填自己的 API Key，无需任何后端。
 - **好友邀请网关是可选扩展，不是核心**：为没有 Gemini Key 的朋友提供分享入口。持有者自行部署 `server/friend_gateway`（FastAPI + SQLite），朋友用邀请码 + 设备公钥绑定后由网关代理调用持有者的 Key。不部署网关时 App 功能不受影响。它是唯一的后端，作用域仅限好友分享，不是账号体系。
 
-当前版本：`2.3.0` / versionCode `33`。
+当前版本：`2.3.1` / versionCode `34`。
 
 ## 不可破坏的产品边界
 
@@ -122,7 +122,7 @@ GitHub Actions 工作流：`.github/workflows/android-debug.yml`。
 - 单连接会被上游 GoAway；连接生命周期操作必须继续串行在 scheduler 单线程，WebSocket 回调不能直接竞争修改 `generation` 或 `ws`。
 - 静音时长时间没有模型输出是正常情况，不能仅凭无字幕判定断线。
 - MediaProjection 授权会导致 Activity 生命周期切换；必须保留发起授权前的操作快照。
-- `ExposedDropdownMenu + boxBackgroundMode=none` 曾导致启动时 `InflateException`，语言胶囊不要恢复该组合。
+- `ExposedDropdownMenu + boxBackgroundMode=none` 曾导致启动时 `InflateException`，语言胶囊不要恢复该组合。作为代价，胶囊用 `endIconMode=none`，没有下拉委托，`bindModeLanguageControls` 必须为每个下拉手动接 `setOnClickListener { showDropDown() }`，否则点击不弹选项、语言切不了；改这块时别删这段。
 - Prompt 固定底座只放通用翻译约束，模式层只描述输入来源；会议、旅行、直播等偏好必须放在可编辑场景库中。
 - 同传/视频空闲态与运行态是 `FrameLayout` 中的兄弟层；显隐必须作用于完整根容器，不能只隐藏内部内容，否则透明层会拦截触摸。
 - `SubtitleOverlay.show()` 需要处理悬浮窗权限竞态；视频模式创建失败时必须安全停止会话，不能让主线程崩溃。
