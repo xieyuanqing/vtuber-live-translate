@@ -115,6 +115,43 @@ class TranslationPlanStoreTest {
     }
 
     @Test
+    fun applyingSavedPlanKeepsCurrentLanguageAndOnlyTakesSceneAndPrompt() {
+        clearStore()
+        val mode = TranslationMode.VIDEO
+        // 当前草稿使用日→中；用户随时可调的语言。
+        val currentDraft = TranslationPlan.default(mode).copy(
+            sourceLanguageCode = "ja",
+            targetLanguageCode = "zh",
+        )
+        TranslationPlanStore.saveDraft(context, currentDraft)
+        // 一个存了不同语言（英→中）的方案。
+        val saved = TranslationPlanStore.saveAs(
+            context,
+            mode,
+            "英文直播",
+            TranslationPlan.default(mode).copy(
+                sourceLanguageCode = "en",
+                targetLanguageCode = "zh",
+                scenePresetId = "livestream",
+                advancedInstruction = "保留主播口头禅",
+            ),
+        )
+
+        val applied = requireNotNull(TranslationPlanStore.applySaved(context, mode, saved.id))
+
+        // 语言保留当前草稿（日→中），不被方案里的英文覆盖。
+        assertEquals("ja", applied.sourceLanguageCode)
+        assertEquals("zh", applied.targetLanguageCode)
+        // 场景与长期提示词按方案套用。
+        assertEquals("livestream", applied.scenePresetId)
+        assertEquals("保留主播口头禅", applied.advancedInstruction)
+        // 写回草稿的也保持当前语言。
+        val draft = TranslationPlanStore.loadDraft(context, mode)
+        assertEquals("ja", draft.sourceLanguageCode)
+        assertEquals("livestream", draft.scenePresetId)
+    }
+
+    @Test
     fun updatingMissingSavedPlanReturnsNullWithoutChangingStore() {
         clearStore()
         val mode = TranslationMode.INTERPRETATION

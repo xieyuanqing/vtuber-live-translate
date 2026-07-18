@@ -72,8 +72,6 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
         val nameLayout = view.findViewById<TextInputLayout>(R.id.tilPlanName)
         val advanced = view.findViewById<TextInputEditText>(R.id.etPlanCustom)
         val name = view.findViewById<TextInputEditText>(R.id.etPlanName)
-        val sourceLanguage = view.findViewById<MaterialAutoCompleteTextView>(R.id.acPlanSourceLanguage)
-        val targetLanguage = view.findViewById<MaterialAutoCompleteTextView>(R.id.acPlanTargetLanguage)
         val apply = view.findViewById<MaterialButton>(R.id.btnSavePlan)
         view.findViewById<View>(R.id.btnClosePlanSheet).setOnClickListener { dismiss() }
 
@@ -110,23 +108,6 @@ class TranslationPlanBottomSheet : BottomSheetDialogFragment() {
         sceneField.setText(selectedScene.label, false)
         sceneField.setOnItemClickListener { _, _, position, _ ->
             scenes.getOrNull(position)?.let { plan = plan.copy(scenePresetId = it.id) }
-        }
-
-        val sourceOptions = TranslationLanguageCatalog.sources
-        val targetOptions = TranslationLanguageCatalog.targets
-        sourceLanguage.setAdapter(
-            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, sourceOptions.map { it.label }),
-        )
-        targetLanguage.setAdapter(
-            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, targetOptions.map { it.label }),
-        )
-        sourceLanguage.setText(TranslationLanguageCatalog.source(plan.sourceLanguageCode).label, false)
-        targetLanguage.setText(TranslationLanguageCatalog.target(plan.targetLanguageCode).label, false)
-        sourceLanguage.setOnItemClickListener { _, _, position, _ ->
-            plan = plan.copy(sourceLanguageCode = sourceOptions[position].code)
-        }
-        targetLanguage.setOnItemClickListener { _, _, position, _ ->
-            plan = plan.copy(targetLanguageCode = targetOptions[position].code)
         }
 
         apply.setOnClickListener {

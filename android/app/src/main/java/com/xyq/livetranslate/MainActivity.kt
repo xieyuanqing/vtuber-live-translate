@@ -1468,9 +1468,10 @@ class MainActivity : AppCompatActivity(), TranslationPlanBottomSheet.Listener {
         val scene = SceneLibraryStore.resolve(this, plan.mode, plan.scenePresetId)
         icon.text = saved.name.trim().firstOrNull()?.toString() ?: "方"
         name.text = saved.name
-        meta.text = "${scene.label} · ${plan.directionLabel}"
+        // 语言方向不再随方案绑定，方案卡只展示场景；语言由主页语言胶囊随时调整。
+        meta.text = scene.label
         tags.removeAllViews()
-        listOf(scene.label, plan.directionLabel).forEach { label ->
+        listOf(scene.label).forEach { label ->
             tags.addView(Chip(this).apply {
                 text = label
                 isClickable = false

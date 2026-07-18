@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-18 · 语言方向与方案解绑，随时可调
+
+把语言方向从翻译方案里解耦，让它成为每模式独立、随时可调的运行时选择，不再被套用方案覆盖：
+
+- **根因**：`TranslationPlanStore.applySaved` 原先 `saveDraft(整个方案)`，套用已保存方案会把当前草稿的语言一起顶掉——语言被“绑死”在方案里。
+- **改法**：`applySaved` 改为读当前草稿、只套用方案的场景与长期提示词、保留当前语言方向后再写回；方案编辑器（`TranslationPlanBottomSheet` + `bottom_sheet_translation_plan.xml`）移除源/目标语言选择器，方案只剩 名称 + 场景 + 长期提示词；方案库卡片不再显示语言方向，避免展示一个套用时被忽略的语言。
+- 语言仍存在草稿里、由同传/视频主页的语言胶囊设置、启动时进快照（冻结逻辑与模式隔离不变）。
+- 同步 CLAUDE.md 边界第 4 条：方案只引用场景 ID 与额外提示词，语言不绑进方案。
+- 新增单测 `applyingSavedPlanKeepsCurrentLanguageAndOnlyTakesSceneAndPrompt`。
+
+**验证**：`git diff --check` 通过。本容器无 Android SDK，单测与 `assembleDebug` 依赖 CI；改动为纯逻辑与布局删减，无新增依赖。
+
+---
+
 ## 2026-07-17 · v2.2.0 好友网关并入主线并收口文档与 CI
 
 将 `test/friend-invite-gateway` 整体合并进主线，把好友邀请网关从实验分支正式纳入产品，并补齐配套护栏：

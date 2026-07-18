@@ -99,8 +99,15 @@ object TranslationPlanStore {
         id: String,
     ): TranslationPlan? {
         val plan = listSaved(context, mode).firstOrNull { it.id == id }?.plan ?: return null
-        saveDraft(context, plan)
-        return plan
+        // 语言方向不被方案绑定：套用方案只更新场景与长期提示词，保留当前草稿的语言方向。
+        // 语言由主页语言胶囊随时调整，不受方案库覆盖（见 CLAUDE.md 边界第 4 条）。
+        val current = loadDraft(context, mode)
+        val merged = plan.copy(
+            sourceLanguageCode = current.sourceLanguageCode,
+            targetLanguageCode = current.targetLanguageCode,
+        )
+        saveDraft(context, merged)
+        return merged
     }
 
     internal fun encodePlan(plan: TranslationPlan): JSONObject = JSONObject().apply {
