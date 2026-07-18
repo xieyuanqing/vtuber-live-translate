@@ -1,240 +1,548 @@
-# 07 · MainActivity 拆分重构执行文档
+# 07 · MainActivity 拆分重构施工文档
 
-本文档是一份可以直接照做的施工图:背景与决策原因、硬性约束、目标结构、六个执行步骤(含每步搬迁清单与验证)、交付要求、以及这次重构在未来 SaaS 演进中的位置。执行者(人或 AI)只需按顺序完成,不需要重新做设计决策。
+> **基线**：分支 `claude/saas-architecture-review-bkde2s`，文档修订基线 `90bf642`。
+>
+> **状态**：待执行。执行者必须按步骤顺序施工；每一步都要独立编译、独立测试、独立提交。
 
-状态:待执行。分支:`claude/saas-architecture-review-bkde2s`。
+## 1. 目标、现状与边界
 
----
+### 1.1 本次目标
 
-## 1. 背景与为什么
+把大型 `MainActivity.kt` 拆为普通 Kotlin controller，使 `MainActivity` 最终只负责：
 
-### 1.1 起因
+- Activity 生命周期与 `savedInstanceState` 汇总；
+- 无条件、固定顺序注册 `ActivityResultLauncher`；
+- 创建 `ViewModel`、视图持有对象和 controllers；
+- 按本文规定的两阶段协议完成 controller、navigator 与回调接线；
+- 启停 300 ms UI 刷新循环，并把一次生成的不可变状态快照分发给页面；
+- 把 Android 系统能力包装成窄 host 回调。
 
-对"未来把流译做成 SaaS"做过一次架构评估,结论:
+重构只改变代码归属，不改变用户可见行为、Store 语义、Service 协议或实时翻译管线。
 
-- 实时管线(`CaptureService → PcmProcessor → GeminiLiveClient → SubtitleStabilizer`)分层干净,SaaS 化时基本原样保留;
-- `ApiCredentialMode`(个人 Key 直连 / 好友网关代理)这条缝留得对,是未来把 Key 移到服务端的现成通道;
-- **客户端最大的技术债是 `MainActivity.kt`(约 1850 行)**:四个主页、全部设置子页、场景库、历史、权限流、会话快照、状态渲染全部在一个类里。未来任何新页面(登录、订阅、同步)都只能继续往里堆。
+### 1.2 当前产品边界
 
-本次重构只解决第三条:把 MainActivity 按页面拆成协作类。**不改任何可见行为,不改任何功能。**
+本项目当前仍是**纯本地、个人 Key 优先**的 Android App：
 
-### 1.2 为什么这样拆(决策已定,不要重新讨论)
+- 用户自己的 Gemini API Key 和自定义 Base URL 是核心路径，不部署任何后端也必须完整可用；
+- 好友邀请网关只是可选扩展，用邀请码和设备凭据分享持有者的 Key，不是账号系统；
+- 主导航固定为“同传 / 视频 / 历史 / 设置”；
+- 同传与视频的场景库、草稿、语言和本场上下文严格隔离；
+- 启动前冻结 Prompt、语言、场景和本场上下文，权限回调不能重新读取当前草稿；
+- 场景库是唯一可复用配置层，不恢复旧方案库、术语库或方案级额外提示词。
 
-- **不用 Fragment**:四个主页面必须继续由 `activity_main.xml` 静态引入(CLAUDE.md 代码结构约定),设置子页必须留在 `settingsSubViews` 显隐式返回栈里。改 Fragment 会同时破坏布局约定、返回栈逻辑和 Robolectric 启动测试。
-- **不上 Compose、不引入 DI 框架、不加事件总线**:个人项目,依赖越少越好;普通 Kotlin 类 + 构造参数 + 回调 lambda 足够。
-- **拆成普通 controller 类**:每个类持有自己页面的视图引用与逻辑,MainActivity 只剩生命周期、ActivityResult 启动器注册和接线。仓库里已有可参照的模式:`FriendGatewayBindingViewModel`(backend 接口 + 可单测状态机)。
+### 1.3 本次明确不做
 
----
+本次不得借重构提前实现或伪造：
 
-## 2. 硬性约束(违反任何一条即返工)
+- 注册、登录、用户资料、账号切换；
+- 订阅、套餐、账单、支付、权益页面；
+- 云同步、历史上传、多端同步；
+- 假 provider、假账号数据、未接后端的占位开关；
+- Fragment、Compose、DI 框架、事件总线；
+- `activity_main.xml` 或任何现有 View ID 的改造；
+- Store、`CaptureService`、`GeminiLiveClient`、`SubtitleStabilizer` 的顺手重构。
 
-1. **不改 `activity_main.xml`,不动任何 View ID**,不改 `res/layout/` 下任何文件。
-2. **纯行为等价**:只搬代码,不"顺手优化"逻辑、不改文案、不改任何 Store / Service / 实时管线层的类。
-3. 以下几个"坑"的现状必须原样保留(CLAUDE.md「容易踩的坑」+ 代码内注释):
-   - 语言下拉框没有下拉委托,必须保留每个下拉 `setOnClickListener { showDropDown() }` 的手动接线(`bindModeLanguageControls`,有测试盯着)。
-   - 同传/视频的空闲态与运行态是 FrameLayout 兄弟层,显隐必须作用于 `interpIdleContent` / `interpRunningContent` / `videoIdleContent` / `videoRunningContent` 完整根容器。
-   - **启动快照冻结(产品边界 7)**:`pendingSession*` 一旦在 `prepareSessionSettings` 里冻结,权限回调、MediaProjection 授权回来、Activity 重建后只能消费快照,不能重新读当前配置。`startCapture` 开头的 `reusePendingSnapshot` 判断逻辑逐字保留。
-   - `showPage` 内不能写 `bottomNav.selectedItemId = ...`(会无限重入栈溢出,代码里有注释说明)。
-   - `consumeStartedSession` 的调用时机(mic 启动后立即;video 在投屏授权成功后)不变。
-4. **测试只许改调用方式,不许删断言**:`MainActivityStartupTest.kt` 目前用反射访问私有成员,拆分后改为直接调用新类的 `internal` 成员;每个测试用例和断言都必须保留等价物。
-5. 注释、文档、提交说明用中文;不改 `versionName`/`versionCode`(纯内部重构不是可见版本变更)。
-6. 交付前:`git diff --check`、`:app:testDebugUnitTest`、`:app:lintDebug`、`:app:assembleDebug` 全部通过。
+未来正式 SaaS 只在第 8 节定义扩展缝，本次不创建这些未来实现类。
 
----
+## 2. 必须保持的行为不变量
 
-## 3. 目标结构
+1. `activity_main.xml` 继续静态包含四个主页面和现有设置子页；不改 `res/layout/`。
+2. 语言下拉仍显式执行 `setOnClickListener { showDropDown() }`，不能依赖不存在的下拉委托。
+3. 空闲态与运行态显隐继续作用于完整根容器：
+   - `interpIdleContent` / `interpRunningContent`；
+   - `videoIdleContent` / `videoRunningContent`。
+4. `showPage` 内不得设置 `bottomNav.selectedItemId`，避免选中回调无限重入。
+5. `startCapture` 的 `reusePendingSnapshot` 判定语义不变；复用时不得再次执行 `prepareSessionSettings`。
+6. `consumeStartedSession` 时机不变：
+   - 同传：`startForegroundService` 成功发起后立即消费；
+   - 视频：MediaProjection 返回成功并发起前台服务后消费；
+   - 权限拒绝或投屏取消不得错误消费。
+7. 普通 controller 不得持有完整 `MainActivity` 作为 service locator。只注入 `Context`、自己的 Views、窄能力接口或回调。
+8. 每个 View 只有一个绑定真源。字段移入 controller 后，同一步删除 `MainActivity` 中对应别名及全部直接访问。
+9. `FriendGatewayBindingViewModel` 仍由 Activity 创建和观察；`SettingsController` 只接收 `bind`、`clear`、`isBinding` 三个动作，不获取完整 ViewModel 或 LifecycleOwner。
+10. 现有测试断言不得删除或弱化。反射可改为窄 `internal` 测试入口，但“改可见性”不能替代新增的生命周期与接线测试。
 
-新建包 `com.xyq.livetranslate.ui`(目录 `android/app/src/main/java/com/xyq/livetranslate/ui/`)。
+## 3. 目标文件与职责
 
-| 新文件 | 职责(吸收的现有代码) | 预估行数 |
+新代码位于 `android/app/src/main/java/com/xyq/livetranslate/ui/`：
+
+| 文件 | 唯一职责 |
+|---|---|
+| `MainNavigator.kt` | 四个主页面、设置子页、toolbar、bottom navigation、window insets、导航 saved state |
+| `ModeHomePages.kt` | `ModeHomeViews`、两个模式主页的 chips、语言、方案摘要、运行态渲染和主页动作 |
+| `SessionCoordinator.kt` | 启停、权限与投屏结果、Activity 内容/模式快照、Service Intent 组装 |
+| `SessionContextController.kt` | 两个模式的本场上下文、视频 URL、AI 解析、requestId 守卫、上下文 saved state |
+| `HistoryController.kt` | 历史列表、筛选、搜索、详情与复制 |
+| `SceneLibraryController.kt` | 场景库模式、列表、编辑、新建、恢复模板与 saved state |
+| `SettingsController.kt` | 设置入口、个人 Key/Base URL、好友网关 UI、字幕与参数、二号 AI、诊断、关于、电池白名单 |
+
+允许在同一文件中定义只服务于该页面的 `Views`、不可变状态和窄接口；不要为每个三行接口再拆文件。
+
+## 4. 依赖、所有权与构造协议
+
+### 4.1 页面 controller 的依赖规则
+
+页面 controller 的构造参数仅可来自以下集合：
+
+- `Context` 或 `applicationContext`：调用现有 Store、读取资源；
+- 该页面唯一的 `Views` 持有对象；
+- 窄 host，例如 `toast(String)`、`launchIntent(Intent)`、`postToUi(Runnable)`；
+- 明确的动作接口或 lambda，例如 `openSceneLibrary(mode, returnTabId)`；
+- 不可变渲染状态。
+
+禁止以下依赖：
+
+- `(activity: MainActivity)`；
+- controller 自行经 Activity 访问其他 controller 或 private 字段；
+- controller 之间互相持有；
+- 重新从 `StatusBus` 读取未包含在渲染快照里的字段。
+
+### 4.2 `SettingsController` 的好友绑定依赖
+
+使用窄动作对象，语义等价于：
+
+```kotlin
+internal data class FriendGatewayBindingActions(
+    val bind: (code: String, version: String, enableOnSuccess: Boolean) -> Unit,
+    val clear: () -> Unit,
+    val isBinding: () -> Boolean,
+)
+```
+
+Activity 用 `friendBindingViewModel.bind(...)`、`clearBinding()`、`isBinding()` 构造该对象。状态观察仍写成 Activity 的 lifecycle observer，并只调用 `settingsController.renderFriendBindingState(state)`。
+
+### 4.3 `SessionCoordinator` 的窄 host
+
+`SessionCoordinator` 不接收 Activity。至少注入以下能力，名称可按 Kotlin 风格微调，但不得退化为一个万能 `activity`：
+
+```kotlin
+internal interface SessionHost {
+    fun requestPermissions(permissions: Array<String>)
+    fun launchProjection(intent: Intent)
+    fun startForegroundService(intent: Intent)
+    fun startService(intent: Intent)
+    fun checkPermission(permission: String): Boolean
+    fun canDrawOverlays(): Boolean
+    fun createProjectionIntent(): Intent
+    fun openSystemSettings(intent: Intent)
+    fun openTranslationSettings()
+    fun toast(message: String)
+}
+```
+
+`openTranslationSettings()` 是窄导航动作，完成“切到设置 tab 并打开翻译服务子页”。不得让 coordinator 操作 `bottomNav`、launcher 或 navigator 字段。
+
+权限流必须同时覆盖两端：
+
+- 发起端：`requestPermissions(...)` 和 `launchProjection(...)`；
+- 结果端：Activity launcher 回调转发给 `onAudioPermissionResult(...)` / `onProjectionResult(...)`。
+
+只迁移结果回调、漏掉 `permLauncher.launch(...)`，该步骤不算闭合。
+
+### 4.4 两阶段 wiring 与最终构造顺序
+
+为避免 controller ↔ navigator 构造环，最终 `onCreate` 严格按以下顺序：
+
+1. ActivityResult launchers 作为 Activity 字段无条件注册，注册顺序不随页面状态变化；回调只转发给已创建的 coordinator。
+2. 恢复原始 saved-state 值，执行既有迁移，`setContentView`。
+3. 创建 `FriendGatewayBindingViewModel`。
+4. 绑定 shell Views 和每页 Views；每个 ID 只绑定一次。
+5. **第一阶段**：创建页面 controllers 和 `SessionCoordinator`；构造函数只保存依赖或绑定本地 listener，不执行跨组件导航。
+6. 创建 `MainNavigator`，其 hooks 指向已经初始化的 controllers。
+7. **第二阶段**：统一调用 `bindCallbacks(...)` / `attachNavigator(...)` / `bindSessionContextAccess(...)`，安装跨组件回调。
+8. 注册 `friendBindingViewModel.state.observe(...)`。LiveData 可能同步回放，所以必须晚于 `settingsController` 创建。
+9. 启动首次状态渲染。
+10. 最后恢复 `bottomNav.selectedItemId` 和设置子页。任何可能触发导航 hook 的恢复动作都不得早于第 7 步。
+
+不得靠捕获未初始化的 `lateinit navigator` 并假设 listener “暂时不会触发”。
+
+### 4.5 `ModeHomeViews` 单一绑定规则
+
+步骤 5 创建后：
+
+- 每个模式各有且仅有一个 `ModeHomeViews` 实例；
+- `ModeHomeController` 和 `SessionContextController` 共享这两个实例；
+- `SessionContextController` 不得再次 `findViewById`；
+- `MainActivity` 删除对应主页 View 字段，不能保留第二套别名；
+- `setupFinalPlanUi`、开始/停止按钮、overlay 权限入口和上下文按钮都必须在步骤 5 闭合，不能留到步骤 6。
+
+## 5. 两类启动快照必须明确区分
+
+### 5.1 Activity：内容/模式快照
+
+在权限请求前由 `prepareSessionSettings` 一次性创建不可变 `PendingSessionSnapshot`，至少包含：
+
+- capture mode；
+- 完整 Prompt；
+- source / target language code；
+- scene ID / scene label；
+- session title / context；
+- 用户当时选择的凭据模式（个人或好友）。
+
+这是**内容快照 + 模式选择快照**，不是完整访问凭据。它必须能写入/恢复自 `savedInstanceState`；权限回调和 MediaProjection 回调只消费该对象。
+
+### 5.2 Service：访问/运行参数快照
+
+`CaptureService.start(intent)` 在真正启动时，根据 Activity 传来的模式选择，再从现有 Store 解析一次并冻结：
+
+- API Key 列表或好友设备 token；
+- Base URL；
+- `ApiCredentialMode`；
+- device ID / 请求签名能力；
+- echo、rotate、stabilizer idle、max chars 等运行参数。
+
+这是**访问快照 + 运行参数快照**。现状不应把 API Key/token 塞进 Activity saved state 或普通 Intent。Service 启动后的重连继续使用该次解析结果，不在每次重连重新读取设置。
+
+因此测试和文档不得把 `pendingCredentialMode` 或 `EXTRA_CREDENTIAL_MODE` 单独称为“完整启动快照”。未来若正式 SaaS 采用短期 access token，还必须单独设计 refresh、撤销和重连语义，不能假设本次 UI 重构已经解决。
+
+## 6. 不可变 UI 状态模型
+
+步骤 5 必须用一次采集、不可变分发替换 controller 对 `StatusBus` 的零散读取。
+
+### 6.1 `UiRuntimeStatus`
+
+`UiRuntimeStatus` 至少完整复制以下页面可见字段：
+
+- `serviceRunning`、`captureMode`、`connState`、`paused`；
+- `audioLevelPct`、`overlayAllowed`；
+- `currentKeyLabel`、`transcriptPath`；
+- session 的 `startedAtMs`、source/target language、scene ID/label；
+- `confirmedTranslations.toList()`、`currentTranslation`、`sourceTail`；
+- 由同一次采集算出的 active status text/color。
+
+不得把可变 `StatusBus`、`Atomic*` 或可变列表直接放进对象。
+
+### 6.2 `DiagnosticsState`
+
+`DiagnosticsState` 至少包含：
+
+- `serviceRunning`、`captureMode`、`connState`；
+- `currentKeyLabel`、`audioLevelPct`；
+- `chunksSent` 的当次数值；
+- `transcriptPath`、`jaTail`、`zhTail`。
+
+每个 300 ms tick 只读取 `StatusBus` 一次，产出同一时刻的 `UiRuntimeStatus` 与 `DiagnosticsState`，再分别传给两个 `ModeHomeController` 和 `SettingsController`。诊断页不得重新读取全局状态。
+
+## 7. 分步施工
+
+总规则：每一步完成代码、迁移/新增测试、运行验证、提交后，才进入下一步。每一步结束时工作树都必须是可编译、可测试状态，不允许用“下一步会补上”解释当前编译错误。
+
+每步最低验证命令：
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+cd ..
+git diff --check
+```
+
+### 步骤 1：抽出 `HistoryController`
+
+**修改文件**：
+
+- 新建 `ui/HistoryController.kt`；
+- 修改 `MainActivity.kt`；
+- 按需修改 `MainActivityStartupTest.kt`，不得删现有断言。
+
+**同一步完成的所有权闭包**：
+
+- 迁移历史搜索、筛选、列表、空态、详情、复制相关 Views 和状态；
+- 迁移 `setupHistoryPage`、`reloadHistory`、`renderHistoryList`、`showHistoryDetail`；
+- controller 只接收 `Context`、`HistoryViews`、`openDetailPage` 和 toast/copy 等窄动作；
+- `MainActivity.showPage` 暂时改调 `historyController.reload()`；
+- 删除 Activity 中已迁移字段、方法和全部直接访问。
+
+**测试**：
+
+- 保留启动时历史页关键 ID 绑定断言；
+- 增加历史 tab 切入会触发 reload、详情会请求正确 return tab 的行为测试；
+- 运行本步最低验证命令。
+
+**提交**：`refactor: 抽出历史页面控制器`
+
+### 步骤 2：抽出 `SceneLibraryController`
+
+**修改文件**：
+
+- 新建 `ui/SceneLibraryController.kt`；
+- 修改 `MainActivity.kt`；
+- 修改/补充 `MainActivityStartupTest.kt`。
+
+**同一步完成的所有权闭包**：
+
+- 迁移场景库 mode toggle、列表、恢复、新建按钮和 `sceneLibraryMode`；
+- 迁移 `setupSceneLibraryPage`、`reloadSceneLibrary`、`buildSceneCard`、`showSceneEditor`；
+- controller 负责 `STATE_SCENE_LIBRARY_MODE` 的读写；
+- 保留 `MainActivity.internal fun openSceneLibrary(...)` 作为窄测试/兼容入口，但内部只委托 controller 设 mode 并请求打开页面；
+- `onSceneChanged(mode)` 暂时回调 Activity 仍存在的 `refreshSceneDependents`；
+- 删除 Activity 中已迁移字段、方法和直接 View 访问。
+
+**测试**：
+
+- `sceneLibrarySettingsEntryOpensSeededLibrary` 保持等价；
+- `homeCardOpensUnifiedSceneLibrary` 保持等价；
+- `videoSceneLibrarySurvivesRecreateAndReturnsToVideoHome` 保持等价，验证 mode、子页和 return tab；
+- 运行本步最低验证命令。
+
+**提交**：`refactor: 抽出场景库控制器`
+
+### 步骤 3：抽出 `SettingsController`，立即闭合启动设置读取
+
+**修改文件**：
+
+- 新建 `ui/SettingsController.kt`；
+- 修改 `MainActivity.kt`；
+- 修改/补充 `MainActivityStartupTest.kt`。
+
+**同一步完成的所有权闭包**：
+
+- 迁移六个设置入口、`etApiKeys`、`etBaseUrl`、好友网关 Views、字幕样式、二号 AI、参数滑杆、reset、诊断、关于、电池白名单相关 Views；
+- 迁移 `setupSettings`、好友网关 UI、样式、参数（二个模式语言控件除外）、二号 AI 保存、关于和电池设置逻辑；
+- 注入第 4.2 节的 `bind/clear/isBinding`，不得直接获取 `FriendGatewayBindingViewModel`；
+- Activity 在 controller 构造完成后再注册 observer；
+- `onPause` 和关闭“内容分析 AI”子页时改调 `settingsController.persistSecondAiInputs()`；
+- 提供 `persistDraftInputs()`，一次保存个人 Key、Base URL 和二号 AI 输入；
+- **本步骤内立即把仍在 Activity 的 `prepareSessionSettings` 改为调用 `settingsController.persistDraftInputs()`**。迁走 `etApiKeys` / `etBaseUrl` / `saveSecondAiSettings` 后不得留下旧引用；
+- `btnResetTranslate` 通过临时 `onTranslateParamsReset` 回调刷新仍在 Activity 的语言控件；步骤 5 再换成两个 mode controller；
+- 诊断暂时接收显式参数对象，不直接读 `StatusBus`，步骤 5 换为完整 `DiagnosticsState`。
+
+**测试**：
+
+- `friendBindingDisablesAllMutableControls` 改为 controller 的窄 `internal` 渲染入口，保留全部控件断言；
+- 增加 LiveData 已有状态同步回放时不访问未初始化 controller 的 recreate 测试；
+- 增加 `persistDraftInputs` 后 `prepareSessionSettings` 仍能保存个人 Key/Base URL 的测试；
+- 运行本步最低验证命令。
+
+**提交**：`refactor: 抽出设置页面控制器`
+
+### 步骤 4：抽出 `SessionCoordinator`，闭合权限发起与结果
+
+**修改文件**：
+
+- 新建 `ui/SessionCoordinator.kt`；
+- 修改 `MainActivity.kt`；
+- 修改 `MainActivityStartupTest.kt`；
+- 新建或补充 `SessionCoordinatorTest.kt`。
+
+**同一步完成的所有权闭包**：
+
+- 用不可变 `PendingSessionSnapshot?` 替代分散的 `pendingSession*` 字段；
+- 迁移 `pendingStartMode`、`permRequested`、`onModeToggle`、`prepareSessionSettings`、`captureStartIntent`、`startCapture`、`consumeStartedSession`、`promptMode`、Prompt 组装；
+- coordinator 负责所有 pending snapshot saved-state key；
+- 注入第 4.3 节全部 host 能力，特别是 `requestPermissions`、`launchProjection`、`startForegroundService`、`startService`、`checkPermission`、`openSystemSettings` 和导航；
+- 两个 launchers 仍由 Activity 无条件注册，结果回调只转发；
+- 本步骤仍可通过 Activity 的临时 `SessionContextAccess` lambda 读取/清空主页上下文；步骤 5 替换成 `SessionContextController`，但本步骤自身必须编译；
+- `SettingsController.persistDraftInputs()` 是启动设置保存的唯一入口；
+- 个人 Key 缺失或好友凭据失效时经 `openTranslationSettings()` 导航，不直接访问 bottomNav；
+- 保留 `reusePendingSnapshot`、拒绝路径和两个消费时机。
+
+**测试**：
+
+- 音频权限缺失时断言实际调用 `requestPermissions`，并按 API 等级验证通知权限集合；
+- 权限回调继续使用冻结快照，不重新读取已修改的 Prompt、语言、场景或凭据模式；
+- Activity recreate 后恢复 pending snapshot，权限同意只启动/消费一次；
+- MediaProjection recreate 后成功只启动/消费一次；
+- 录音拒绝和投屏取消不启动、不消费、不拿当前草稿覆盖快照；
+- `captureIntentCarriesFrozenCredentialMode` 改走 coordinator 的窄测试入口，但扩展为断言全部内容/模式字段，而不只断言 credential mode；
+- 运行本步最低验证命令。
+
+**提交**：`refactor: 抽出会话启动协调器`
+
+### 步骤 5：抽出主页与本场上下文，建立单一 View 真源
+
+**修改文件**：
+
+- 新建 `ui/ModeHomePages.kt`；
+- 新建 `ui/SessionContextController.kt`；
+- 修改 `MainActivity.kt`、`SessionCoordinator.kt`、`SettingsController.kt`、`SceneLibraryController.kt`；
+- 修改/补充 `MainActivityStartupTest.kt` 和 coordinator 测试。
+
+**同一步完成的所有权闭包**：
+
+1. 每个模式创建唯一 `ModeHomeViews`，完整覆盖第 7.1 节 ID；不对称 View 用可空字段表达。
+2. 两个 `ModeHomeController` 迁移：
+   - `setupHomeSceneChips`；
+   - `bindModeLanguageControls` / `renderModeLanguageControls` / store 同步；
+   - `setupFinalPlanUi` 的卡片、打开场景库按钮、初次 chips 和摘要；
+   - `updatePlanSummary`、确认行渲染和 elapsed 格式化；
+   - 空闲/运行根容器与运行态状态渲染。
+3. 开始/停止四个按钮全部在 mode controller 中绑定到 coordinator 的窄 toggle 动作。
+4. overlay 权限行和设置按钮全部在 video mode controller 中绑定到 `openSystemSettings`；状态也由该 controller 渲染。
+5. 同一步创建 `SessionContextController`，共享两个 `ModeHomeViews`：
+   - 迁移 `setupSessionContextUi`、`analyzeSessionContext`、两个 requestId；
+   - 迁移 `STATE_INTERPRETATION_CONTEXT`、`STATE_VIDEO_CONTEXT`、`STATE_VIDEO_URL`；
+   - 保持现有后台线程、UI 回投时点和 requestId 防陈旧回写语义；UI 回投使用注入的窄 `postToUi`，不为此持有 Activity，也不改成协程/ViewModel；
+   - 实现 coordinator 所需的上下文读取和成功后清空接口。
+6. 调用 `sessionCoordinator.bindSessionContextAccess(sessionContextController)` 完成第二阶段接线；Activity 中不再保留上下文 View 别名。
+7. `SceneLibraryController.onSceneChanged(mode)` 精确刷新对应 mode 的 chips 和摘要。
+8. `SettingsController` 的 translate reset 回调精确刷新两个 mode controller 的语言、摘要和参数状态。
+9. 引入第 6 节完整不可变 `UiRuntimeStatus` / `DiagnosticsState`；一次采集后分发，所有字段齐全。
+
+**测试**：
+
+- 保留 `languageDropdownsOpenOnTap`；
+- 保留场景 chips 始终单选、删除回退和恢复测试；
+- 保留 idle/mic/video 三种根容器显隐测试；
+- 新增四个开始/停止按钮都调用正确 mode 的接线测试；
+- 新增 plan 卡片和两个“打开场景库”按钮 return tab 正确的测试；
+- 新增 overlay 行与按钮都打开正确系统设置的测试；
+- 新增同一模式 Views 只绑定一次、context controller 与 mode controller 使用同一实例的测试或构造断言；
+- 新增状态快照保留 `currentKeyLabel`、`transcriptPath`、`chunksSent`、`jaTail`、`zhTail` 的测试；
+- 新增上下文 AI 旧 requestId 不能覆盖新请求状态的既有语义测试；
+- 运行本步最低验证命令。
+
+**提交**：`refactor: 抽出模式主页与本场上下文`
+
+### 步骤 6：抽出 `MainNavigator`，完成两阶段接线和恢复顺序
+
+**修改文件**：
+
+- 新建 `ui/MainNavigator.kt`；
+- 修改 `MainActivity.kt` 和各 controller 的临时导航回调；
+- 修改/补充 `MainActivityStartupTest.kt`。
+
+**同一步完成的所有权闭包**：
+
+- 迁移 shell Views、`showPage`、`openSettingsSub`、`closeSettingsSub`、bottom nav、toolbar、window insets；
+- 迁移 `currentMainTabId`、`settingsSubId`、`settingsReturnTabId` 和对应 saved state；
+- hooks 明确为：
+  - 主历史 tab 显示时 `historyController.reload()`；
+  - 场景库子页打开时 `sceneLibraryController.reload()`；
+  - 内容分析 AI 子页关闭前 `settingsController.persistSecondAiInputs()`；
+- 所有步骤 1–5 的临时 Activity 导航 lambda 改为 navigator 窄方法；
+- 严格执行第 4.4 节构造顺序，导航恢复放最后；
+- `onBackPressed` 先交给 `navigator.handleBack()`，未消费再调用 Activity 默认行为；
+- Activity 只保留生命周期、launchers、ViewModel、controllers、wiring、状态采集/分发和窄 `internal` 测试入口。
+
+**测试**：
+
+- 启动 smoke 不只断言“不崩溃”，还要断言四个主页面、所有现有设置子页和关键 View 已绑定；
+- 默认启动、指定主 tab 恢复、设置子页恢复、历史详情 return tab、视频场景库 return tab 全覆盖；
+- 构造期间的 LiveData 同步回放和首次导航恢复都不得访问未初始化 controller/navigator；
+- bottom nav 恢复不无限重入；
+- 返回键先关闭子页，再遵循 Activity 默认行为；
+- 全量运行本步最低验证命令。
+
+**提交**：`refactor: 抽出主导航并完成页面接线`
+
+### 7.1 `ModeHomeViews` ID 清单
+
+| 语义 | 同传 | 视频 |
 |---|---|---|
-| `ui/MainNavigator.kt` | 壳子导航:`showPage` / `openSettingsSub` / `closeSettingsSub` / bottomNav 与 toolbar 接线 / `applyWindowInsets` / tab 与子页的 saved-state | ~180 |
-| `ui/ModeHomePages.kt` | 同传+视频主页。`ModeHomeViews`(按模式绑定视图的持有类,每模式一实例)+ `ModeHomeController`(场景 chips、语言胶囊、方案摘要、运行态渲染) | ~380 |
-| `ui/SessionCoordinator.kt` | 启动流程与快照:`pendingSession*` 全部字段、`prepareSessionSettings` / `captureStartIntent` / `startCapture` / `onModeToggle` / `consumeStartedSession` 与对应 saved-state | ~230 |
-| `ui/SessionContextController.kt` | 本场临时上下文 + AI 解析:`analyzeSessionContext` 整块与 requestId 守卫 | ~180 |
-| `ui/HistoryController.kt` | 历史页 + 详情渲染 | ~170 |
-| `ui/SceneLibraryController.kt` | 场景库页 + 场景编辑对话框 | ~200 |
-| `ui/SettingsController.kt` | 设置首页 + 翻译服务(含好友网关 UI)+ 字幕滑杆 + 内容分析 AI + 诊断 + 关于 + 电池白名单 | ~330 |
-
-拆完后 `MainActivity.kt` 目标 250–300 行,只剩:
-
-- `onCreate`:恢复 saved-state → `setContentView` → 构造各 controller 并接线;
-- 两个 `ActivityResultLauncher`(必须注册在 Activity 上,回调转发给 `SessionCoordinator`);
-- 生命周期:`onResume`/`onPause` 的 300ms 刷新循环与草稿保存、`onSaveInstanceState` 汇总各 controller、`onBackPressed` 委托 navigator;
-- 若干 `internal` 属性暴露 controller 供测试直调。
-
-### 3.1 接线原则
-
-- 每个 controller 构造时拿 `MainActivity`(用作 Context / layoutInflater / findViewById),自己 `findViewById` 自己页面的视图;跨类协作全部走构造参数里的 lambda,**不引入事件总线**。
-- 需要的回调关系(全景):
-  - `SceneLibraryController.onSceneChanged(mode)` → 通知两个 `ModeHomeController` 刷新 chips 与方案摘要(即现有 `refreshSceneDependents`);
-  - `HistoryController` 打开详情 → 调 navigator 的 `openSettingsSub(R.id.pageHistoryDetail, "历史详情", R.id.nav_history)`;
-  - navigator 切到历史 tab → `HistoryController.reload()`;打开场景库子页 → `SceneLibraryController.reload()`;关闭内容分析 AI 子页 → `SettingsController.saveSecondAiSettings()`;
-  - `SessionCoordinator` 校验失败(没 Key / 好友凭据失效)→ 调 navigator 跳设置子页;
-  - `ModeHomeController` 主页场景卡片 → `SceneLibraryController` 的打开入口(带 returnTab)。
-- 步骤 1–5 期间 navigator 还没抽出来,回调先指向 MainActivity 上的现有方法引用,步骤 6 再改指 navigator;这样每一步都可编译可测。
-
-### 3.2 同传/视频视图对照表(`ModeHomeViews` 的绑定依据)
-
-现在 `renderStatus` 等方法对两个模式各写一份,拆分时用一个数据类按模式绑定。ID 对照:
-
-| 语义 | 同传(INTERPRETATION) | 视频(VIDEO) |
-|---|---|---|
-| 空闲态根容器 | `interpIdleContent` | `videoIdleContent` |
-| 运行态根容器 | `interpRunningContent` | `videoRunningContent` |
+| 空闲/运行根 | `interpIdleContent` / `interpRunningContent` | `videoIdleContent` / `videoRunningContent` |
 | 主页场景 chips | `chipGroupInterpHomeScenes` | `chipGroupVideoHomeScenes` |
-| 运行态状态文字 | `tvInterpRunningStatus` | `tvHeroStatus` |
-| 运行态状态圆点 | `viewInterpRunningStatusDot` | `viewVideoRunningStatusDot` |
-| 运行态副标题 | (无,见下方"不对称项") | `tvHeroSubStatus` |
-| 已用时长 | `tvInterpElapsed` | `tvVideoElapsed` |
-| 运行态 meta(方向·场景) | `tvInterpRunningMeta` | `tvVideoRunningMeta` |
-| 确认行列表容器 | `interpConfirmedList` | `videoConfirmedList` |
-| 音量百分比 / 进度条 | `tvInterpAudioLevel` / `pbInterpAudio` | `tvAudioLevel` / `pbAudio` |
-| 开始按钮 / 停止按钮 | `btnInterpToggle` / `btnInterpStop` | `btnToggle` / `btnVideoStop` |
-| 目标译文标签 | `tvInterpTargetLanguageLabel` | `tvVideoTargetLanguageLabel` |
-| 当前译文 / 原文尾巴 | `tvInterpZh` / `tvInterpJa` | `tvLiveZh` / `tvLiveJa` |
+| 运行状态/圆点 | `tvInterpRunningStatus` / `viewInterpRunningStatusDot` | `tvHeroStatus` / `viewVideoRunningStatusDot` |
+| 运行副标题 | 无 | `tvHeroSubStatus` |
+| elapsed/meta | `tvInterpElapsed` / `tvInterpRunningMeta` | `tvVideoElapsed` / `tvVideoRunningMeta` |
+| 确认行容器 | `interpConfirmedList` | `videoConfirmedList` |
+| 音量文字/进度 | `tvInterpAudioLevel` / `pbInterpAudio` | `tvAudioLevel` / `pbAudio` |
+| 开始/停止 | `btnInterpToggle` / `btnInterpStop` | `btnToggle` / `btnVideoStop` |
+| 目标语言标签 | `tvInterpTargetLanguageLabel` | `tvVideoTargetLanguageLabel` |
+| 当前译文/原文 | `tvInterpZh` / `tvInterpJa` | `tvLiveZh` / `tvLiveJa` |
 | 记录路径 | `tvInterpTranscriptPath` | `tvTranscriptPath` |
-| 源/目标语言下拉 | `acInterpSourceLang` / `acInterpTargetLang` | `acVideoSourceLang` / `acVideoTargetLang` |
-| 方案摘要卡 | `cardInterpPlan`、`tvInterpPlanSummary`、`tvInterpProfile` | `cardVideoPlan`、`tvVideoPlanSummary`、`tvCurrentProfile` |
-| 打开场景库按钮 | `btnInterpOpenPlanLibrary` | `btnVideoOpenPlanLibrary` |
-| 本场上下文输入 | `etInterpSessionContext` | `etVideoSessionContext` |
-| AI 解析按钮 / 状态 | `btnInterpAnalyzeContext` / `tvInterpAnalyzeStatus` | `btnVideoAnalyzeContext` / `tvVideoAnalyzeStatus` |
+| 语言下拉 | `acInterpSourceLang` / `acInterpTargetLang` | `acVideoSourceLang` / `acVideoTargetLang` |
+| 方案卡/摘要/profile | `cardInterpPlan` / `tvInterpPlanSummary` / `tvInterpProfile` | `cardVideoPlan` / `tvVideoPlanSummary` / `tvCurrentProfile` |
+| 打开场景库 | `btnInterpOpenPlanLibrary` | `btnVideoOpenPlanLibrary` |
+| 本场上下文 | `etInterpSessionContext` | `etVideoSessionContext` |
+| AI 按钮/状态 | `btnInterpAnalyzeContext` / `tvInterpAnalyzeStatus` | `btnVideoAnalyzeContext` / `tvVideoAnalyzeStatus` |
+| 模式独有 | `tvInterpStatus` / `tvInterpSubStatus` | `rowOverlayPermission` / `viewOverlayPermissionDot` / `tvOverlayPermissionStatus` / `btnOverlayPermissionSettings` / `etVideoSessionUrl` |
 
-**不对称项(用可空字段处理,不要硬造对称)**:
+## 8. 未来正式 SaaS 的扩展缝（仅定义边界，本次不实现）
 
-- 同传独有:空闲态状态文案 `tvInterpStatus` / `tvInterpSubStatus`(内容还依赖"视频是否正在运行",见 `renderStatus` 1765–1770 行附近的现状)。
-- 视频独有:悬浮窗权限行 `rowOverlayPermission` / `viewOverlayPermissionDot` / `tvOverlayPermissionStatus` / `btnOverlayPermissionSettings`、视频链接输入 `etVideoSessionUrl`、运行态副标题 `tvHeroSubStatus`(内容含悬浮窗状态与当前 Key 标签)。
+本节不改变当前“个人 Key + 可选好友网关”的产品定位，只记录未来若另行决策做正式 SaaS 时必须存在的窄接口。
 
----
+### 8.1 账号、凭据与权益访问层
 
-## 4. 执行步骤
+未来应在实时与文本分析两条付费调用链之前，共用一个访问决策边界，输入用途、当前产品后端选择和会话上下文，输出：
 
-总原则:**一步一验一提交**。每步做完跑 `cd android && ./gradlew :app:testDebugUnitTest`,通过后单独 commit(中文说明,如 `refactor: 抽出 HistoryController`),再进行下一步。任何一步测试红了,先修复再前进,禁止跳步。
+- 是否允许访问及可展示的失败原因；
+- endpoint / wire protocol 选择；
+- 凭据提供与生命周期策略；
+- 必需的签名或设备证明；
+- reconnect 时刷新还是终止的明确语义。
 
-### 步骤 1:抽出 `HistoryController`(最独立,先做热身)
+`ApiCredentialMode` 当前只决定凭据如何传输（query API key 或 Bearer），**不是后端抽象**，也不描述账号、权益、协议、token refresh 或撤销。只有正式网关继续兼容当前 Gemini wire protocol 且保留兼容凭据生命周期时，实时管线才可能大比例复用。
 
-搬迁自 MainActivity:
+本次不新增 `ACCOUNT` 枚举、不创建空实现、不让 UI 假装支持登录。
 
-- 字段:`btnRefreshHistory`、`etHistorySearch`、`chipHistoryAll/Interp/Video`、`tvHistoryEmpty`、`historyList`、`cardHistoryDetail`、`tvHistoryTitle`、`btnCopyHistory`、`tvHistoryDetail`、`tvHistoryDetailMeta`、`tvHistoryDetailContext`、`tvHistoryDetailEmpty`、`historyDetailSegments`、`allHistoryItems`、`historyModeFilter`;
-- 方法:`setupHistoryPage`、`reloadHistory`、`renderHistoryList`、`showHistoryDetail`。
+### 8.2 页面注册与导航 hook
 
-构造参数:`(activity: MainActivity, openDetailPage: () -> Unit)`,其中 `openDetailPage` 现阶段传 `{ openSettingsSub(R.id.pageHistoryDetail, "历史详情", R.id.nav_history) }` 的方法引用。`showPage` 里的 `if (itemId == R.id.nav_history) reloadHistory()` 改为调 `historyController.reload()`。toast 可以在 controller 里自带一个私有扩展,或由 activity 传入。
+未来新增账号或权益页面时，应通过显式 page registration / navigation hook 接入 `MainNavigator`，并定义：
 
-### 步骤 2:抽出 `SceneLibraryController`
+- 页面 ID、标题、返回 tab；
+- 打开、关闭和恢复 hooks；
+- saved-state 与深链语义；
+- 对应静态 layout/View ID 的真实实现。
 
-搬迁:
+controller 拆分只是可维护性基础，不代表“未来只加一个 controller 就完成 SaaS”。在当前静态 View/XML 架构下，正式页面仍需布局、导航注册、状态和后端能力同时落地。
 
-- 字段:`toggleSceneLibraryMode`、`btnSceneLibraryInterp/Video`、`sceneLibraryList`、`btnResetSceneLibrary`、`fabNewScene`、`sceneLibraryMode`;
-- 方法:`setupSceneLibraryPage`、`reloadSceneLibrary`、`buildSceneCard`、`showSceneEditor`;
-- saved-state:`STATE_SCENE_LIBRARY_MODE` 的读写移进来(controller 提供 `saveState(outState)` / 构造时收恢复值)。
+### 8.3 多实例网关的共享租约与限流
 
-构造参数带 `onSceneChanged: (TranslationMode) -> Unit`(现阶段指向 MainActivity 的 `refreshSceneDependents`)。**保留 MainActivity 上的 `internal fun openSceneLibrary(mode, returnTabId)`**(测试 `videoSceneLibrarySurvivesRecreateAndReturnsToVideoHome` 直接调它),内部改为设 controller 的 mode 再开子页。
+当前好友网关的 `active_live` 与 `BindLimiter` 是进程内状态。把 SQLite 换成 Postgres **不等于**无状态水平扩展。未来多实例至少需要：
 
-### 步骤 3:抽出 `SettingsController`
+- 按 account/tenant/device 维度的共享实时会话租约；
+- acquire / renew / release、TTL、故障回收和 fencing token；
+- 跨实例共享绑定/IP/账号限流；
+- 撤销和额度决策的一致可见性。
 
-搬迁:
+WebSocket 连接本身可留在单实例内，但影响全局资格、并发与额度的状态必须外置。负载均衡粘性不能替代正确租约。
 
-- 字段:`rowSet*` 六个入口行、`etApiKeys`、`etBaseUrl`、好友网关全部视图(`swFriendGateway`、`etFriendInviteCode`、`tvFriendGatewayStatus`、`btnBindFriendGateway`、`btnClearFriendGateway`)、`syncingFriendGatewayUi`、样式滑杆(`slFont/slOpacity/slLines` + 三个 label)、二号 AI(`etSecondAi*`、`btnSecondAiFormat`)、参数滑杆(`swEchoTarget`、`slRotate/slIdle/slMaxChars` + label、两个 reset 按钮)、`btnBattery`、`tvStatus`、`tvAboutVersion`、`btnAboutRepo`;
-- 方法:`setupSettings`、`setupFriendGatewayUi`、`renderFriendGatewayUi`、`renderFriendBindingState`、`bindFriendGateway`、`refreshFriendGatewayStatus`、`secondAiFormat`、`updateSecondAiFormatLabel`、`toggleSecondAiFormat`、`saveSecondAiSettings`、`setupStyleSliders`、`updateStyleLabels`、`requestBatteryWhitelist`,以及 `setupParamControls` 中**除语言胶囊绑定以外**的部分(滑杆、echo 开关、两个重置按钮)。
+### 8.4 可审计计量，不把 usage 当账单真源
 
-注意:
+现有 `usage_daily` 适合好友测试防滥用，不能直接作为订阅账单真源。正式计量边界至少要定义：
 
-- 语言胶囊绑定(`bindModeLanguageControls` / `renderModeLanguageControls` / `syncLanguageControlsFromStore`)**这一步先留在 MainActivity**,步骤 5 才移入 ModeHomePages;`btnResetTranslate` 点击后需要刷新语言胶囊,通过回调 `onTranslateParamsReset: () -> Unit` 通知(现阶段指向 activity 的 `renderParamValues` 等价逻辑)。
-- `friendBindingViewModel` 的 `observe` 留在 MainActivity(生命周期拥有者),observer 体调 `settingsController.renderFriendBindingState(state)`。
-- `onPause` / `closeSettingsSub` 里的 `saveSecondAiSettings()` 调用改为经 controller。
-- 诊断页 `tvStatus` 的汇总渲染(`renderStatus` 尾部那段 `buildString`)先随本步移成 `settingsController.renderDiagnostics(...)`,由 activity 的刷新循环调用。
-- 好友网关校验失败跳设置子页的逻辑仍在 `prepareSessionSettings`(此时还在 MainActivity),不动。
+- account / tenant / subscription 归属；
+- 幂等 event ID 与不可变 usage ledger；
+- 请求前预留、成功、失败、取消、退款和重放语义；
+- 音频时长/字节、上下游 token、供应商成本等真实计量维度；
+- 与供应商账单的对账和审计。
 
-测试改造:`friendBindingDisablesAllMutableControls` 删除反射,改为 `activity.settingsController.renderFriendGatewayUi(null, bindingInProgress = true)`(方法设为 `internal`,controller 以 `internal lateinit var settingsController` 挂在 activity 上)。
+限额计数、活跃会话租约和可计费账本是三个不同概念，不得复用一个 `usage` 表混为一谈。
 
-### 步骤 4:抽出 `SessionCoordinator`(高风险步,对照边界 7 自查)
+## 9. 测试与最终验收矩阵
 
-搬迁:
+除每步测试外，步骤 6 后必须确认以下矩阵全部有自动化覆盖：
 
-- 字段:`pendingSessionPrompt/Source/Target/Scene/SceneLabel/Title/Context`、`permRequested`、`pendingStartMode`、`pendingCredentialMode`;
-- 方法:`onModeToggle`、`promptMode`、`prepareSessionSettings`、`captureStartIntent`、`startCapture`、`consumeStartedSession`、`currentSessionContext`、`composeSessionPrompt`;
-- saved-state:`STATE_PENDING_*` 七个 key + `STATE_PERMISSION_REQUESTED` + `STATE_PENDING_START_MODE` + `STATE_PENDING_CREDENTIAL_MODE` 的读写全部移入(构造时恢复、`saveState(outState)` 写出)。
+| 风险 | 必须证明 |
+|---|---|
+| 启动绑定 | 四个主页面、现有子页、关键 View 全部绑定；初次 render 不崩溃 |
+| 构造顺序 | controller 创建后才 observe，全部 wiring 后才恢复导航 |
+| 权限 recreate | 冻结 Prompt/语言/场景/上下文/凭据模式，不读取新草稿，只消费一次 |
+| Projection recreate | 成功使用原快照启动一次；取消不启动、不消费 |
+| 设置闭包 | Key/Base URL/二号 AI 经 `SettingsController` 保存，Activity 无旧 View 引用 |
+| 主页接线 | 四个开始/停止按钮、四个场景库入口、两个 overlay 入口全部可达 |
+| View 所有权 | `ModeHomeViews` 每模式单实例，context 不重复绑定 |
+| 状态完整性 | Key 标签、记录路径、chunks、ja/zh tail 均保留，列表已复制 |
+| 导航恢复 | 四个 tab、所有可恢复子页、return tab、返回键语义不变 |
+| Activity 内容/模式快照 | Service Intent 携带冻结内容和模式，不含明文 Key/token |
+| Service 访问/运行快照 | Service 启动时解析一次 access/runtime 参数，重连沿用；与 Activity 快照测试分开 |
 
-接线:
+反射迁移约定：
 
-- 两个 launcher 留在 MainActivity:`permLauncher` 回调改为 `sessionCoordinator.onAudioPermissionResult()`(即原来的 `startCapture(pendingStartMode)`);`projLauncher` 回调改为 `sessionCoordinator.onProjectionResult(resultCode, data)`;`startCapture` 里发起投屏的那行通过构造参数 `launchProjection: (Intent) -> Unit` 回到 activity。
-- `prepareSessionSettings` 需要读设置页输入框并保存(`etApiKeys`/`etBaseUrl`/`saveSecondAiSettings`),通过 `SettingsController` 暴露的 `internal fun persistDraftInputs()` 之类的方法提供;跳设置子页通过 lambda。
-- 本场上下文输入框(`etInterpSessionContext`/`etVideoSessionContext`/`etVideoSessionUrl`)的读取与清空,先通过 lambda 取值(`sessionContextOf: (TranslationMode) -> String` 等),步骤 5/6 后自然落到 ModeHomeViews 上。
+- `renderStatus(activity)` 可改为 `activity.renderStatusForTest()`，内部只触发一次真实采集与分发；
+- `refreshHomeScenes(...)` 改为对应 mode controller 的窄 `internal` 入口；
+- pending snapshot 不公开可变字段，优先使用构造 fixture 或只读测试入口；
+- `friendBindingDisablesAllMutableControls` 直调 settings controller 渲染入口；
+- `openSceneLibrary(...)` 可保留 Activity 的 `internal` 委托入口；
+- 不得用 `internal var pending...` 暴露生产状态来代替行为测试。
 
-自查清单(边界 7):
+## 10. 最终交付
 
-- [ ] `reusePendingSnapshot` 判断原样;
-- [ ] `prepareSessionSettings` 只在**非复用**路径调用;
-- [ ] `consumeStartedSession` 的两个调用点时机不变;
-- [ ] 进程重建后 `STATE_PENDING_*` 恢复完整,投屏授权回来仍用快照启动。
-
-测试改造:`captureIntentCarriesFrozenCredentialMode` 删除反射,改为直接设 coordinator 的 `internal` 状态(如 `internal fun overrideCredentialModeForTest(...)` 或直接 `internal var pendingCredentialMode`)并调 `internal fun captureStartIntent(mode)`。
-
-### 步骤 5:抽出 `ModeHomePages`(工作量最大的一步)
-
-内容:
-
-1. `ModeHomeViews`:按 §3.2 对照表绑定视图的类,构造时 `findViewById`;不对称项为可空。
-2. `ModeHomeController`(每模式一实例,构造收 `mode: TranslationMode` 与对应 `ModeHomeViews`):
-   - 吸收 `setupHomeSceneChips`、`bindModeLanguageControls`、`renderModeLanguageControls`、`updatePlanSummary`、`renderConfirmedTranslations`、`formatRunningElapsed`;
-   - 吸收 `renderStatus` 中按模式重复的渲染分支:写成 `renderStatus(shared: SharedStatus)`,其中 `SharedStatus` 是一次算好的公共状态(running/mode/conn/level/activeStatusText/activeStatusColor/snapshot/overlayAllowed);
-   - 同传空闲文案依赖"视频是否在跑"、视频副标题含悬浮窗状态——这些跨模式输入都放进 `SharedStatus`,不要让两个 controller 互相引用。
-3. MainActivity 的刷新循环变为:算一次 `SharedStatus` → 两个 `modeHome.renderStatus(shared)` → `settingsController.renderDiagnostics(shared)`。`onResume` 里 `syncLanguageControlsFromStore` 改为对两个 controller 调 `syncLanguageFromStore()`。
-4. 步骤 3 留下的 `onTranslateParamsReset` 回调、步骤 4 留下的本场上下文取值 lambda,改指到 controller/views。
-5. `SceneLibraryController.onSceneChanged` 回调改为通知对应 mode 的 controller(`refreshSceneChips()` + `renderPlanSummary()`)。
-
-**语言胶囊红线**:`bindModeLanguageControls` 中每个下拉的 `setOnClickListener { showDropDown() }` 必须原样搬入,并保留原方法注释;测试 `languageDropdownsOpenOnTap` 会验证。
-
-测试改造:`renderStatus` / `setupHomeSceneChips` 的反射改为——MainActivity 保留 `internal fun renderStatus()`(即刷新循环的那次完整渲染,委托实现)供测试直调;`refreshHomeScenes` 辅助函数改调对应 controller 的 `internal fun refreshSceneChips()`。
-
-### 步骤 6:抽出 `SessionContextController` 与 `MainNavigator`,收尾
-
-1. `SessionContextController`:搬 `setupSessionContextUi`、`analyzeSessionContext`、`latestInterpAnalysisRequestId` / `latestVideoAnalysisRequestId`;视图经 `ModeHomeViews` 取;`STATE_INTERPRETATION_CONTEXT` / `STATE_VIDEO_CONTEXT` / `STATE_VIDEO_URL` 的存取移入。线程 + `runOnUiThread` + requestId 守卫的实现**原样搬**,不改成协程/ViewModel(那是后续独立改动,见 §7)。
-2. `MainNavigator`:搬 `showPage`、`openSettingsSub`、`closeSettingsSub`、`setupBottomNav`、`applyWindowInsets`、`currentMainTabId` / `settingsSubId` / `settingsReturnTabId`、`STATE_MAIN_TAB` / `STATE_SETTINGS_SUB` / `STATE_SETTINGS_RETURN_TAB` 存取、onCreate 尾部恢复子页标题的 `when`。navigator 构造收三个 hook:`onMainTabShown(tabId)`(历史 tab → history.reload)、`onSubPageOpened(pageId)`(场景库 → scene.reload)、`onSubPageClosing(pageId)`(内容分析 AI → settings.saveSecondAiSettings)。`onBackPressed` 委托 `navigator.handleBack(): Boolean`。
-3. 步骤 1–5 里所有暂时指向 MainActivity 方法的导航 lambda,改指 navigator。
-4. 收尾核对 MainActivity:应只剩 §3 列的内容,约 250–300 行;所有 `// ---------- xxx ----------` 分节应已搬空。
-
-### 最终验证(步骤 6 完成后)
+步骤 6 提交后运行：
 
 ```bash
 cd android
 ./gradlew clean :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+cd ..
 git diff --check
+git status --short
 ```
 
-全绿后按 §5 交付。若有 Android 设备/模拟器可用,再人工过一遍冒烟:切四个 tab、进出场景库与历史详情、旋转屏幕后各页状态保留、(可选)启动同传看运行态渲染。
+然后：
 
----
+1. 在 `docs/04-dev-log.md` 顶部写入真实改动、原因、版本不变和实际验证结果；
+2. 确认实现阶段每一步都有独立 commit，且任一 commit checkout 后都能通过该步最低验证；
+3. 确认没有布局、版本号、账号/订阅假功能或实时管线越界改动；
+4. 有设备/模拟器时补做人工冒烟：四 tab、场景库、历史详情、设置子页、旋转恢复、权限拒绝、同传启动、视频投屏取消和 overlay 设置入口。
 
-## 5. 交付要求
-
-1. `docs/04-dev-log.md` 顶部追加一条(中文):改动(MainActivity 拆分为 ui/ 包七个协作类)、原因(为后续演进减债,行为等价)、版本(不变)、真实验证结果(测试/Lint/assembleDebug 输出摘要)。
-2. 提交历史:每步一个 commit(共 6 个左右)+ 文档 commit,提交说明中文。
-3. 推送:`git push -u origin claude/saas-architecture-review-bkde2s`(网络失败按 2s/4s/8s/16s 退避重试,最多 4 次)。
-4. 不创建 Pull Request,除非用户明确要求。
-
----
-
-## 6. 测试改造对照表(汇总)
-
-| 测试用例 | 现状(反射) | 改为 |
-|---|---|---|
-| `renderStatus(activity)` 辅助函数 | 反射调私有 `renderStatus` | `activity.renderStatus()`(internal,委托实现) |
-| `refreshHomeScenes(...)` 辅助函数 | 反射调私有 `setupHomeSceneChips` | 对应模式 controller 的 `internal fun refreshSceneChips()` |
-| `captureIntentCarriesFrozenCredentialMode` | 反射设 `pendingCredentialMode` 字段 + 反射调 `captureStartIntent` | `activity.sessionCoordinator` 的 internal 成员直调 |
-| `friendBindingDisablesAllMutableControls` | 反射调 `renderFriendGatewayUi(null, true)` | `activity.settingsController.renderFriendGatewayUi(null, bindingInProgress = true)` |
-| `videoSceneLibrarySurvivesRecreateAndReturnsToVideoHome` | 调 `activity.openSceneLibrary`(已是 internal) | 不变(方法保留,内部委托) |
-| 其余用例 | 只走 findViewById / performClick | 不变 |
-
----
-
-## 7. 未来演变(这次重构在整体路线中的位置)
-
-SaaS 化评估给出的路线,本次重构属于"阶段 0 的顺手投资":
-
-- **阶段 0(现在)**:保持纯本地 App 形态,按 CLAUDE.md 边界继续开发。本次拆分的意义:未来加任何新页面(登录、订阅、同步设置)都是"新增一个 controller + 一个子页",不再膨胀 MainActivity。
-- **阶段 1(决定做 SaaS 那天,后端先行)**:把 `server/friend_gateway` 的协议设计(WebSocket 代理 + ECDSA 设备绑定 + 请求签名)升级成正式网关:Postgres、无状态可水平扩展、账号 + 订阅 + 用量计量。客户端 `ApiCredentialMode.BEARER_TOKEN` 路径基本复用,改动集中在登录/绑定 UI。同时必须正式修订 CLAUDE.md 产品边界 10(账号体系是独立决策,不能顺着邀请码滑过去)。
-- **阶段 2(客户端跟进)**:实时管线四件套(`CaptureService` / `PcmProcessor` / `GeminiLiveClient` / `SubtitleStabilizer`)原样保留;UI 层在本次拆分的基础上按需继续演进。
-- **本次刻意不做、留给后续的独立小改动**:`analyzeSessionContext` 的线程实现改为 ViewModel(参照 `FriendGatewayBindingViewModel` 模式,解决旋转丢进行中状态);历史云同步;多 Key 池管理 UI。
-
-其他前置提醒(做 SaaS 前必须先想清楚,与代码无关):Gemini Live 实时音频的成本模型与计量粒度;商店分发的录音 / MediaProjection / AudioPlaybackCapture 合规审查。
+除非用户明确要求，不创建 Pull Request，不把未来 SaaS 扩展缝实现进本次 UI 重构。
