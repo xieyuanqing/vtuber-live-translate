@@ -64,7 +64,7 @@ internal interface SessionHost {
 internal class SessionCoordinator(
     private val context: Context,
     private val persistDraftInputs: () -> Unit,
-    private val sessionContextAccess: SessionContextAccess,
+    sessionContextAccess: SessionContextAccess? = null,
     private val host: SessionHost,
 ) {
     private companion object {
@@ -83,6 +83,15 @@ internal class SessionCoordinator(
     }
 
     private var pendingSnapshot: PendingSessionSnapshot? = null
+    private var sessionContextAccess: SessionContextAccess? = sessionContextAccess
+
+    /** 第二阶段接线：所有页面 controller 创建完成后再安装上下文访问边界。 */
+    fun bindSessionContextAccess(access: SessionContextAccess) {
+        check(sessionContextAccess == null || sessionContextAccess === access) {
+            "SessionContextAccess 已绑定"
+        }
+        sessionContextAccess = access
+    }
 
     fun onModeToggle(captureMode: String) {
         if (StatusBus.serviceRunning) {
@@ -226,7 +235,7 @@ internal class SessionCoordinator(
         }
 
         val scene = SceneLibraryStore.resolve(context, mode, plan.scenePresetId)
-        val sessionContext = sessionContextAccess.current(mode)
+        val sessionContext = requireSessionContextAccess().current(mode)
         return PendingSessionSnapshot(
             captureMode = captureMode,
             credentialMode = credentialMode,
@@ -288,7 +297,7 @@ internal class SessionCoordinator(
     }
 
     private fun consumeStartedSession(snapshot: PendingSessionSnapshot) {
-        sessionContextAccess.clearAfterSuccessfulStart(promptMode(snapshot.captureMode))
+        requireSessionContextAccess().clearAfterSuccessfulStart(promptMode(snapshot.captureMode))
         if (pendingSnapshot == snapshot || pendingSnapshot?.captureMode == snapshot.captureMode) {
             pendingSnapshot = null
         }
@@ -328,6 +337,9 @@ internal class SessionCoordinator(
             snapshot.targetLanguageCode.isNotBlank() &&
             snapshot.scenePresetId.isNotBlank() &&
             snapshot.sceneLabel.isNotBlank()
+
+    private fun requireSessionContextAccess(): SessionContextAccess =
+        checkNotNull(sessionContextAccess) { "SessionContextAccess 尚未绑定" }
 
     // 窄 internal 测试入口：只允许安装一个完整不可变 fixture，不暴露可变 pending 字段。
     internal fun installPendingSnapshotForTest(snapshot: PendingSessionSnapshot) {

@@ -2,8 +2,12 @@ package com.xyq.livetranslate
 
 import android.content.Context
 import android.content.Intent
+import android.view.LayoutInflater
 import android.view.View
+import com.xyq.livetranslate.ui.ModeHomeController
+import com.xyq.livetranslate.ui.ModeHomeViews
 import com.xyq.livetranslate.ui.PendingSessionSnapshot
+import com.xyq.livetranslate.ui.UiRuntimeStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -112,6 +116,59 @@ class MainActivityStartupTest {
                 activity.findViewById<View>(id).hasOnClickListeners(),
             )
         }
+    }
+
+    @Test
+    fun fourSessionButtonsAndModeSpecificEntriesDelegateCorrectly() = withActivity { activity ->
+        val inflated = LayoutInflater.from(activity).inflate(R.layout.activity_main, null)
+        val root = inflated.findViewById<View>(R.id.rootLayout)
+        val toggles = mutableListOf<String>()
+        val sceneEntries = mutableListOf<Pair<TranslationMode, Int>>()
+        var overlayEntries = 0
+        val interp = ModeHomeController(
+            context = activity,
+            mode = TranslationMode.INTERPRETATION,
+            views = ModeHomeViews.bind(root, TranslationMode.INTERPRETATION),
+            toggleSession = toggles::add,
+            openSceneLibrary = { mode, tab -> sceneEntries += mode to tab },
+            openOverlaySettings = { overlayEntries++ },
+        )
+        val video = ModeHomeController(
+            context = activity,
+            mode = TranslationMode.VIDEO,
+            views = ModeHomeViews.bind(root, TranslationMode.VIDEO),
+            toggleSession = toggles::add,
+            openSceneLibrary = { mode, tab -> sceneEntries += mode to tab },
+            openOverlaySettings = { overlayEntries++ },
+        )
+        interp.setup()
+        video.setup()
+
+        listOf(R.id.btnInterpToggle, R.id.btnInterpStop, R.id.btnToggle, R.id.btnVideoStop)
+            .forEach { root.findViewById<View>(it).performClick() }
+        listOf(
+            R.id.cardInterpPlan,
+            R.id.btnInterpOpenPlanLibrary,
+            R.id.cardVideoPlan,
+            R.id.btnVideoOpenPlanLibrary,
+        ).forEach { root.findViewById<View>(it).performClick() }
+        root.findViewById<View>(R.id.rowOverlayPermission).performClick()
+        root.findViewById<View>(R.id.btnOverlayPermissionSettings).performClick()
+
+        assertEquals(
+            listOf(StatusBus.MODE_MIC, StatusBus.MODE_MIC, StatusBus.MODE_VIDEO, StatusBus.MODE_VIDEO),
+            toggles,
+        )
+        assertEquals(
+            listOf(
+                TranslationMode.INTERPRETATION to R.id.nav_interp,
+                TranslationMode.INTERPRETATION to R.id.nav_interp,
+                TranslationMode.VIDEO to R.id.nav_video,
+                TranslationMode.VIDEO to R.id.nav_video,
+            ),
+            sceneEntries,
+        )
+        assertEquals(2, overlayEntries)
     }
 
     @Test
@@ -307,6 +364,70 @@ class MainActivityStartupTest {
     }
 
     @Test
+    fun runtimeStatusCopiesAllDiagnosticsAndMutableSessionData() {
+        StatusBus.serviceRunning = true
+        StatusBus.captureMode = StatusBus.MODE_VIDEO
+        StatusBus.connState = "ready"
+        StatusBus.currentKeyLabel = "Key 2/3"
+        StatusBus.transcriptPath = "/private/session.json"
+        StatusBus.audioLevelPct = 73
+        StatusBus.chunksSent.set(44)
+        StatusBus.jaTail = "source-tail"
+        StatusBus.zhTail = "target-tail"
+        StatusBus.startSession(TranslationPlan.default(TranslationMode.VIDEO), 1_000L, "冻结场景")
+        StatusBus.updateSessionSubtitles(listOf("第一行", "第二行"), "当前行", "原文尾巴")
+
+        val status = UiRuntimeStatus.capture(overlayAllowed = true, sampledAtMs = 5_000L)
+        val diagnostics = status.toDiagnostics()
+        StatusBus.updateSessionSubtitles(listOf("后来行"), "后来当前行", "后来原文")
+
+        assertEquals(listOf("第一行", "第二行"), status.confirmedTranslations)
+        assertEquals("当前行", status.currentTranslation)
+        assertEquals("原文尾巴", status.sourceTail)
+        assertEquals("Key 2/3", diagnostics.currentKeyLabel)
+        assertEquals("/private/session.json", diagnostics.transcriptPath)
+        assertEquals(44L, diagnostics.chunksSent)
+        assertEquals("source-tail", diagnostics.jaTail)
+        assertEquals("target-tail", diagnostics.zhTail)
+    }
+
+    @Test
+    fun sessionContextAndVideoUrlRestoreFromControllerBundle() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            controller.get().findViewById<android.widget.EditText>(R.id.etInterpSessionContext).apply {
+                isSaveEnabled = false
+                setText("同传 Bundle 上下文")
+            }
+            controller.get().findViewById<android.widget.EditText>(R.id.etVideoSessionContext).apply {
+                isSaveEnabled = false
+                setText("视频 Bundle 上下文")
+            }
+            controller.get().findViewById<android.widget.EditText>(R.id.etVideoSessionUrl).apply {
+                isSaveEnabled = false
+                setText("https://youtu.be/bundle")
+            }
+
+            controller.recreate()
+
+            assertEquals(
+                "同传 Bundle 上下文",
+                controller.get().findViewById<android.widget.EditText>(R.id.etInterpSessionContext).text.toString(),
+            )
+            assertEquals(
+                "视频 Bundle 上下文",
+                controller.get().findViewById<android.widget.EditText>(R.id.etVideoSessionContext).text.toString(),
+            )
+            assertEquals(
+                "https://youtu.be/bundle",
+                controller.get().findViewById<android.widget.EditText>(R.id.etVideoSessionUrl).text.toString(),
+            )
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
     fun captureIntentCarriesCompleteFrozenSessionSnapshotWithoutPlaintextCredentials() =
         withActivity { activity ->
             val snapshot = distinctPendingSnapshot()
@@ -389,10 +510,7 @@ class MainActivityStartupTest {
     }
 
     private fun renderStatus(activity: MainActivity) {
-        MainActivity::class.java.getDeclaredMethod("renderStatus").apply {
-            isAccessible = true
-            invoke(activity)
-        }
+        activity.renderStatusForTest()
     }
 
     private fun distinctPendingSnapshot(): PendingSessionSnapshot = PendingSessionSnapshot(
@@ -470,13 +588,7 @@ class MainActivityStartupTest {
         mode: TranslationMode,
         group: com.google.android.material.chip.ChipGroup,
     ) {
-        MainActivity::class.java.getDeclaredMethod(
-            "setupHomeSceneChips",
-            TranslationMode::class.java,
-        ).apply {
-            isAccessible = true
-            invoke(activity, mode)
-        }
+        activity.refreshHomeScenesForTest(mode)
         check(group.childCount > 0)
     }
 }
