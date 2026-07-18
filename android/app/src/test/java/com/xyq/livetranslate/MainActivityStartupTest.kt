@@ -293,19 +293,55 @@ class MainActivityStartupTest {
 
     @Test
     fun friendBindingDisablesAllMutableControls() = withActivity { activity ->
-        MainActivity::class.java.getDeclaredMethod(
-            "renderFriendGatewayUi",
-            FriendGatewayStatus::class.java,
-            Boolean::class.javaPrimitiveType,
-        ).apply {
-            isAccessible = true
-            invoke(activity, null, true)
-        }
+        activity.renderFriendGatewayBindingForTest(bindingInProgress = true)
 
         assertFalse(activity.findViewById<View>(R.id.swFriendGateway).isEnabled)
         assertFalse(activity.findViewById<View>(R.id.etFriendInviteCode).isEnabled)
         assertFalse(activity.findViewById<View>(R.id.btnBindFriendGateway).isEnabled)
         assertFalse(activity.findViewById<View>(R.id.btnClearFriendGateway).isEnabled)
+    }
+
+    @Test
+    fun prepareSessionSettingsPersistsControllerDraftInputs() = withActivity { activity ->
+        FriendGatewayStore.usePersonal(activity)
+        val settingsPrefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        settingsPrefs.edit().remove("apiKeysEnc").commit()
+        activity.findViewById<android.widget.EditText>(R.id.etApiKeys).setText("draft-api-key")
+        activity.findViewById<android.widget.EditText>(R.id.etBaseUrl)
+            .setText("https://draft.example.test")
+
+        MainActivity::class.java.getDeclaredMethod(
+            "prepareSessionSettings",
+            String::class.java,
+        ).run {
+            isAccessible = true
+            invoke(activity, StatusBus.MODE_MIC)
+        }
+
+        // Robolectric 没有 AndroidKeyStore；这里只验证保存入口写入了加密偏好项。
+        assertTrue(settingsPrefs.contains("apiKeysEnc"))
+        assertEquals("https://draft.example.test", SettingsStore.baseUrl(activity))
+    }
+
+    @Test
+    fun friendBindingStateSynchronousReplaySurvivesRecreate() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            val viewModel = MainActivity::class.java.getDeclaredField("friendBindingViewModel").run {
+                isAccessible = true
+                get(controller.get()) as FriendGatewayBindingViewModel
+            }
+            viewModel.clearBinding()
+
+            controller.recreate()
+
+            assertEquals(
+                "当前使用你自己的 API Key",
+                controller.get().findViewById<android.widget.TextView>(R.id.tvFriendGatewayStatus).text,
+            )
+        } finally {
+            controller.pause().stop().destroy()
+        }
     }
 
     private fun withActivity(block: (MainActivity) -> Unit) {

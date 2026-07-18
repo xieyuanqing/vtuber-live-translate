@@ -1,7 +1,7 @@
 package com.xyq.livetranslate
 
 import android.Manifest
-import android.annotation.SuppressLint
+
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,12 +11,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
+
 import android.provider.Settings
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.EditText
+
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -32,13 +32,16 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.slider.Slider
+
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.xyq.livetranslate.ui.HistoryController
 import com.xyq.livetranslate.ui.HistoryViews
 import com.xyq.livetranslate.ui.SceneLibraryController
 import com.xyq.livetranslate.ui.SceneLibraryViews
+import com.xyq.livetranslate.ui.FriendGatewayBindingActions
+import com.xyq.livetranslate.ui.SettingsController
+import com.xyq.livetranslate.ui.SettingsDiagnosticsState
+import com.xyq.livetranslate.ui.SettingsViews
 
 class MainActivity : AppCompatActivity() {
 
@@ -74,6 +77,7 @@ class MainActivity : AppCompatActivity() {
     private var currentMainTabId = R.id.nav_interp
     private lateinit var historyController: HistoryController
     private lateinit var sceneLibraryController: SceneLibraryController
+    private lateinit var settingsController: SettingsController
 
     // 设置二级页（0 = 设置首页）
     private var settingsSubId = 0
@@ -85,12 +89,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pageSettingsAbout: View
     private lateinit var pageSceneLibrary: View
     private lateinit var settingsSubViews: List<View>
-    private lateinit var rowSetTranslate: View
-    private lateinit var rowSetSubtitle: View
-    private lateinit var rowSetSceneLibrary: View
-    private lateinit var rowSetProfileAi: View
-    private lateinit var rowSetDiagnostics: View
-    private lateinit var rowSetAbout: View
+
 
 
     // 同传页（麦克风）
@@ -147,42 +146,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnVideoAnalyzeContext: com.google.android.material.button.MaterialButton
     private lateinit var tvVideoAnalyzeStatus: TextView
 
-    // 设置页
-    private lateinit var etApiKeys: EditText
-    private lateinit var etBaseUrl: EditText
-    private lateinit var swFriendGateway: MaterialSwitch
-    private lateinit var etFriendInviteCode: EditText
-    private lateinit var tvFriendGatewayStatus: TextView
-    private lateinit var btnBindFriendGateway: Button
-    private lateinit var btnClearFriendGateway: Button
-    private lateinit var slFont: Slider
-    private lateinit var slOpacity: Slider
-    private lateinit var slLines: Slider
-    private lateinit var tvFontVal: TextView
-    private lateinit var tvOpacityVal: TextView
-    private lateinit var tvLinesVal: TextView
-    private lateinit var etSecondAiKey: EditText
-    private lateinit var etSecondAiUrl: EditText
-    private lateinit var etSecondAiModel: EditText
-    private lateinit var btnSecondAiFormat: Button
-
-    // 翻译参数 / 断句参数（分属翻译服务、字幕与悬浮窗两个子页）
-    private lateinit var swEchoTarget: MaterialSwitch
-    private lateinit var slRotate: Slider
-    private lateinit var slIdle: Slider
-    private lateinit var slMaxChars: Slider
-    private lateinit var tvRotateVal: TextView
-    private lateinit var tvIdleVal: TextView
-    private lateinit var tvMaxCharsVal: TextView
-    private lateinit var btnResetTranslate: Button
-    private lateinit var btnResetSubtitle: Button
-
-    // 诊断 / 关于子页
-    private lateinit var btnBattery: Button
-    private lateinit var tvStatus: TextView
-    private lateinit var tvAboutVersion: TextView
-    private lateinit var btnAboutRepo: Button
-
     private var pendingSessionPrompt = ""
     private var pendingSessionSource = ""
     private var pendingSessionTarget = ""
@@ -198,7 +161,6 @@ class MainActivity : AppCompatActivity() {
     /** 权限回调期间冻结的凭据模式：只传模式，不传 Token。 */
     private var pendingCredentialMode: String = FriendGatewayStore.MODE_PERSONAL
     private var syncingLanguageControls = false
-    private var syncingFriendGatewayUi = false
     private lateinit var friendBindingViewModel: FriendGatewayBindingViewModel
 
     private data class LanguageControls(
@@ -295,12 +257,30 @@ class MainActivity : AppCompatActivity() {
         sceneLibraryController.restoreState(savedInstanceState)
         sceneLibraryController.setup()
         friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
-        friendBindingViewModel.state.observe(this, ::renderFriendBindingState)
+        settingsController = SettingsController(
+            context = this,
+            views = SettingsViews.bind(rootLayout),
+            friendActions = FriendGatewayBindingActions(
+                bind = { code, version, enableOnSuccess ->
+                    friendBindingViewModel.bind(code, version, enableOnSuccess)
+                },
+                clear = friendBindingViewModel::clearBinding,
+                isBinding = friendBindingViewModel::isBinding,
+            ),
+            openSubPage = { pageId, title -> openSettingsSub(pageId, title) },
+            openSceneLibrary = { mode -> openSceneLibrary(mode) },
+            onTranslateParamsReset = ::syncLanguageControlsFromStore,
+            postToUi = { action -> runOnUiThread { action() } },
+            isHostActive = { !isFinishing && !isDestroyed },
+            launchIntent = ::startActivity,
+            toast = ::toast,
+        )
+        settingsController.setup()
+        // LiveData 可能在 observe 时同步回放，必须晚于 controller 完整创建。
+        friendBindingViewModel.state.observe(this, settingsController::renderFriendBindingState)
         applyWindowInsets()
         setupBottomNav()
-        setupSettings()
-        setupStyleSliders()
-        setupParamControls()
+        setupLanguageControls()
         setupFinalPlanUi()
         setupSessionContextUi()
 
@@ -315,7 +295,6 @@ class MainActivity : AppCompatActivity() {
             savedInstanceState?.getString(STATE_VIDEO_URL).orEmpty(),
         )
 
-        btnBattery.setOnClickListener { requestBatteryWhitelist() }
         btnToggle.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
         btnVideoStop.setOnClickListener { onModeToggle(StatusBus.MODE_VIDEO) }
         btnInterpToggle.setOnClickListener { onModeToggle(StatusBus.MODE_MIC) }
@@ -374,7 +353,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        if (::etSecondAiKey.isInitialized) saveSecondAiSettings()
+        if (::settingsController.isInitialized) settingsController.persistSecondAiInputs()
         super.onPause()
         ui.removeCallbacks(refresh)
     }
@@ -413,12 +392,6 @@ class MainActivity : AppCompatActivity() {
             pageSettingsTranslate, pageSettingsSubtitle, pageSettingsProfileAi,
             pageSettingsDiagnostics, pageSettingsAbout,
         )
-        rowSetTranslate = findViewById(R.id.rowSetTranslate)
-        rowSetSubtitle = findViewById(R.id.rowSetSubtitle)
-        rowSetSceneLibrary = findViewById(R.id.rowSetSceneLibrary)
-        rowSetProfileAi = findViewById(R.id.rowSetProfileAi)
-        rowSetDiagnostics = findViewById(R.id.rowSetDiagnostics)
-        rowSetAbout = findViewById(R.id.rowSetAbout)
 
         interpIdleContent = findViewById(R.id.interpIdleContent)
         interpRunningContent = findViewById(R.id.interpRunningContent)
@@ -472,38 +445,6 @@ class MainActivity : AppCompatActivity() {
         btnVideoAnalyzeContext = findViewById(R.id.btnVideoAnalyzeContext)
         tvVideoAnalyzeStatus = findViewById(R.id.tvVideoAnalyzeStatus)
 
-        etApiKeys = findViewById(R.id.etApiKeys)
-        etBaseUrl = findViewById(R.id.etBaseUrl)
-        swFriendGateway = findViewById(R.id.swFriendGateway)
-        etFriendInviteCode = findViewById(R.id.etFriendInviteCode)
-        tvFriendGatewayStatus = findViewById(R.id.tvFriendGatewayStatus)
-        btnBindFriendGateway = findViewById(R.id.btnBindFriendGateway)
-        btnClearFriendGateway = findViewById(R.id.btnClearFriendGateway)
-        slFont = findViewById(R.id.slFont)
-        slOpacity = findViewById(R.id.slOpacity)
-        slLines = findViewById(R.id.slLines)
-        tvFontVal = findViewById(R.id.tvFontVal)
-        tvOpacityVal = findViewById(R.id.tvOpacityVal)
-        tvLinesVal = findViewById(R.id.tvLinesVal)
-        etSecondAiKey = findViewById(R.id.etSecondAiKey)
-        etSecondAiUrl = findViewById(R.id.etSecondAiUrl)
-        etSecondAiModel = findViewById(R.id.etSecondAiModel)
-        btnSecondAiFormat = findViewById(R.id.btnSecondAiFormat)
-
-        swEchoTarget = findViewById(R.id.swEchoTarget)
-        slRotate = findViewById(R.id.slRotate)
-        slIdle = findViewById(R.id.slIdle)
-        slMaxChars = findViewById(R.id.slMaxChars)
-        tvRotateVal = findViewById(R.id.tvRotateVal)
-        tvIdleVal = findViewById(R.id.tvIdleVal)
-        tvMaxCharsVal = findViewById(R.id.tvMaxCharsVal)
-        btnResetTranslate = findViewById(R.id.btnResetTranslate)
-        btnResetSubtitle = findViewById(R.id.btnResetSubtitle)
-
-        btnBattery = findViewById(R.id.btnBattery)
-        tvStatus = findViewById(R.id.tvStatus)
-        tvAboutVersion = findViewById(R.id.tvAboutVersion)
-        btnAboutRepo = findViewById(R.id.btnAboutRepo)
     }
 
     /** targetSdk 35 起默认 edge-to-edge，需要手动把状态栏/导航栏的高度让出来。 */
@@ -575,7 +516,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun closeSettingsSub() {
-        if (settingsSubId == R.id.pageSettingsProfileAi) saveSecondAiSettings()
+        if (settingsSubId == R.id.pageSettingsProfileAi) settingsController.persistSecondAiInputs()
         settingsSubId = 0
         settingsSubViews.forEach { it.visibility = View.GONE }
         val returnTab = settingsReturnTabId
@@ -804,207 +745,6 @@ class MainActivity : AppCompatActivity() {
         }, "session-context-${mode.storageKey}").start()
     }
 
-    // ---------- 设置 ----------
-
-    private fun setupSettings() {
-        rowSetTranslate.setOnClickListener { openSettingsSub(R.id.pageSettingsTranslate, "翻译服务") }
-        rowSetSubtitle.setOnClickListener { openSettingsSub(R.id.pageSettingsSubtitle, "字幕与悬浮窗") }
-        rowSetSceneLibrary.setOnClickListener {
-            openSceneLibrary(TranslationMode.INTERPRETATION)
-        }
-        rowSetProfileAi.setOnClickListener { openSettingsSub(R.id.pageSettingsProfileAi, "内容分析 AI") }
-        rowSetDiagnostics.setOnClickListener { openSettingsSub(R.id.pageSettingsDiagnostics, "诊断") }
-        rowSetAbout.setOnClickListener { openSettingsSub(R.id.pageSettingsAbout, "关于") }
-
-        etApiKeys.setText(SettingsStore.apiKeysRaw(this))
-        etBaseUrl.setText(SettingsStore.baseUrl(this))
-        setupFriendGatewayUi()
-        etSecondAiKey.setText(SettingsStore.secondAiApiKey(this))
-        etSecondAiUrl.setText(SettingsStore.secondAiBaseUrl(this))
-        etSecondAiModel.setText(SettingsStore.secondAiModel(this))
-        updateSecondAiFormatLabel()
-        btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
-
-        val info = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
-        tvAboutVersion.text = if (info != null) {
-            "版本 ${info.versionName}（${info.longVersionCode}）"
-        } else {
-            "版本未知"
-        }
-        btnAboutRepo.setOnClickListener {
-            runCatching {
-                startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xieyuanqing/vtuber-live-translate")),
-                )
-            }.onFailure { toast("没有可用的浏览器") }
-        }
-    }
-
-    private fun setupFriendGatewayUi() {
-        swFriendGateway.setOnCheckedChangeListener { _, checked ->
-            if (syncingFriendGatewayUi) return@setOnCheckedChangeListener
-            if (checked) {
-                if (!FriendGatewayStore.useFriend(this)) {
-                    toast("请先输入邀请码并完成绑定")
-                }
-            } else {
-                FriendGatewayStore.usePersonal(this)
-            }
-            renderFriendGatewayUi()
-        }
-        btnBindFriendGateway.setOnClickListener { bindFriendGateway() }
-        btnClearFriendGateway.setOnClickListener {
-            friendBindingViewModel.clearBinding()
-            etFriendInviteCode.setText("")
-            toast("已清除本机好友凭据")
-        }
-        renderFriendGatewayUi()
-        if (FriendGatewayStore.isBound(this)) refreshFriendGatewayStatus()
-    }
-
-    private fun renderFriendGatewayUi(
-        remote: FriendGatewayStatus? = null,
-        bindingInProgress: Boolean = friendBindingViewModel.isBinding(),
-    ) {
-        val bound = FriendGatewayStore.isBound(this)
-        val active = FriendGatewayStore.isActive(this)
-        syncingFriendGatewayUi = true
-        swFriendGateway.isEnabled = bound && !bindingInProgress
-        swFriendGateway.isChecked = active
-        syncingFriendGatewayUi = false
-        etFriendInviteCode.isEnabled = !bindingInProgress
-        btnBindFriendGateway.isEnabled = !bindingInProgress
-        btnClearFriendGateway.visibility = if (bound) View.VISIBLE else View.GONE
-        btnClearFriendGateway.isEnabled = bound && !bindingInProgress
-        btnBindFriendGateway.text = if (bound) "重新绑定" else "绑定并启用"
-        tvFriendGatewayStatus.text = when {
-            remote != null && active -> {
-                val name = remote.label.ifBlank { "好友测试" }
-                "$name 已启用 · 今日实时 ${remote.liveSessions} 次 · 内容分析 ${remote.textRequests} 次"
-            }
-            active -> "好友测试通道已启用，翻译和内容分析均由服务器提供"
-            bound -> "邀请码已绑定，当前仍使用你自己的 API Key"
-            else -> "当前使用你自己的 API Key"
-        }
-    }
-
-    private fun renderFriendBindingState(state: FriendGatewayBindingState) {
-        val binding = state.phase == FriendGatewayBindingPhase.BINDING
-        renderFriendGatewayUi(bindingInProgress = binding)
-        when (state.phase) {
-            FriendGatewayBindingPhase.BINDING -> {
-                tvFriendGatewayStatus.text = "正在验证邀请码并绑定当前设备…"
-            }
-            FriendGatewayBindingPhase.SUCCESS -> {
-                etFriendInviteCode.setText("")
-                if (FriendGatewayStore.isBound(this)) refreshFriendGatewayStatus()
-            }
-            FriendGatewayBindingPhase.FAILURE -> {
-                tvFriendGatewayStatus.text = state.message
-            }
-            FriendGatewayBindingPhase.IDLE -> Unit
-        }
-    }
-
-    private fun bindFriendGateway() {
-        val code = etFriendInviteCode.text?.toString().orEmpty().trim()
-        if (code.isBlank()) {
-            toast("请输入好友邀请码")
-            return
-        }
-        val version = runCatching {
-            val info = packageManager.getPackageInfo(packageName, 0)
-            "${info.versionName}(${info.longVersionCode})"
-        }.getOrDefault("unknown")
-        val enableFriendOnSuccess =
-            !FriendGatewayStore.isBound(this) || FriendGatewayStore.isActive(this)
-        friendBindingViewModel.bind(code, version, enableFriendOnSuccess)
-    }
-
-    private fun refreshFriendGatewayStatus() {
-        val token = FriendGatewayStore.token(this)
-        if (token.isBlank()) return
-        Thread({
-            runCatching { FriendGatewayClient(this).status(token) }
-                .onSuccess { status ->
-                    runOnUiThread {
-                        if (!isFinishing && !isDestroyed && !friendBindingViewModel.isBinding()) {
-                            renderFriendGatewayUi(status)
-                        }
-                    }
-                }
-                .onFailure { error ->
-                    runOnUiThread {
-                        if (
-                            !isFinishing && !isDestroyed && !friendBindingViewModel.isBinding() &&
-                            FriendGatewayStore.isActive(this)
-                        ) {
-                            tvFriendGatewayStatus.text =
-                                "好友通道验证失败：${error.message ?: "未知错误"}"
-                        }
-                    }
-                }
-        }, "friend-gateway-status").start()
-    }
-
-    private fun secondAiFormat(): AiTextClient.Format =
-        AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(this))
-
-    private fun updateSecondAiFormatLabel() {
-        btnSecondAiFormat.text = when (secondAiFormat()) {
-            AiTextClient.Format.GEMINI -> "Gemini 原生"
-            AiTextClient.Format.OPENAI -> "OpenAI 兼容"
-        }
-    }
-
-    private fun toggleSecondAiFormat() {
-        val next = when (secondAiFormat()) {
-            AiTextClient.Format.GEMINI -> AiTextClient.Format.OPENAI
-            AiTextClient.Format.OPENAI -> AiTextClient.Format.GEMINI
-        }
-        SettingsStore.saveSecondAiFormat(this, next.key)
-        updateSecondAiFormatLabel()
-        toast("已切换到 ${next.key} 格式")
-    }
-
-    private fun saveSecondAiSettings() {
-        SettingsStore.saveSecondAiApiKey(this, etSecondAiKey.text.toString())
-        SettingsStore.saveSecondAiBaseUrl(this, etSecondAiUrl.text.toString().trim()
-            .ifEmpty { SettingsStore.DEFAULT_BASE_URL })
-        SettingsStore.saveSecondAiModel(this, etSecondAiModel.text.toString().trim()
-            .ifEmpty { SettingsStore.secondAiModel(this) })
-    }
-
-    private fun setupStyleSliders() {
-        slFont.value = SettingsStore.fontSizeSp(this).toFloat().coerceIn(12f, 26f)
-        slOpacity.value = (SettingsStore.bgOpacityPct(this) / 5 * 5).toFloat().coerceIn(20f, 95f)
-        slLines.value = SettingsStore.overlayMaxLines(this).toFloat().coerceIn(1f, 3f)
-        updateStyleLabels()
-
-        val change = Slider.OnChangeListener { _, _, _ -> updateStyleLabels() }
-        val touch = object : Slider.OnSliderTouchListener {
-            override fun onStartTrackingTouch(slider: Slider) {}
-            override fun onStopTrackingTouch(slider: Slider) {
-                SettingsStore.saveStyle(
-                    this@MainActivity,
-                    slFont.value.toInt(),
-                    slOpacity.value.toInt(),
-                    slLines.value.toInt(),
-                )
-            }
-        }
-        listOf(slFont, slOpacity, slLines).forEach {
-            it.addOnChangeListener(change)
-            it.addOnSliderTouchListener(touch)
-        }
-    }
-
-    private fun updateStyleLabels() {
-        tvFontVal.text = "字号 ${slFont.value.toInt()}sp"
-        tvOpacityVal.text = "背景不透明度 ${slOpacity.value.toInt()}%"
-        tvLinesVal.text = "最多行数 ${slLines.value.toInt()}"
-    }
-
     private fun setupFinalPlanUi() {
         findViewById<View>(R.id.cardInterpPlan).setOnClickListener {
             openSceneLibrary(TranslationMode.INTERPRETATION, returnTabId = R.id.nav_interp)
@@ -1026,6 +766,10 @@ class MainActivity : AppCompatActivity() {
 
     internal fun openSceneLibrary(mode: TranslationMode, returnTabId: Int = R.id.nav_settings) {
         sceneLibraryController.open(mode, returnTabId)
+    }
+
+    internal fun renderFriendGatewayBindingForTest(bindingInProgress: Boolean) {
+        settingsController.renderFriendGatewayUiForTest(bindingInProgress)
     }
 
     private fun setupHomeSceneChips(mode: TranslationMode) {
@@ -1134,7 +878,7 @@ class MainActivity : AppCompatActivity() {
         updatePlanSummary(mode)
     }
 
-    private fun setupParamControls() {
+    private fun setupLanguageControls() {
         bindModeLanguageControls(
             TranslationMode.INTERPRETATION,
             LanguageControls(acInterpSourceLang, acInterpTargetLang),
@@ -1143,51 +887,6 @@ class MainActivity : AppCompatActivity() {
             TranslationMode.VIDEO,
             LanguageControls(acVideoSourceLang, acVideoTargetLang),
         )
-
-        renderParamValues()
-
-        swEchoTarget.setOnCheckedChangeListener { _, checked ->
-            SettingsStore.saveEchoTargetLanguage(this, checked)
-        }
-
-        val change = Slider.OnChangeListener { _, _, _ -> updateParamLabels() }
-        val touch = object : Slider.OnSliderTouchListener {
-            override fun onStartTrackingTouch(slider: Slider) {}
-            override fun onStopTrackingTouch(slider: Slider) {
-                SettingsStore.saveRotateSeconds(this@MainActivity, slRotate.value.toInt())
-                SettingsStore.saveStabIdleMs(this@MainActivity, slIdle.value.toInt())
-                SettingsStore.saveStabMaxChars(this@MainActivity, slMaxChars.value.toInt())
-            }
-        }
-        listOf(slRotate, slIdle, slMaxChars).forEach {
-            it.addOnChangeListener(change)
-            it.addOnSliderTouchListener(touch)
-        }
-
-        btnResetTranslate.setOnClickListener {
-            TranslationPlanStore.resetDraft(this, TranslationMode.INTERPRETATION)
-            TranslationPlanStore.resetDraft(this, TranslationMode.VIDEO)
-            SettingsStore.saveEchoTargetLanguage(this, true)
-            SettingsStore.saveRotateSeconds(this, SettingsStore.DEFAULT_ROTATE_SECONDS)
-            renderParamValues()
-            toast("翻译参数已恢复默认，下次开始翻译时生效")
-        }
-        btnResetSubtitle.setOnClickListener {
-            SettingsStore.saveStabIdleMs(this, SettingsStore.DEFAULT_STAB_IDLE_MS)
-            SettingsStore.saveStabMaxChars(this, SettingsStore.DEFAULT_STAB_MAX_CHARS)
-            SettingsStore.saveStyle(
-                this,
-                SettingsStore.DEFAULT_FONT_SP,
-                SettingsStore.DEFAULT_BG_OPACITY,
-                SettingsStore.DEFAULT_OVERLAY_LINES,
-            )
-            slFont.value = SettingsStore.DEFAULT_FONT_SP.toFloat()
-            slOpacity.value = SettingsStore.DEFAULT_BG_OPACITY.toFloat()
-            slLines.value = SettingsStore.DEFAULT_OVERLAY_LINES.toFloat()
-            updateStyleLabels()
-            renderParamValues()
-            toast("字幕设置已恢复默认")
-        }
     }
 
     private fun syncLanguageControlsFromStore() {
@@ -1199,44 +898,6 @@ class MainActivity : AppCompatActivity() {
             TranslationMode.VIDEO,
             LanguageControls(acVideoSourceLang, acVideoTargetLang),
         )
-    }
-
-    private fun renderParamValues() {
-        syncLanguageControlsFromStore()
-        swEchoTarget.isChecked = SettingsStore.echoTargetLanguage(this)
-        slRotate.value = SettingsStore.rotateSeconds(this).toFloat()
-        slIdle.value = SettingsStore.stabIdleMs(this).toFloat()
-        slMaxChars.value = SettingsStore.stabMaxChars(this).toFloat()
-        updateParamLabels()
-    }
-
-    private fun updateParamLabels() {
-        tvRotateVal.text = "连接主动轮换 ${slRotate.value.toInt()} 秒"
-        val secs = slIdle.value.toInt() / 1000.0
-        val secsText = if (secs % 1.0 == 0.0) secs.toInt().toString() else secs.toString()
-        tvIdleVal.text = "静默 $secsText 秒转正"
-        tvMaxCharsVal.text = "当前行最长 ${slMaxChars.value.toInt()} 字"
-    }
-
-    // ---------- 电池白名单 ----------
-
-    @SuppressLint("BatteryLife")
-    private fun requestBatteryWhitelist() {
-        val pm = getSystemService(PowerManager::class.java)
-        if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            toast("已在电池白名单里")
-            return
-        }
-        runCatching {
-            startActivity(
-                Intent(
-                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:$packageName"),
-                ),
-            )
-        }.onFailure {
-            runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
-        }
     }
 
     // ---------- 启动流程 ----------
@@ -1260,12 +921,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun prepareSessionSettings(captureMode: String): Boolean {
         val mode = promptMode(captureMode)
-        SettingsStore.saveApiKeys(this, etApiKeys.text.toString())
-        SettingsStore.saveBaseUrl(
-            this,
-            etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
-        )
-        saveSecondAiSettings()
+        settingsController.persistDraftInputs()
         val plan = TranslationPlanStore.loadDraft(this, mode)
         val friendSelected = FriendGatewayStore.mode(this) == FriendGatewayStore.MODE_FRIEND
         val friendAccess = FriendGatewayStore.isActive(this)
@@ -1508,17 +1164,19 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        tvStatus.text = buildString {
-            append(if (running) "● 运行中" else "○ 未运行")
-            if (mode.isNotEmpty()) append("  模式: ").append(if (mode == StatusBus.MODE_MIC) "同传" else "视频")
-            append("  连接: ").append(conn)
-            if (s.currentKeyLabel.isNotEmpty()) append("  ").append(s.currentKeyLabel)
-            append("  音量: ").append(level).append("%")
-            append("  已发送: ").append(s.chunksSent.get()).append(" 块\n")
-            if (s.transcriptPath.isNotEmpty()) append("记录: ").append(s.transcriptPath).append("\n")
-            if (s.jaTail.isNotEmpty()) append("ja: …").append(s.jaTail).append("\n")
-            if (s.zhTail.isNotEmpty()) append("zh: …").append(s.zhTail)
-        }
+        settingsController.renderDiagnostics(
+            SettingsDiagnosticsState(
+                serviceRunning = running,
+                captureMode = mode,
+                connState = conn,
+                currentKeyLabel = s.currentKeyLabel,
+                audioLevelPct = level,
+                chunksSent = s.chunksSent.get(),
+                transcriptPath = s.transcriptPath,
+                jaTail = s.jaTail,
+                zhTail = s.zhTail,
+            ),
+        )
     }
 
     private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_LONG).show()
