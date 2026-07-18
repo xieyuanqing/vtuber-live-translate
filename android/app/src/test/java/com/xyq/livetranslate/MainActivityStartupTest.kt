@@ -202,10 +202,35 @@ class MainActivityStartupTest {
     fun videoSceneLibrarySurvivesRecreateAndReturnsToVideoHome() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         try {
-            controller.get().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+            val activity = controller.get()
+            val interpOnly = requireNotNull(
+                SceneLibraryStore.create(
+                    activity,
+                    TranslationMode.INTERPRETATION,
+                    "仅同传 Bundle 场景",
+                    "不应在恢复后的视频列表出现",
+                ),
+            )
+            val videoOnly = requireNotNull(
+                SceneLibraryStore.create(
+                    activity,
+                    TranslationMode.VIDEO,
+                    "仅视频 Bundle 场景",
+                    "应由 controller Bundle 模式恢复",
+                ),
+            )
+            activity.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
                 R.id.bottomNav,
             ).selectedItemId = R.id.nav_video
-            controller.get().openSceneLibrary(TranslationMode.VIDEO, R.id.nav_video)
+            activity.openSceneLibrary(TranslationMode.VIDEO, R.id.nav_video)
+
+            // 禁用 Toggle 及子按钮的 View 状态保存，确保恢复来源只能是 controller Bundle。
+            activity.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(
+                R.id.toggleSceneLibraryMode,
+            ).apply {
+                isSaveEnabled = false
+                (0 until childCount).forEach { index -> getChildAt(index).isSaveEnabled = false }
+            }
 
             controller.recreate()
             val recreated = controller.get()
@@ -216,6 +241,15 @@ class MainActivityStartupTest {
                     R.id.toggleSceneLibraryMode,
                 ).checkedButtonId,
             )
+            val list = recreated.findViewById<android.widget.LinearLayout>(R.id.sceneLibraryList)
+            val labels = (0 until list.childCount).map { index ->
+                list.getChildAt(index)
+                    .findViewById<android.widget.TextView>(R.id.tvSceneName)
+                    .text
+                    .toString()
+            }
+            assertTrue(videoOnly.label in labels)
+            assertFalse(interpOnly.label in labels)
 
             recreated.onBackPressed()
             assertEquals(View.VISIBLE, recreated.findViewById<View>(R.id.pageVideo).visibility)

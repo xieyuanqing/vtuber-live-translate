@@ -66,10 +66,12 @@ internal class SceneLibraryController(
     fun setup() {
         views.modeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
-            mode = when (checkedId) {
+            val selectedMode = when (checkedId) {
                 views.videoButton.id -> TranslationMode.VIDEO
                 else -> TranslationMode.INTERPRETATION
             }
+            if (selectedMode == mode) return@addOnButtonCheckedListener
+            mode = selectedMode
             reload()
         }
         views.newSceneButton.setOnClickListener { showSceneEditor() }
