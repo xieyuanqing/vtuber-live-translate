@@ -36,6 +36,13 @@ object UpdateDownloader {
                 if (!partial.exists() || partial.length() < 1024L) {
                     throw IOException("文件过小")
                 }
+                // 下载源含第三方镜像；清单给出摘要时不匹配就换下一个源。
+                if (info.sha256.isNotEmpty()) {
+                    val actual = UpdateIntegrity.sha256Of(partial)
+                    if (actual != info.sha256) {
+                        throw IOException("SHA-256 校验失败")
+                    }
+                }
                 if (target.exists()) target.delete()
                 if (!partial.renameTo(target)) {
                     partial.copyTo(target, overwrite = true)

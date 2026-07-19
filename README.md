@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.4.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.4.1-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
@@ -182,16 +182,16 @@ GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/w
 
 ## 当前状态
 
-当前版本：**v2.3.0（versionCode 33）**。
+当前版本：**v2.4.1（versionCode 36）**。
 
-v2.3.0 将方案库并入场景库：场景（名称 + 提示词）成为唯一的长期配置，场景库支持使用、设为默认、编辑、删除与模板恢复，旧的命名方案在首次启动时自动折算为场景；语言方向独立于场景、随时可调。v2.2.0 新增可选的好友邀请网关：为没有 Gemini Key 的朋友提供分享入口，App 端通过 `ApiCredentialMode` 在个人 Key 直连与好友网关（Bearer 令牌 + 设备签名）之间切换，个人路径不依赖网关。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
+v2.4.1 加固检查更新：清单支持 `sha256` 摘要校验，安装前校验 APK 包名与签名和当前应用一致，防第三方下载镜像篡改；并移除 Releases API 兜底路径不可靠的 versionCode 推导。v2.4.0 完成 UI 去噪与信息架构重构（同传 / 视频 / 场景库 / 历史 / 设置逐页结构整理，见 [docs/08-ui-declutter-plan.md](docs/08-ui-declutter-plan.md)），交互增强（运行中暂停、停止确认、语言方向交换、本场上下文保留、字幕回看与聆听状态），历史按日分组、支持分享、空会话不落盘，并新增应用内检查更新（GitHub Release 多下载源、忽略版本、可关闭自动检查）。v2.3.0 将方案库并入场景库，场景（名称 + 提示词）成为唯一的长期配置，语言方向独立于场景、随时可调。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
 
 ## 已知限制
 
 - Gemini Live Translate 使用预览模型，模型名称、可用区域和配额可能由上游调整。
 - 实时输出适合快速理解，不保证完整、逐字或可直接发布的字幕质量。
 - Android 厂商后台策略、悬浮窗策略和目标应用的内录策略可能影响体验。
-- 当前没有正式 Release、自动更新、账号同步或跨设备历史同步。
+- Release 为 Debug 签名内测包；应用内更新需手动确认安装，没有静默自动更新，也没有账号同步或跨设备历史同步。
 - 项目未针对无障碍、平板、横屏和所有厂商 ROM 做完整测试。
 
 ## 参与开发

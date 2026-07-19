@@ -145,6 +145,14 @@ internal class UpdateController(
                         }
                     }
                 }
+                // 摘要在下载器里已按源校验；这里再核对包名与签名和当前应用一致，
+                // 防止被镜像替换成另一个包名的 APK 冒充更新。仍在下载线程执行。
+                val identityProblem = com.xyq.livetranslate.UpdateIntegrity
+                    .apkInstallProblem(activity, file)
+                if (identityProblem != null) {
+                    file.delete()
+                    throw java.io.IOException("安装包校验未通过：$identityProblem")
+                }
                 postToUi {
                     busy.set(false)
                     dialog.dismiss()

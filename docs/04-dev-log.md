@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-19 · v2.4.1 检查更新安全加固与文档收口
+
+对 v2.4.0 新增的检查更新做安全评审后补三处：
+
+- **下载完整性校验（安全缺口）**：下载源里有 ghproxy 等第三方代理镜像，镜像内容可被篡改，而原实现只检查「文件 > 1KB」就拉起安装——恶意 APK 换个包名即可冒充更新装成新应用。修复分两层，均落在新增 `UpdateIntegrity`：
+  - 清单支持 `sha256` 字段（`update.json` 已补 v2.4.0 的真实摘要，Releases API 路径从 body 里的 `APK SHA-256:` 提取）；下载完成后逐源校验，不匹配换下一个源。格式非法的摘要按缺失处理，不因清单笔误卡死升级。
+  - 安装前无论有无摘要，都用 `PackageManager.getPackageArchiveInfo` 校验 APK 包名与签名证书和当前安装完全一致；不一致删包报错。这层不依赖清单可信，彻底封掉恶意镜像路径。校验在下载线程执行，不阻塞主线程。
+- **versionCode 推导 bug**：`extractVersionCode` 的「versionName 抽数字」兜底会把 "2.4.1" 算成 241，一旦走到该兜底会永远提示有新版本、升级完还提示。已删除该兜底，解析不出就走既有的「请使用 update.json」失败分支。
+- **README 失同步**：「当前状态」段停在 v2.3.0（v2.3.1 起漏改），「已知限制」仍写「没有正式 Release、自动更新」与事实矛盾。均已改写至 v2.4.1 现状。
+
+**测试**：`UpdateCheckerTest` 新增 4 例（sha256 解析与归一化、坏摘要归空、Release body 摘要提取、缺 versionCode 必须失败）；新增 `UpdateIntegrityTest` 验证流式 SHA-256。签名比对涉及 `SigningInfo`，留待真机验证覆盖安装路径。
+
+**版本**：versionCode 36 / versionName 2.4.1。发布 2.4.1 Release 时记得把新 APK 的 sha256 写进 `update.json` 与 Release body。
+
+**验证**：`git diff --check` 通过；本容器无 Android SDK，单测、Lint 与 `assembleDebug` 由 CI（workflow_dispatch 于本分支）执行，结果见提交后 Run。
+
+---
+
 ## 2026-07-19 · 实时字幕稳定性修复（CI 构建）
 
 - 不改变既有音频积压策略与连接参数。

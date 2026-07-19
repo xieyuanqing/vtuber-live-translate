@@ -94,6 +94,7 @@ object UpdateChecker {
             apkName = apkName,
             downloadUrls = expandDownloadMirrors(urls.distinct()),
             sourceLabel = sourceLabel,
+            sha256 = normalizeSha256(json.optString("sha256")),
         )
     }
 
@@ -116,7 +117,7 @@ object UpdateChecker {
         require(apkUrl.isNotEmpty()) { "Release 中没有 APK" }
         // tag 形如 2.4.0 时用 versionName 兜底；优先 body 外自定义字段没有则从 tag 推导 code 失败则用 published 时间不可靠。
         // 正式清单仍以 update.json 为准；API 路径要求 tag 为纯数字 versionCode 或 name 含 code=。
-        val versionCode = extractVersionCode(json, tag, versionName)
+        val versionCode = extractVersionCode(json, tag)
         require(versionCode > 0L) { "无法解析 versionCode，请使用 update.json" }
         return AppUpdateInfo(
             versionCode = versionCode,
@@ -126,7 +127,23 @@ object UpdateChecker {
             apkName = apkName,
             downloadUrls = expandDownloadMirrors(listOf(apkUrl)),
             sourceLabel = sourceLabel,
+            sha256 = extractSha256(notes),
         )
+    }
+
+    /** Release body 里形如 "APK SHA-256: <64位十六进制>" 的摘要。 */
+    fun extractSha256(text: String): String =
+        Regex("""(?i)SHA-?256\s*[:：]\s*([0-9a-fA-F]{64})""")
+            .find(text)
+            ?.groupValues
+            ?.getOrNull(1)
+            .orEmpty()
+            .lowercase()
+
+    /** 清单里的摘要字段：不是 64 位十六进制就当没有，不因格式错误卡死升级。 */
+    fun normalizeSha256(raw: String): String {
+        val cleaned = raw.trim().lowercase()
+        return if (Regex("""^[0-9a-f]{64}$""").matches(cleaned)) cleaned else ""
     }
 
     fun expandDownloadMirrors(urls: List<String>): List<String> {
@@ -143,7 +160,7 @@ object UpdateChecker {
         return out.toList()
     }
 
-    private fun extractVersionCode(json: JSONObject, tag: String, versionName: String): Long {
+    private fun extractVersionCode(json: JSONObject, tag: String): Long {
         if (json.has("versionCode")) {
             val v = json.optLong("versionCode", -1L)
             if (v > 0L) return v
@@ -157,8 +174,8 @@ object UpdateChecker {
             ?.toLongOrNull()
             ?.let { if (it > 0L) return it }
         tag.toLongOrNull()?.let { if (it > 0L) return it }
-        // 最后：versionName 全是数字
-        versionName.filter { it.isDigit() }.toLongOrNull()?.let { if (it > 0L) return it }
+        // 不做「versionName 抽数字」兜底："2.4.1" 会被算成 241，之后永远提示有新版本。
+        // 解析不出就让调用方走 update.json。
         return -1L
     }
 

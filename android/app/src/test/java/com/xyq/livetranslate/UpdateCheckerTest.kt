@@ -2,9 +2,76 @@ package com.xyq.livetranslate
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class UpdateCheckerTest {
+
+    @Test
+    fun parseManifestReadsAndNormalizesSha256() {
+        val digest = "B2E6EDCF5543E20910A46B1AE8F98F233EAD56641162E588A979CC7641CA0F09"
+        val json = """
+            {
+              "versionCode": 36,
+              "versionName": "2.4.1",
+              "sha256": "$digest",
+              "downloadUrls": ["https://example.com/a.apk"]
+            }
+        """.trimIndent()
+        assertEquals(digest.lowercase(), UpdateChecker.parseManifest(json).sha256)
+    }
+
+    @Test
+    fun malformedSha256IsTreatedAsAbsentInsteadOfBlockingUpdate() {
+        val json = """
+            {
+              "versionCode": 36,
+              "versionName": "2.4.1",
+              "sha256": "not-a-hash",
+              "downloadUrls": ["https://example.com/a.apk"]
+            }
+        """.trimIndent()
+        assertEquals("", UpdateChecker.parseManifest(json).sha256)
+    }
+
+    @Test
+    fun parseGitHubReleaseExtractsSha256FromBody() {
+        val json = """
+            {
+              "tag_name": "v2.4.0",
+              "name": "流译 2.4.0",
+              "body": "versionCode: 35\n\nAPK SHA-256: b2e6edcf5543e20910a46b1ae8f98f233ead56641162e588a979cc7641ca0f09",
+              "assets": [
+                {"name": "a.apk", "browser_download_url": "https://example.com/a.apk"}
+              ]
+            }
+        """.trimIndent()
+        assertEquals(
+            "b2e6edcf5543e20910a46b1ae8f98f233ead56641162e588a979cc7641ca0f09",
+            UpdateChecker.parseGitHubRelease(json).sha256,
+        )
+    }
+
+    @Test
+    fun releaseWithoutParsableVersionCodeFailsInsteadOfGuessingFromDigits() {
+        // "2.4.1" 抽数字会变成 241，导致永远提示有新版本；现在必须显式解析失败。
+        val json = """
+            {
+              "tag_name": "v2.4.1",
+              "name": "流译 2.4.1",
+              "body": "没有版本号字段",
+              "assets": [
+                {"name": "a.apk", "browser_download_url": "https://example.com/a.apk"}
+              ]
+            }
+        """.trimIndent()
+        try {
+            UpdateChecker.parseGitHubRelease(json)
+            fail("缺 versionCode 的 Release 应该解析失败")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("versionCode"))
+        }
+    }
 
     @Test
     fun parseManifestKeepsOrderAndExpandsGithubMirrors() {
