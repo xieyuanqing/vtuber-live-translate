@@ -51,20 +51,13 @@
                     android:textAllCaps="false" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_12"
-                android:text="场景是唯一的长期配置：名称 + 提示词，按模式各自维护。点「使用」立即切换当前场景；修改提示词对下次启动生效，正在运行的会话不变。"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnResetSceneLibrary"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target"
                 android:layout_gravity="end"
+                android:layout_marginTop="@dimen/space_12"
                 android:text="恢复该模式默认场景"
                 android:textAllCaps="false"
                 android:textColor="@color/brand" />
@@ -87,6 +80,6 @@
         android:text="新建场景"
         android:textColor="@color/brand_on"
         app:backgroundTint="@color/brand"
-        app:icon="@drawable/ic_brand_translate_24"
+        app:icon="@drawable/ic_add_24"
         app:iconTint="@color/brand_on" />
 </FrameLayout>

@@ -38,7 +38,7 @@
                         android:layout_width="40dp" android:layout_height="40dp"
                         android:background="@drawable/bg_history_badge" android:padding="8dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                        android:src="@drawable/ic_key_24" app:tint="@color/brand" />
                     <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="翻译服务" />
                         <TextView style="@style/SettingsRowDesc" android:text="Gemini Live、API Key、连接轮换" />
@@ -55,7 +55,7 @@
                         android:layout_width="40dp" android:layout_height="40dp"
                         android:background="@drawable/bg_history_badge" android:padding="8dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                        android:src="@drawable/ic_layers_24" app:tint="@color/brand" />
                     <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="场景库" />
                         <TextView style="@style/SettingsRowDesc" android:text="同传和视频的场景提示词、使用与默认选择" />
@@ -81,7 +81,7 @@
                     android:layout_width="40dp" android:layout_height="40dp"
                     android:background="@drawable/bg_history_badge" android:padding="8dp"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                    android:src="@drawable/ic_sparkle_24" app:tint="@color/brand" />
                 <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
                     <TextView style="@style/SettingsRowTitle" android:text="AI 内容分析" />
                     <TextView style="@style/SettingsRowDesc" android:text="解析视频资料、整理本场背景" />
@@ -153,7 +153,7 @@
                         android:layout_width="40dp" android:layout_height="40dp"
                         android:background="@drawable/bg_history_badge" android:padding="8dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_brand_translate_24" app:tint="@color/brand" />
+                        android:src="@drawable/ic_info_24" app:tint="@color/brand" />
                     <LinearLayout style="@style/SettingsRowText" android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="关于" />
                         <TextView style="@style/SettingsRowDesc" android:text="版本与项目信息" />

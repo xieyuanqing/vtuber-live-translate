@@ -134,7 +134,7 @@
                     <View
                         android:layout_width="@dimen/status_dot_size"
                         android:layout_height="@dimen/status_dot_size"
-                        android:background="@drawable/bg_success_dot" />
+                        android:background="@drawable/bg_idle_dot" />
 
                     <TextView
                         android:id="@+id/tvInterpStatus"
@@ -242,7 +242,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="只在本场生效，成功开始后清除，不写入方案库"
+                        android:text="只对本场翻译生效"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
 
@@ -275,9 +275,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
-                        android:text="可选：把杂乱资料整理成翻译可用的本场背景"
+                        android:text=""
                         android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>

@@ -180,15 +180,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="链接与背景只在本场生效，成功开始后清除"
+                        android:text="只对本场翻译生效"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Field"
                         android:layout_marginTop="@dimen/space_12"
-                        android:hint="YouTube 视频链接"
-                        app:helperText="用于解析标题、频道和内容背景">
+                        android:hint="YouTube 链接（用于 AI 解析背景）">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etVideoSessionUrl"
@@ -201,8 +200,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Field"
                         android:layout_marginTop="@dimen/space_12"
-                        android:hint="本场背景与资料"
-                        app:helperText="可手写，也可用 AI 解析视频">
+                        android:hint="本场背景与资料">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etVideoSessionContext"
@@ -227,9 +225,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
-                        android:text="解析结果会写入上方本场背景，不保存进方案"
+                        android:text=""
                         android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

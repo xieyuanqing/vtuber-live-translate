@@ -2,6 +2,8 @@ package com.xyq.livetranslate.ui
 
 import android.content.Context
 import android.os.Bundle
+import android.view.View
+import android.widget.TextView
 import com.xyq.livetranslate.AiTextClient
 import com.xyq.livetranslate.ApiCredentialMode
 import com.xyq.livetranslate.ContentAnalysisRequest
@@ -86,6 +88,11 @@ internal class SessionContextController(
         TranslationMode.VIDEO -> videoViews
     }
 
+    private fun showAnalyzeStatus(statusView: TextView, message: String) {
+        statusView.text = message
+        statusView.visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+    }
+
     private fun analyzeSessionContext(mode: TranslationMode) {
         persistSecondAiInputs()
         val friendAccess = FriendGatewayStore.isActive(context)
@@ -101,29 +108,32 @@ internal class SessionContextController(
             FriendGatewayStore.mode(context) == FriendGatewayStore.MODE_FRIEND &&
             !friendAccess
         ) {
-            statusView.text = "好友测试凭据已失效，请回到设置重新绑定"
+            showAnalyzeStatus(statusView, "好友测试凭据已失效，请回到设置重新绑定")
             return
         }
         if (apiKey.isBlank()) {
-            statusView.text = if (friendAccess) {
-                "好友测试凭据已失效，请回到设置重新绑定"
-            } else {
-                "请先在设置 → 内容分析 AI 中填写 API Key"
-            }
+            showAnalyzeStatus(
+                statusView,
+                if (friendAccess) {
+                    "好友测试凭据已失效，请回到设置重新绑定"
+                } else {
+                    "请先在设置 → 内容分析 AI 中填写 API Key"
+                },
+            )
             return
         }
         val material = modeViews.sessionContext.text?.toString().orEmpty().trim()
         val url = modeViews.videoSessionUrl?.text?.toString().orEmpty().trim()
         if (mode == TranslationMode.INTERPRETATION && material.isBlank()) {
-            statusView.text = "请先填写本场背景或资料"
+            showAnalyzeStatus(statusView, "请先填写本场背景或资料")
             return
         }
         if (mode == TranslationMode.VIDEO && url.isBlank() && material.isBlank()) {
-            statusView.text = "请先填写视频链接或本场资料"
+            showAnalyzeStatus(statusView, "请先填写视频链接或本场资料")
             return
         }
         if (mode == TranslationMode.VIDEO && url.isBlank()) {
-            statusView.text = "解析视频需要先填写 YouTube 链接"
+            showAnalyzeStatus(statusView, "解析视频需要先填写 YouTube 链接")
             return
         }
 
@@ -156,7 +166,7 @@ internal class SessionContextController(
                 null
             }
         button.isEnabled = false
-        statusView.text = "正在整理，请稍候…"
+        showAnalyzeStatus(statusView, "正在整理，请稍候…")
 
         runCatching {
             Thread({
@@ -196,12 +206,12 @@ internal class SessionContextController(
                         }
                         if (inputChanged) {
                             setLatestRequestId(mode, "")
-                            statusView.text = "输入已修改，之前的分析结果已忽略"
+                            showAnalyzeStatus(statusView, "输入已修改，之前的分析结果已忽略")
                             button.isEnabled = true
                             return@success
                         }
                         if (result.sessionContext.isBlank()) {
-                            statusView.text = "AI 没有返回可用背景，请补充资料后重试"
+                            showAnalyzeStatus(statusView, "AI 没有返回可用背景，请补充资料后重试")
                         } else {
                             val composed = buildString {
                                 if (videoInfo != null) {
@@ -212,14 +222,14 @@ internal class SessionContextController(
                                 append(result.sessionContext)
                             }.trim()
                             modeViews.sessionContext.setText(composed)
-                            statusView.text = result.note.ifBlank { "本场资料已整理" }
+                            showAnalyzeStatus(statusView, result.note.ifBlank { "本场资料已整理" })
                         }
                         button.isEnabled = true
                     }
                 }.onFailure { error ->
                     postToUi failure@{
                         if (!isHostActive() || requestId != latestRequestId(mode)) return@failure
-                        statusView.text = "整理失败：${error.message ?: "未知错误"}"
+                        showAnalyzeStatus(statusView, "整理失败：${error.message ?: "未知错误"}")
                         button.isEnabled = true
                     }
                 }
