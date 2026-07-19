@@ -260,7 +260,7 @@ Android 使用系统字体，不引入网络字体：
 
 字幕数据只使用已有 `StatusBus.sessionSnapshot()`：
 
-- `confirmedTranslations.takeLast(6)`：已确认译文列表，旧内容逐渐降低透明度。
+- `confirmedTranslations.takeLast(6)`：v2.0.7 当时的已确认译文列表上限。**现行实现（阶段 C / 2026-07-19）改为最多 80 条、增量渲染、靠近底部才自动跟随**，见 `docs/08-ui-declutter-plan.md` 与 `docs/04-dev-log.md`。
 - `currentTranslation`：当前主译文。
 - `sourceTail`：当前原文。
 - 没有配对原文时，不为已确认译文虚构原文。

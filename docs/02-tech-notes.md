@@ -75,9 +75,10 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 ### 连接寿命与重连
 
 - 实测单连接约 590 秒后服务端发 GoAway 并关闭（close 1008）
-- 主动重连策略：跑到 8 分 30 秒 → 开新连接 B → 发同样 setup + prompt → 从 ring buffer 回放最近 1–2 秒音频 → B 开始出字幕后切换、关掉 A
-- 异常断线：立即重连，悬浮窗提示"重连中"
-- **静音时长时间无返回是正常行为**（Windows 版 README 也确认：无声就不发数据），不要误判成断线
+- 默认约 **505 秒**主动轮换（高级设置可调 120–580 秒）：到点后在 scheduler 单线程里 `connect()` 新连接，再关闭旧连接；**不是**双连接无缝切换。新连接 `ready` 前音频会进发送队列。
+- 发送队列最多约 **200 块 / 20 秒**（100ms 一块），满了丢最旧；`chunksSent` 表示已交给 OkHttp 本地发送，不等于上游已消费。
+- 异常断线：立即重连，并把最近约 **1 秒**（10 块）已发送音频前置到队列；主动轮换本身不做这段 overlap。
+- **静音时长时间无返回是正常行为**（Windows 版 README 也确认：无声就不发数据），不要误判成断线。运行页「聆听中…」只按译文更新时间派生，不能当断线判定。
 
 ## 安卓关键 API
 
@@ -123,7 +124,13 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 2. 语言方向；
 3. 只描述输入来源差异的同传或视频模式规则；
 4. 从 `SceneLibraryStore` 解析出的可编辑场景提示词；
-5. 仅本场使用的临时上下文；
-6. 当前方案的额外提示词。
+5. 仅本场使用的临时上下文。
 
-`DefaultSceneCatalog` 只在首次使用或用户主动恢复时提供初始化模板，不参与新会话的运行时场景解析。方案只保存场景 ID；同传和视频分别读取自己的场景库、默认场景和 `TranslationPlan`。会话启动时冻结完整 Prompt 与场景名称，本场上下文仍不写入方案库。术语库已从当前提示词链路移除。
+`DefaultSceneCatalog` 只在首次使用或用户主动恢复时提供初始化模板，不参与新会话的运行时场景解析。场景库是唯一长期配置层；`TranslationPlan` 草稿只保存语言方向与场景 ID。同传和视频分别读取自己的场景库、默认场景和草稿。会话启动时冻结完整 Prompt 与场景名称，本场上下文不写入场景库。术语库与旧「方案库」已从当前提示词链路移除。
+
+### 字幕与历史
+
+- `SubtitleStabilizer`：主线程处理碎片重叠合并、句末切句、连续复读去重；一个服务端碎片若含多句，确认回调保留全部句子，不只最后一句。
+- 默认 idle 转正约 2500ms、当前行约 42 字上限（高级设置可调）；idle 只影响「转正写历史」，当前行仍即时渲染。
+- 运行态确认行上限 **80**（`StatusBus` 与 `CaptureService.sessionLines` 一致）。
+- `TranscriptLogger` 把确认段写入 App 私有 `history_v2` JSON；写盘走单线程后台队列，避免阻塞悬浮窗与主界面。

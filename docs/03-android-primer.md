@@ -91,7 +91,7 @@ MediaProjection 授权（用户点确认框）
 | **单声道 / mono** | 只有一条声道。内录抓到的常是立体声（左右两条），要**混音**成单声道 |
 | **chunk** | 把连续音频流切成的小块。我们按 100ms 一块发（16kHz × 0.1s × 2 字节 = 3200 字节/块） |
 | **WAV** | PCM 加个 44 字节文件头，让播放器认识它。Step 1 的样本存 WAV 就是为了能直接点开听 |
-| **ring buffer** | 环形缓冲区：固定大小、新数据覆盖最旧数据。我们留 2 秒的环形缓冲，重连时把最近 1–2 秒重发一遍，避免换连接瞬间丢话 |
+| **发送队列 / overlap** | `GeminiLiveClient` 用 FIFO 队列缓存最多约 20 秒音频块；异常断线重连时把最近约 1 秒已发送块前置回去。主动轮换目前不做双连接无缝交接 |
 | **WebSocket** | 一种"拨通后保持在线、双方随时互发消息"的网络连接（对比普通 HTTP 的一问一答）。实时翻译必须用这种 |
 | **base64** | 把二进制数据编码成纯文本的方法。PCM 块要 base64 后塞进 JSON 消息里发 |
 
@@ -103,14 +103,14 @@ MainActivity（界面）
       │ 启动/停止
       ▼
 CaptureService（前台服务 = 管线宿主，App 切后台后活着的就是它）
-  ├─ AudioRecord 循环        不停读内录 PCM（48kHz 立体声）
-  ├─ PcmProcessor            混音成单声道 → 重采样 16kHz → 切 100ms 块 → 顺带维护 2s ring buffer
+  ├─ AudioRecord 循环        不停读麦克风或内录 PCM
+  ├─ PcmProcessor            混音成单声道 → 重采样 16kHz → 切 100ms 块
   ├─ GeminiLiveClient        WebSocket：发 setup+prompt、推音频块、收转写文本；
-  │                          管重连（8:30 主动轮换 + 异常立即重连）
-  ├─ SubtitleStabilizer      （阶段 1 加入）碎片合并、去重、临时/确认两级
+  │                          发送队列约 20 秒；默认约 505s 主动轮换；异常重连补约 1 秒 overlap
+  ├─ SubtitleStabilizer      碎片合并、多句确认、去重、临时/确认两级
   ├─ SubtitleOverlay         悬浮窗渲染字幕 + 连接状态小圆点
-  └─ TranscriptLogger        转写按日期落盘 Markdown
-SettingsStore                API key（加密）、Base URL、语言、prompt 预设
+  └─ TranscriptLogger        确认段写入 App 私有 history_v2 JSON（后台线程）
+SettingsStore                API key（加密）、Base URL、高级参数、语言等
 ```
 
 数据流一句话：**PCM 进，中文字幕出，全程在前台服务里循环。**

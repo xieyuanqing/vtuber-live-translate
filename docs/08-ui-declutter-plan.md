@@ -6,7 +6,7 @@
 
 基线版本：v2.3.1 / versionCode 34（2026-07-18 的界面截图诊断）。若执行时版本已前进，先核对涉及的文件与 View ID 是否仍然存在，行号仅供定位参考，以实际代码为准。
 
-**阶段 A/B/C 状态：已完成（2026-07-19）**。C6 未上 RecyclerView（全量 LinearLayout + 滚底）；C9 历史列表 RecyclerView 未做。
+**阶段 A/B/C 状态：已完成（2026-07-19）**。C6 未上 RecyclerView：`StatusBus` / `CaptureService.sessionLines` 各保留最近 **80** 条确认行，运行页用增量 `LinearLayout` 展示；用户已在底部时才自动跟随，上滑回看时不强制滚底。C7「聆听中…」只按译文更新时间计时。C9 会话历史 JSON 经 `TranscriptLogger` 单线程后台写入；历史列表 RecyclerView 仍未做。
 
 ---
 
@@ -185,12 +185,12 @@
 - **C3 停止需确认**：`btnInterpStop` / `btnVideoStop` 单击即断，误触代价高（视频模式还需重走投屏授权）。加确认对话框或改长按停止（二选一，倾向确认框）。
 - **C4 悬浮窗权限返回自动续跑**：现状缺悬浮窗权限时 toast + 跳设置，回来要手动再点开始。录音权限路径已有快照续跑机制，对齐之：`PendingSessionStage` 加 `WAITING_OVERLAY`，`onResume` 检测到已授权且快照处于该态时自动继续。
 - **C5 语言方向交换按钮**：语言胶囊中间的「→」改为可点击交换源/目标。源为「自动检测」时禁用并 toast 说明。写入对应模式草稿（`TranslationPlanStore`），不碰 showDropDown workaround。
-- **C6 运行态字幕完整回看**：现状 `renderConfirmedTranslations` 只保留最后 6 条（`takeLast(6)`），长会话无法回看。确认行列表改 `RecyclerView`：全量（或分页）展示、自动吸底、用户上滑时暂停跟随、回到底部恢复。需要 `StatusBus` 快照承载更多确认行或提供增量通道。
-- **C7 静音/聆听状态提示**：静音期长时间无输出是正常情况（`CLAUDE.md`），但界面无任何传达，用户会疑心断线。在运行态副状态派生显示：电平持续≈0 →「静音中」；有电平但超过 N 秒无新字幕 →「聆听中…」。只改 UI 派生逻辑，不动连接判定。
+- **C6 运行态字幕完整回看**：原状只展示最后 6 条。落地：确认行上限 **80**（`StatusBus` 与 `CaptureService.sessionLines` 对齐）；运行页仍用 `LinearLayout` 增量追加，不每句全量重建；用户靠近底部时才自动跟随，上滑回看时暂停跟随。`RecyclerView` 仍可选后续优化。
+- **C7 静音/聆听状态提示**：静音期长时间无输出是正常情况（`CLAUDE.md`），但界面无任何传达，用户会疑心断线。在运行态副状态派生显示：电平持续≈0 →「静音中」；有电平但超过 N 秒无新**译文** →「聆听中…」。`lastSubtitleAtMs` 只在译文确认/当前行变化时更新，原文输入不重置计时。只改 UI 派生逻辑，不动连接判定。
 - **C8 悬浮字幕收起态可纵向拖动**：`SubtitleOverlay.dragListener` 现为 `moved && !collapsed`，收起胶囊 y 锁死，挡住目标 App 控件时必须展开-拖-再收。放开 collapsed 态的纵向拖动（x 仍贴边），拖完 clamp。
-> 落地：阶段 C1–C9 已实现（C6/C9 列表未改 RecyclerView，见 dev-log）。
+> 落地：阶段 C1–C9 已实现（C6/C9 列表未改 RecyclerView，见 dev-log）；2026-07-19 稳定性补丁对齐了 80 行生产链路、增量列表与 C7 计时。
 
-- **C9 历史落盘与导出**：① 空会话（无确认行且时长 < 10s）停止时不落盘，避免历史堆「00:03 · 暂无字幕摘要」垃圾条目；② 历史详情页加系统分享（`ACTION_SEND`，Markdown 文本），与「不自动写公共 Downloads」边界不冲突（用户主动动作）；③ 历史列表 `LinearLayout` 全量 addView 改 `RecyclerView`（会话多时的性能与 B4 分组一起做亦可）。
+- **C9 历史落盘与导出**：① 空会话（无确认行且时长 < 10s）停止时不落盘，避免历史堆「00:03 · 暂无字幕摘要」垃圾条目；② 历史详情页加系统分享（`ACTION_SEND`，Markdown 文本），与「不自动写公共 Downloads」边界不冲突（用户主动动作）；③ 历史列表 `LinearLayout` 全量 addView 改 `RecyclerView`（会话多时的性能与 B4 分组一起做亦可，**尚未做**）。会话 JSON 由 `TranscriptLogger` 后台单线程写入 `history_v2`，避免确认字幕时阻塞主线程。
 
 ---
 

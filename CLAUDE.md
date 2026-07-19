@@ -60,8 +60,9 @@ CaptureService
 | `CaptureService.kt` | 前台服务和完整实时音频管线 |
 | `GeminiLiveClient.kt` | Gemini Live setup、WebSocket、主动轮换与断线重连 |
 | `PcmProcessor.kt` | 音频重采样和分块 |
-| `SubtitleStabilizer.kt` | 流式字幕稳定、确认与去重 |
+| `SubtitleStabilizer.kt` | 流式字幕稳定、多句确认与去重 |
 | `SubtitleOverlay.kt` | WindowManager 悬浮字幕、拖动、独立暂停与侧边收起 |
+| `TranscriptLogger.kt` | 确认段写入 `history_v2`（后台单线程，避免卡主线程） |
 | `TranslationPlan.kt` | 每模式运行时草稿模型（语言 + 场景引用） |
 | `TranslationPlanStore.kt` | 模式隔离的草稿持久化与旧方案库一次性迁移 |
 | `SceneLibraryStore.kt` | 可编辑场景、模式默认项及初始化模板持久化 |
@@ -120,7 +121,9 @@ GitHub Actions 工作流：`.github/workflows/android-debug.yml`。
 
 - `GeminiLiveClient.buildSetupJson()` 的字段层级严格依赖 Gemini Live 协议，修改前先读 `docs/02-tech-notes.md`。
 - 单连接会被上游 GoAway；连接生命周期操作必须继续串行在 scheduler 单线程，WebSocket 回调不能直接竞争修改 `generation` 或 `ws`。
-- 静音时长时间没有模型输出是正常情况，不能仅凭无字幕判定断线。
+- 静音时长时间没有模型输出是正常情况，不能仅凭无字幕判定断线；运行页「聆听中…」只按译文更新时间派生。
+- `GeminiLiveClient` 发送队列约 20 秒、异常重连约 1 秒 overlap；不要在未明确要求时改成更激进的“只保留 1–2 秒”策略。
+- 确认字幕写历史必须走 `TranscriptLogger` 后台队列，不要把整份会话 JSON 同步写回主线程。
 - MediaProjection 授权会导致 Activity 生命周期切换；必须保留发起授权前的操作快照。
 - `ExposedDropdownMenu + boxBackgroundMode=none` 曾导致启动时 `InflateException`，语言胶囊不要恢复该组合。作为代价，胶囊用 `endIconMode=none`，没有下拉委托，`bindModeLanguageControls` 必须为每个下拉手动接 `setOnClickListener { showDropDown() }`，否则点击不弹选项、语言切不了；改这块时别删这段。
 - Prompt 固定底座只放通用翻译约束，模式层只描述输入来源；会议、旅行、直播等偏好必须放在可编辑场景库中。

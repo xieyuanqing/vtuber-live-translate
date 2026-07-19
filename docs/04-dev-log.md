@@ -14,7 +14,7 @@
 
 **版本**：保持 2.4.0 / 35；只发布 GitHub Actions Debug APK，不创建新 Release。
 
-**验证**：定向单测、编译检查与精确提交 CI。
+**验证**：定向单测与编译检查通过；推送 `c8534c8` 后 GitHub Actions `Android Debug Build` 运行 `29690605781` 成功（`headSha` 精确匹配）；产物 `LiveTranslate-debug-apk`，包名 `com.xyq.livetranslate`，`2.4.0 / 35`，APK v2 签名校验通过。
 
 ---
 
