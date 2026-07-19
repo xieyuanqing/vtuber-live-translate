@@ -46,6 +46,15 @@ internal class SessionContextController(
         interpretationViews.idleContent.findViewById(R.id.tvInterpSessionContextSummary)
     private val interpContextBody: View? =
         interpretationViews.idleContent.findViewById(R.id.interpSessionContextBody)
+    private var videoContextExpanded = false
+    private val videoContextToggle: View? =
+        videoViews.idleContent.findViewById(R.id.rowVideoSessionContextToggle)
+    private val videoContextHeader: TextView? =
+        videoViews.idleContent.findViewById(R.id.tvVideoSessionContextHeader)
+    private val videoContextSummary: TextView? =
+        videoViews.idleContent.findViewById(R.id.tvVideoSessionContextSummary)
+    private val videoContextBody: View? =
+        videoViews.idleContent.findViewById(R.id.videoSessionContextBody)
 
     init {
         check(interpretationViews.videoSessionUrl == null)
@@ -77,6 +86,24 @@ internal class SessionContextController(
             },
         )
         renderInterpContextFold()
+        videoContextToggle?.setOnClickListener {
+            videoContextExpanded = !videoContextExpanded
+            renderVideoContextFold()
+            if (videoContextExpanded) {
+                videoViews.sessionContext.requestFocus()
+            }
+        }
+        val videoWatcher = object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (!videoContextExpanded) renderVideoContextFold()
+                else updateVideoContextSummaryOnly()
+            }
+        }
+        videoViews.sessionContext.addTextChangedListener(videoWatcher)
+        videoViews.videoSessionUrl?.addTextChangedListener(videoWatcher)
+        renderVideoContextFold()
     }
 
     private fun renderInterpContextFold() {
@@ -111,6 +138,33 @@ internal class SessionContextController(
         }
     }
 
+    private fun renderVideoContextFold() {
+        val body = videoContextBody ?: return
+        body.visibility = if (videoContextExpanded) View.VISIBLE else View.GONE
+        updateVideoContextSummaryOnly()
+        videoContextHeader?.text = if (videoContextExpanded) {
+            "本场视频 · 可选"
+        } else {
+            "本场视频 · 可选 ›"
+        }
+    }
+
+    private fun updateVideoContextSummaryOnly() {
+        val contextText = videoViews.sessionContext.text?.toString().orEmpty().trim()
+        val url = videoViews.videoSessionUrl?.text?.toString().orEmpty().trim()
+        val parts = buildList {
+            if (url.isNotEmpty()) add("链接")
+            if (contextText.isNotEmpty()) add("${contextText.length} 字")
+        }
+        if (!videoContextExpanded && parts.isNotEmpty()) {
+            videoContextSummary?.visibility = View.VISIBLE
+            videoContextSummary?.text = "已填 · " + parts.joinToString(" · ")
+        } else {
+            videoContextSummary?.visibility = View.GONE
+            videoContextSummary?.text = ""
+        }
+    }
+
     fun saveState(outState: Bundle) {
         outState.putString(
             STATE_INTERPRETATION_CONTEXT,
@@ -134,7 +188,9 @@ internal class SessionContextController(
         videoViews.videoSessionUrl?.setText(savedState?.getString(STATE_VIDEO_URL).orEmpty())
         // 恢复后仍默认折叠，仅刷新摘要。
         interpContextExpanded = false
+        videoContextExpanded = false
         renderInterpContextFold()
+        renderVideoContextFold()
     }
 
     override fun current(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
@@ -144,9 +200,15 @@ internal class SessionContextController(
     override fun clearAfterSuccessfulStart(mode: TranslationMode) {
         views(mode).sessionContext.setText("")
         if (mode == TranslationMode.VIDEO) videoViews.videoSessionUrl?.setText("")
-        if (mode == TranslationMode.INTERPRETATION) {
-            interpContextExpanded = false
-            renderInterpContextFold()
+        when (mode) {
+            TranslationMode.INTERPRETATION -> {
+                interpContextExpanded = false
+                renderInterpContextFold()
+            }
+            TranslationMode.VIDEO -> {
+                videoContextExpanded = false
+                renderVideoContextFold()
+            }
         }
     }
 

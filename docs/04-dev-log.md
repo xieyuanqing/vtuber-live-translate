@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-19 · UI 去噪阶段 B2：视频页结构改造
+
+视频空闲态对齐同传：场景行 + 横滑 chips + 本场折叠；主 CTA 固定底部；权限卡改为缺权限警告横幅。
+
+- 布局：`videoIdleContent` 改为垂直 LinearLayout（NestedScrollView weight1 + 底部 `btnToggle`）；`cardVideoPlan` 改为场景行；`rowOverlayPermission` 改为警告横幅默认 gone。
+- `ModeHomeController.renderOverlayPermission`：已授权整行 GONE，未授权显示「悬浮字幕未授权」。
+- `SessionContextController` 视频本场折叠与摘要（链接 / 字数）。
+- 新增 `bg_warning_banner` / `bg_warning_dot`。
+
+**版本**：保持 2.3.1 / 34。
+
+**验证**：本地无 SDK，依赖 CI。固定 CTA、折叠与权限横幅需真机确认。
+
+---
+
 ## 2026-07-19 · UI 去噪阶段 B1：同传页结构改造
 
 同传空闲态去噪：去掉「当前场景」大卡与 prompt 原文，场景改为标签 + 摘要 + 单行横滑 chips；本场背景默认折叠。

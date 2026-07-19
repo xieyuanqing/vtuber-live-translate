@@ -284,18 +284,11 @@ internal class ModeHomeController(
     }
 
     private fun renderOverlayPermission(allowed: Boolean) {
-        views.overlayPermissionStatus?.text = if (allowed) {
-            "已授权，可在其他应用上显示字幕"
-        } else {
-            "未授权，开始视频字幕前需要开启"
-        }
-        views.overlayPermissionDot?.let { dot ->
-            ViewCompat.setBackgroundTintList(
-                dot,
-                context.getColorStateList(if (allowed) R.color.success else R.color.error),
-            )
-        }
-        views.overlayPermissionSettings?.visibility = if (allowed) View.GONE else View.VISIBLE
+        // 已授权时整行隐藏，缺权限时显示警告横幅。
+        views.overlayPermissionRow?.visibility = if (allowed) View.GONE else View.VISIBLE
+        if (allowed) return
+        views.overlayPermissionStatus?.text = "悬浮字幕未授权"
+        views.overlayPermissionSettings?.visibility = View.VISIBLE
     }
 
     private fun renderConfirmedTranslations(translations: List<String>) {
