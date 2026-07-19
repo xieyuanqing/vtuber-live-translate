@@ -4,6 +4,55 @@
 
 ---
 
+## 2026-07-19 · UI 去噪阶段 A：文案与图标清理
+
+按 `docs/08-ui-declutter-plan.md` 完成阶段 A（零结构风险）：
+
+- **A1/A2 文案**：清掉用户可见「方案」旧词；同传/视频本场说明改为「只对本场翻译生效」；删除场景库顶部产品边界说明段；`tvInterpAnalyzeStatus` / `tvVideoAnalyzeStatus` 空闲默认文案置空并 `gone`（ID 保留，AI 整理进行中再显示）。视频链接 hint 改为「YouTube 链接（用于 AI 解析背景）」，去掉重复 helper。
+- **A3 图标**：新增 `ic_key_24` / `ic_layers_24` / `ic_sparkle_24` / `ic_info_24` / `ic_add_24`；设置页翻译服务/场景库/AI 内容分析/关于与场景库 FAB 不再复用 App logo。
+- **A4 状态点**：新增 `bg_idle_dot`，同传空闲 pill 改灰点；运行态成功点仍用 `bg_success_dot`。
+- **代码**：`SessionContextController` 增加 `showAnalyzeStatus`，写入状态时恢复可见，避免默认 `gone` 后分析反馈看不见。
+
+**版本**：保持 versionCode 34 / versionName 2.3.1（纯文案与图标，不升版）。
+
+**验证**：布局内用户可见文案无「方案」；设置四行语义图标互不相同；同传空闲点为 idle 灰；`git diff --check` 通过。本容器无 Android SDK，单测/Lint/assemble 依赖 CI。空闲态灰点与 AI 状态显隐需真机确认。
+
+---
+
+## 2026-07-18 · MainActivity 拆分完成（步骤 1–6）
+
+把大型 `MainActivity` 按 `docs/07-mainactivity-refactor.md` 拆成页面 controller 与协调器，行为不变，只改代码归属。
+
+**落地**：
+
+| 步骤 | 提交 | 产物 |
+|---|---|---|
+| 1 历史 | `8332e8b` | `ui/HistoryController` |
+| 2 场景库 | `0a6d836` | `ui/SceneLibraryController` |
+| 3 设置 | `e60ec96` | `ui/SettingsController` |
+| 4 会话 | `ed00289` | `ui/SessionCoordinator` + `PendingSessionSnapshot` |
+| 5 主页/本场 | `1171ed7` | `ui/ModeHomePages`、`SessionContextController`、`UiRuntimeStatus` |
+| 6 导航 | `bca032c` | `ui/MainNavigator` |
+
+相关护栏：`3e44318` 会话启动快照边界测试；`24cf8f9` 场景模式重复渲染修复。
+
+**结果形态**：
+
+- `MainActivity` 约 269 行，只保留生命周期、`ActivityResultLauncher`、controller 接线、300 ms `UiRuntimeStatus` 分发、窄 `SessionHost` 与测试入口。
+- 每个主页 View 单一绑定真源；同传/视频 `ModeHomeViews` 由主页与本场上下文共享。
+- 权限/投屏前冻结内容与模式快照；Service 侧仍在真正启动时解析访问与运行参数。
+- 未改 `res/layout/`、未升版本号、未改实时翻译管线，也未实现账号/订阅等 SaaS 占位。
+
+**版本**：保持 versionCode 34 / versionName 2.3.1（纯结构重构，不升版）。
+
+**验证**：
+
+- 各步独立提交；`main` 最新 `bca032c` 对应 Android Debug CI 成功。
+- 真机冒烟通过：四 tab、场景库、历史详情、设置子页、旋转/重建恢复、权限拒绝、同传启动、视频投屏取消、overlay 设置入口。
+- 施工文档状态已改为「已完成」，见 `docs/07-mainactivity-refactor.md`。
+
+---
+
 ## 2026-07-18 · v2.3.1 修复语言胶囊点击不弹、无法切换语言
 
 现场发现主页语言胶囊点了没反应，源/目标语言根本切不了。排查确认是**历史遗留缺陷**（`8ea4faa` 基线即存在，非本轮合并引入）：
