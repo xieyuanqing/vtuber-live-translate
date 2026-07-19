@@ -51,23 +51,24 @@
                     android:textAllCaps="false" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
+            <LinearLayout
+                android:id="@+id/sceneLibraryList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:orientation="vertical" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnResetSceneLibrary"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target"
-                android:layout_gravity="end"
-                android:layout_marginTop="@dimen/space_12"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/space_8"
                 android:text="恢复该模式默认场景"
                 android:textAllCaps="false"
-                android:textColor="@color/brand" />
-
-            <LinearLayout
-                android:id="@+id/sceneLibraryList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:orientation="vertical" />
+                android:textColor="@color/text_muted"
+                android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
 

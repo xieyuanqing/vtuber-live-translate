@@ -258,7 +258,7 @@ class MainActivityStartupTest {
             .first {
                 it.findViewById<android.widget.TextView>(R.id.tvSceneName).text.toString() == created.label
             }
-        card.findViewById<View>(R.id.btnUseScene).performClick()
+        card.performClick()
 
         assertEquals(created.id, TranslationPlanStore.loadDraft(activity, mode).scenePresetId)
         val group = activity.findViewById<com.google.android.material.chip.ChipGroup>(

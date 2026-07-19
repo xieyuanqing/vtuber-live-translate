@@ -4,147 +4,86 @@
     style="@style/LuminousCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="@dimen/space_12"
+    android:layout_marginBottom="@dimen/space_8"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardCornerRadius="@dimen/card_radius">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="@dimen/space_16">
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/space_12"
+        android:paddingVertical="@dimen/space_12">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/tvSceneIcon"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_status_pill"
-                android:gravity="center"
-                android:text="场"
-                android:textColor="@color/brand"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_12"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/tvSceneName"
                     style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:text="场景名称" />
 
-                <LinearLayout
+                <!-- 复用旧 chip ID，改为紧凑标记。 -->
+                <TextView
+                    android:id="@+id/chipSceneInUse"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_marginStart="@dimen/space_8"
+                    android:text="✓"
+                    android:textColor="@color/brand"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipSceneInUse"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:checkable="false"
-                        android:clickable="false"
-                        android:text="使用中"
-                        android:textColor="@color/brand_on"
-                        android:visibility="gone"
-                        app:chipBackgroundColor="@color/brand"
-                        app:chipMinHeight="24dp"
-                        app:chipStrokeWidth="0dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipSceneDefault"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/grid_4"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:checkable="false"
-                        android:clickable="false"
-                        android:text="默认"
-                        android:textColor="@color/brand"
-                        android:visibility="gone"
-                        app:chipBackgroundColor="@color/primary_fixed"
-                        app:chipMinHeight="24dp"
-                        app:chipStrokeWidth="0dp" />
-                </LinearLayout>
+                <TextView
+                    android:id="@+id/chipSceneDefault"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:text="★"
+                    android:textColor="@color/warning"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvSceneInstruction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/grid_4"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="场景提示词"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvSceneInstruction"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:maxLines="4"
-            android:text="场景提示词"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:layout_marginBottom="@dimen/space_8" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnUseScene"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/touch_target"
-                android:text="使用"
-                android:textAllCaps="false"
-                android:textColor="@color/brand" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSetDefaultScene"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/touch_target"
-                android:text="设为默认"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEditScene"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/touch_target"
-                android:text="编辑"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeleteScene"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/touch_target"
-                android:text="删除"
-                android:textAllCaps="false"
-                android:textColor="@color/error" />
-        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnSceneMore"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="更多操作"
+            android:padding="12dp"
+            android:src="@drawable/ic_more_vert_24"
+            app:tint="@color/text_muted" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

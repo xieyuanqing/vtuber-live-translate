@@ -4,11 +4,12 @@ import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
@@ -124,66 +125,84 @@ internal class SceneLibraryController(
         isInUse: Boolean,
     ): View {
         val card = layoutInflater.inflate(R.layout.item_scene_preset, views.list, false)
-        card.findViewById<TextView>(R.id.tvSceneIcon).text =
-            scene.label.firstOrNull()?.toString() ?: "场"
         card.findViewById<TextView>(R.id.tvSceneName).text = scene.label
-        card.findViewById<TextView>(R.id.tvSceneInstruction).text = scene.instruction
-        card.findViewById<Chip>(R.id.chipSceneDefault).visibility =
+        card.findViewById<TextView>(R.id.tvSceneInstruction).text =
+            scene.instruction.replace('\n', ' ')
+        card.findViewById<TextView>(R.id.chipSceneDefault).visibility =
             if (isDefault) View.VISIBLE else View.GONE
-        card.findViewById<Chip>(R.id.chipSceneInUse).visibility =
+        card.findViewById<TextView>(R.id.chipSceneInUse).visibility =
             if (isInUse) View.VISIBLE else View.GONE
-        card.findViewById<MaterialButton>(R.id.btnUseScene).apply {
-            visibility = if (isInUse) View.GONE else View.VISIBLE
-            setOnClickListener {
-                val draft = TranslationPlanStore.loadDraft(context, mode)
-                TranslationPlanStore.saveDraft(
-                    context,
-                    draft.copy(scenePresetId = scene.id),
-                )
-                notifySceneChanged()
-                toast("已使用：${scene.label}")
-            }
-        }
-        card.findViewById<MaterialButton>(R.id.btnSetDefaultScene).apply {
-            visibility = if (isDefault) View.GONE else View.VISIBLE
-            setOnClickListener {
-                if (SceneLibraryStore.setDefault(context, mode, scene.id)) {
-                    val draft = TranslationPlanStore.loadDraft(context, mode)
-                    TranslationPlanStore.saveDraft(
-                        context,
-                        draft.copy(scenePresetId = scene.id),
-                    )
-                    notifySceneChanged()
-                    toast("已设为${mode.label}默认场景")
-                } else {
-                    toast("场景库数据异常，请先恢复模板")
-                }
-            }
-        }
-        card.findViewById<MaterialButton>(R.id.btnEditScene).setOnClickListener {
-            showSceneEditor(scene)
-        }
-        card.findViewById<MaterialButton>(R.id.btnDeleteScene).setOnClickListener {
-            MaterialAlertDialogBuilder(context)
-                .setTitle("删除“${scene.label}”？")
-                .setMessage("正在使用该场景的模式下次启动会回退到当前默认场景。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("删除") { _, _ ->
-                    if (SceneLibraryStore.delete(context, mode, scene.id)) {
-                        notifySceneChanged()
-                        toast("已删除：${scene.label}")
-                    } else {
-                        val message = if (SceneLibraryStore.list(context, mode).size <= 1) {
-                            "每种模式至少保留一个场景"
-                        } else {
-                            "场景库数据异常，请先恢复模板"
+        // 整行点击 = 使用该场景。
+        card.setOnClickListener { useScene(scene) }
+        card.findViewById<ImageButton>(R.id.btnSceneMore).setOnClickListener { anchor ->
+            PopupMenu(context, anchor).apply {
+                menu.add(0, 1, 0, "编辑")
+                if (!isDefault) menu.add(0, 2, 1, "设为默认")
+                menu.add(0, 3, 2, "删除")
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        1 -> {
+                            showSceneEditor(scene)
+                            true
                         }
-                        toast(message)
+                        2 -> {
+                            setDefaultScene(scene)
+                            true
+                        }
+                        3 -> {
+                            confirmDeleteScene(scene)
+                            true
+                        }
+                        else -> false
                     }
                 }
-                .show()
+                show()
+            }
         }
         return card
+    }
+
+    private fun useScene(scene: ScenePromptPreset) {
+        val draft = TranslationPlanStore.loadDraft(context, mode)
+        if (draft.scenePresetId == scene.id) {
+            toast("当前已使用：${scene.label}")
+            return
+        }
+        TranslationPlanStore.saveDraft(context, draft.copy(scenePresetId = scene.id))
+        notifySceneChanged()
+        toast("已使用：${scene.label}")
+    }
+
+    private fun setDefaultScene(scene: ScenePromptPreset) {
+        if (SceneLibraryStore.setDefault(context, mode, scene.id)) {
+            val draft = TranslationPlanStore.loadDraft(context, mode)
+            TranslationPlanStore.saveDraft(context, draft.copy(scenePresetId = scene.id))
+            notifySceneChanged()
+            toast("已设为${mode.label}默认场景")
+        } else {
+            toast("场景库数据异常，请先恢复模板")
+        }
+    }
+
+    private fun confirmDeleteScene(scene: ScenePromptPreset) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle("删除“${scene.label}”？")
+            .setMessage("正在使用该场景的模式下次启动会回退到当前默认场景。")
+            .setNegativeButton("取消", null)
+            .setPositiveButton("删除") { _, _ ->
+                if (SceneLibraryStore.delete(context, mode, scene.id)) {
+                    notifySceneChanged()
+                    toast("已删除：${scene.label}")
+                } else {
+                    val message = if (SceneLibraryStore.list(context, mode).size <= 1) {
+                        "每种模式至少保留一个场景"
+                    } else {
+                        "场景库数据异常，请先恢复模板"
+                    }
+                    toast(message)
+                }
+            }
+            .show()
     }
 
     private fun showSceneEditor(existing: ScenePromptPreset? = null) {

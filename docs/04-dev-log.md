@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-19 · UI 去噪阶段 B3：场景库列表选择器化
+
+场景库从大卡操作区改为紧凑行选择器：整行点选使用，更多操作用 ⋯ 菜单。
+
+- `item_scene_preset`：删头像与四常驻按钮；名称 + 单行提示词 + ✓/★ 标记 + `btnSceneMore`。
+- `page_scene_library`：恢复默认移到列表底部小字。
+- `SceneLibraryController`：行点击 `useScene`；PopupMenu 编辑/设默认/删除。
+- 测试 `sceneUseRefreshesHomeDependentsThroughControllerCallback` 改为 `card.performClick()`。
+
+**版本**：保持 2.3.1 / 34。
+
+**验证**：本地无 SDK，依赖 CI。PopupMenu 与密度需真机确认。
+
+---
+
 ## 2026-07-19 · UI 去噪阶段 B2：视频页结构改造
 
 视频空闲态对齐同传：场景行 + 横滑 chips + 本场折叠；主 CTA 固定底部；权限卡改为缺权限警告横幅。
