@@ -20,6 +20,7 @@ import com.xyq.livetranslate.TranslationPlanStore
 internal enum class PendingSessionStage {
     READY,
     WAITING_PERMISSION,
+    WAITING_OVERLAY,
     WAITING_PROJECTION,
 }
 
@@ -282,7 +283,8 @@ internal class SessionCoordinator(
         pendingSnapshot = ready
         if (ready.captureMode == StatusBus.MODE_VIDEO) {
             if (!host.canDrawOverlays()) {
-                host.toast("请开启悬浮窗权限，开启后回到本页再点开始")
+                pendingSnapshot = ready.copy(stage = PendingSessionStage.WAITING_OVERLAY)
+                host.toast("请开启悬浮窗权限，返回后将自动继续")
                 host.openOverlaySettings()
                 return
             }
@@ -296,8 +298,22 @@ internal class SessionCoordinator(
         consumeStartedSession(ready)
     }
 
+    /** onResume：悬浮窗权限返回后自动续跑。 */
+    fun onHostResume() {
+        val snapshot = pendingSnapshot
+            ?.takeIf {
+                it.captureMode == StatusBus.MODE_VIDEO &&
+                    it.stage == PendingSessionStage.WAITING_OVERLAY
+            }
+            ?: return
+        if (!host.canDrawOverlays()) return
+        val ready = snapshot.copy(stage = PendingSessionStage.READY)
+        pendingSnapshot = ready
+        continueStart(ready, returningFromPermissionRequest = false)
+    }
+
     private fun consumeStartedSession(snapshot: PendingSessionSnapshot) {
-        requireSessionContextAccess().clearAfterSuccessfulStart(promptMode(snapshot.captureMode))
+        // C2：启动成功后保留本场上下文，便于断线/误停后重开；由主页折叠行的 × 手动清除。
         if (pendingSnapshot == snapshot || pendingSnapshot?.captureMode == snapshot.captureMode) {
             pendingSnapshot = null
         }

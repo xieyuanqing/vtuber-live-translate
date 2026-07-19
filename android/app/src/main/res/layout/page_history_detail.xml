@@ -31,12 +31,21 @@
                 android:text="历史详情" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareHistory"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="分享"
+                android:textColor="@color/brand" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCopyHistory"
                 style="@style/LuminousSecondaryButton"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:layout_marginStart="@dimen/space_8"
-                android:text="复制全文" />
+                android:layout_marginStart="@dimen/space_4"
+                android:text="复制" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView

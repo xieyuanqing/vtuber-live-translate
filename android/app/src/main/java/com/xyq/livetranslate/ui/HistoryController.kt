@@ -3,6 +3,7 @@ package com.xyq.livetranslate.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
@@ -29,6 +30,7 @@ internal data class HistoryViews(
     val emptyText: TextView,
     val list: LinearLayout,
     val detailTitle: TextView,
+    val shareButton: Button,
     val copyButton: Button,
     val detailText: TextView,
     val detailMeta: TextView,
@@ -45,6 +47,7 @@ internal data class HistoryViews(
             emptyText = root.findViewById(R.id.tvHistoryEmpty),
             list = root.findViewById(R.id.historyList),
             detailTitle = root.findViewById(R.id.tvHistoryTitle),
+            shareButton = root.findViewById(R.id.btnShareHistory),
             copyButton = root.findViewById(R.id.btnCopyHistory),
             detailText = root.findViewById(R.id.tvHistoryDetail),
             detailMeta = root.findViewById(R.id.tvHistoryDetailMeta),
@@ -91,6 +94,19 @@ internal class HistoryController(
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("transcript", text))
             toast("已复制全文")
+        }
+        views.shareButton.setOnClickListener {
+            val text = views.detailText.text.toString()
+            if (text.isBlank()) {
+                toast("暂无可分享内容")
+                return@setOnClickListener
+            }
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, views.detailTitle.text.toString())
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+            context.startActivity(Intent.createChooser(send, "分享历史记录"))
         }
     }
 

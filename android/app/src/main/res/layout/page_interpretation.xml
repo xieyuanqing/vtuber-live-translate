@@ -60,12 +60,14 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="@dimen/space_8"
-                    android:text="→"
+                    android:id="@+id/btnInterpSwapLang"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:text="⇄"
                     android:textColor="@color/brand"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -260,6 +262,16 @@
                             android:textColor="@color/text_muted"
                             android:textSize="12sp"
                             android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/btnInterpClearSessionContext"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:text="×"
+                            android:textColor="@color/text_muted"
+                            android:textSize="20sp"
+                            android:visibility="gone" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -269,17 +281,9 @@
                         android:orientation="vertical"
                         android:visibility="gone">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/grid_4"
-                            android:text="只对本场翻译生效"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp" />
-
                         <com.google.android.material.textfield.TextInputLayout
                             style="@style/Field"
-                            android:layout_marginTop="@dimen/space_12"
+                            android:layout_marginTop="@dimen/space_8"
                             android:hint="本场背景与资料"
                             app:helperText="例如现场主题、说话人、专名提示">
 
@@ -500,15 +504,32 @@
             </com.google.android.material.card.MaterialCardView>
         </androidx.core.widget.NestedScrollView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnInterpStop"
-            style="@style/LuminousDangerButton"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="@dimen/primary_action_height"
+            android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_12"
-            android:text="停止同传"
-            app:icon="@drawable/ic_stop_white_24"
-            app:iconGravity="textStart"
-            app:iconPadding="@dimen/space_8" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInterpPause"
+                style="@style/LuminousSecondaryButton"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/primary_action_height"
+                android:layout_marginEnd="@dimen/space_8"
+                android:layout_weight="1"
+                android:text="暂停" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInterpStop"
+                style="@style/LuminousDangerButton"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/primary_action_height"
+                android:layout_weight="1"
+                android:text="停止同传"
+                app:icon="@drawable/ic_stop_white_24"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/space_8" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

@@ -180,6 +180,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (::sessionCoordinator.isInitialized) {
+            sessionCoordinator.onHostResume()
+        }
         if (::modeHomeControllers.isInitialized) {
             modeHomeControllers.values.forEach(ModeHomeController::refreshConfiguration)
         }

@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-07-19 · UI 交互增强阶段 C（C1–C9）
+
+按 `docs/08` 完成阶段 C 主要交互项（C6 列表未改 RecyclerView，改为全量展示 StatusBus 确认行并自动滚底）。
+
+- **C1** 运行页 `btnInterpPause` / `btnVideoPause`，读 `StatusBus.paused` 显示暂停/继续。
+- **C2** 启动成功不再 `clearAfterSuccessfulStart`；折叠行加 × 清除；去掉「只对本场翻译生效」说明。
+- **C3** 停止按钮弹确认框。
+- **C4** `PendingSessionStage.WAITING_OVERLAY` + `onHostResume` 授权后自动续跑。
+- **C5** 语言胶囊 `⇄` 交换源/目标；`auto` 源禁用并 toast。
+- **C6** 确认行展示上限由 6→随 StatusBus 80；新字幕尽量滚底。
+- **C7** 运行态派生「静音中 / 聆听中…」（电平与 `lastSubtitleAtMs`）。
+- **C8** 悬浮窗收起态可纵向拖动，x 贴边。
+- **C9** 空会话（无字幕且 <10s）不落盘；历史详情加系统分享。历史列表 RecyclerView 未做（仍 LinearLayout + B4 分组）。
+
+**版本**：保持 2.3.1 / 34。
+
+**验证**：本地无 SDK，依赖 CI；暂停/确认停止/交换/折叠清除/悬浮窗拖动/分享需真机确认。
+
+---
+
 ## 2026-07-19 · UI 去噪阶段 B5：设置页分组合并
 
 设置页合并为「翻译 / 系统」两组，降低分组噪声。

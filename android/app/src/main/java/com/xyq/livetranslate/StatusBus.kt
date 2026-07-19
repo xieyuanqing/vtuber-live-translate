@@ -13,6 +13,7 @@ data class TranslationSessionSnapshot(
     val confirmedTranslations: List<String> = emptyList(),
     val currentTranslation: String = "",
     val sourceTail: String = "",
+    val lastSubtitleAtMs: Long = 0L,
 ) {
     val isActive: Boolean get() = startedAtMs > 0L
 }
@@ -78,9 +79,10 @@ object StatusBus {
         sessionRef.updateAndGet { old ->
             old.copy(
                 startedAtMs = old.startedAtMs.takeIf { it > 0L } ?: System.currentTimeMillis(),
-                confirmedTranslations = confirmed.takeLast(20).toList(),
+                confirmedTranslations = confirmed.takeLast(80).toList(),
                 currentTranslation = current.trim(),
                 sourceTail = source.trim(),
+                lastSubtitleAtMs = System.currentTimeMillis(),
             )
         }
     }
@@ -90,6 +92,7 @@ object StatusBus {
             old.copy(
                 startedAtMs = old.startedAtMs.takeIf { it > 0L } ?: System.currentTimeMillis(),
                 sourceTail = source.trim(),
+                lastSubtitleAtMs = System.currentTimeMillis(),
             )
         }
     }

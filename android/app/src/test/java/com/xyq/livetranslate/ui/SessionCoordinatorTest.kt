@@ -62,7 +62,7 @@ class SessionCoordinatorTest {
         coordinator.onAudioPermissionResult()
 
         assertCaptureIntentMatches(frozen, host.startedForegroundServices.single())
-        assertEquals(listOf(TranslationMode.INTERPRETATION), contexts.clearedModes)
+        assertTrue(contexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(coordinator.pendingSnapshotForTest())
     }
 
@@ -88,7 +88,7 @@ class SessionCoordinatorTest {
         restored.onAudioPermissionResult()
 
         assertCaptureIntentMatches(frozen, restoredHost.startedForegroundServices.single())
-        assertEquals(listOf(TranslationMode.INTERPRETATION), restoredContexts.clearedModes)
+        assertTrue(restoredContexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(restored.pendingSnapshotForTest())
     }
 
@@ -150,7 +150,7 @@ class SessionCoordinatorTest {
         assertCaptureIntentMatches(frozen, started, includeProjection = true)
         assertEquals(Activity.RESULT_OK, started.getIntExtra(CaptureService.EXTRA_RESULT_CODE, -1))
         assertNotNull(started.getParcelableExtra<Intent>(CaptureService.EXTRA_RESULT_DATA))
-        assertEquals(listOf(TranslationMode.VIDEO), restoredContexts.clearedModes)
+        assertTrue(restoredContexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(restored.pendingSnapshotForTest())
     }
 
@@ -165,6 +165,31 @@ class SessionCoordinatorTest {
         coordinator.beginPreparedSessionForTest(frozen)
 
         assertCaptureIntentMatches(frozen, host.startedForegroundServices.single())
+    }
+
+
+    @Test
+    fun waitingOverlayResumesWhenPermissionGrantedOnHostResume() {
+        val host = FakeSessionHost().apply {
+            granted += Manifest.permission.RECORD_AUDIO
+            overlayAllowed = false
+        }
+        val coordinator = coordinator(host)
+        val frozen = snapshot(
+            captureMode = StatusBus.MODE_VIDEO,
+            context = "overlay-wait",
+            title = "video-title",
+        )
+        coordinator.beginPreparedSessionForTest(frozen)
+        assertEquals(1, host.overlaySettingsOpened)
+        assertEquals(PendingSessionStage.WAITING_OVERLAY, coordinator.pendingSnapshotForTest()?.stage)
+        assertTrue(host.projectionLaunches.isEmpty())
+
+        host.overlayAllowed = true
+        coordinator.onHostResume()
+
+        assertEquals(1, host.projectionLaunches.size)
+        assertEquals(PendingSessionStage.WAITING_PROJECTION, coordinator.pendingSnapshotForTest()?.stage)
     }
 
     private fun coordinator(

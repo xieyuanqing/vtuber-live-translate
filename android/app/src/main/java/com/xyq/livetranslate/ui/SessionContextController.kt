@@ -55,6 +55,10 @@ internal class SessionContextController(
         videoViews.idleContent.findViewById(R.id.tvVideoSessionContextSummary)
     private val videoContextBody: View? =
         videoViews.idleContent.findViewById(R.id.videoSessionContextBody)
+    private val interpClearButton: View? =
+        interpretationViews.idleContent.findViewById(R.id.btnInterpClearSessionContext)
+    private val videoClearButton: View? =
+        videoViews.idleContent.findViewById(R.id.btnVideoClearSessionContext)
 
     init {
         check(interpretationViews.videoSessionUrl == null)
@@ -103,6 +107,19 @@ internal class SessionContextController(
         }
         videoViews.sessionContext.addTextChangedListener(videoWatcher)
         videoViews.videoSessionUrl?.addTextChangedListener(videoWatcher)
+        interpClearButton?.setOnClickListener {
+            interpretationViews.sessionContext.setText("")
+            showAnalyzeStatus(interpretationViews.analyzeContextStatus, "")
+            renderInterpContextFold()
+            toast("已清除本场背景")
+        }
+        videoClearButton?.setOnClickListener {
+            videoViews.sessionContext.setText("")
+            videoViews.videoSessionUrl?.setText("")
+            showAnalyzeStatus(videoViews.analyzeContextStatus, "")
+            renderVideoContextFold()
+            toast("已清除本场视频资料")
+        }
         renderVideoContextFold()
     }
 
@@ -136,6 +153,7 @@ internal class SessionContextController(
             interpContextSummary?.visibility = View.GONE
             interpContextSummary?.text = ""
         }
+        interpClearButton?.visibility = if (count > 0) View.VISIBLE else View.GONE
     }
 
     private fun renderVideoContextFold() {
@@ -163,6 +181,8 @@ internal class SessionContextController(
             videoContextSummary?.visibility = View.GONE
             videoContextSummary?.text = ""
         }
+        videoClearButton?.visibility =
+            if (contextText.isNotEmpty() || url.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     fun saveState(outState: Bundle) {

@@ -95,10 +95,17 @@ class TranscriptLogger(
             commitTranslation(pendingTranslation)
         }
         closed = true
+        val endedAt = System.currentTimeMillis()
         session = session.copy(
-            endedAt = System.currentTimeMillis(),
+            endedAt = endedAt,
             segments = segments.toList(),
         )
+        // C9：无确认字幕且时长 < 10s 的空会话不落盘，并删掉 init 时的占位文件。
+        val durationMs = (endedAt - startedAt).coerceAtLeast(0L)
+        if (segments.isEmpty() && durationMs < 10_000L) {
+            HistoryStore.delete(context, session.id)
+            return
+        }
         HistoryStore.save(context, session)
     }
 }

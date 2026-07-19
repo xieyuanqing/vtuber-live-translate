@@ -1,18 +1,23 @@
 package com.xyq.livetranslate.ui
 
 import android.content.Context
+import android.content.Intent
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
+import com.xyq.livetranslate.CaptureService
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.SceneLibraryStore
+import com.xyq.livetranslate.StatusBus
 import com.xyq.livetranslate.TranslationLanguageCatalog
 import com.xyq.livetranslate.TranslationMode
 import com.xyq.livetranslate.TranslationPlanStore
@@ -34,6 +39,7 @@ internal data class ModeHomeViews(
     val audioLevel: TextView,
     val audioProgress: ProgressBar,
     val startButton: View,
+    val pauseButton: MaterialButton,
     val stopButton: MaterialButton,
     val targetLanguageLabel: TextView,
     val currentTranslation: TextView,
@@ -41,6 +47,7 @@ internal data class ModeHomeViews(
     val transcriptPath: TextView,
     val sourceLanguage: MaterialAutoCompleteTextView,
     val targetLanguage: MaterialAutoCompleteTextView,
+    val languageSwapButton: TextView,
     val planCard: View,
     val planSummary: TextView,
     val profileSummary: TextView,
@@ -71,6 +78,7 @@ internal data class ModeHomeViews(
                 audioLevel = root.findViewById(R.id.tvInterpAudioLevel),
                 audioProgress = root.findViewById(R.id.pbInterpAudio),
                 startButton = root.findViewById(R.id.btnInterpToggle),
+                pauseButton = root.findViewById(R.id.btnInterpPause),
                 stopButton = root.findViewById(R.id.btnInterpStop),
                 targetLanguageLabel = root.findViewById(R.id.tvInterpTargetLanguageLabel),
                 currentTranslation = root.findViewById(R.id.tvInterpZh),
@@ -78,6 +86,7 @@ internal data class ModeHomeViews(
                 transcriptPath = root.findViewById(R.id.tvInterpTranscriptPath),
                 sourceLanguage = root.findViewById(R.id.acInterpSourceLang),
                 targetLanguage = root.findViewById(R.id.acInterpTargetLang),
+                languageSwapButton = root.findViewById(R.id.btnInterpSwapLang),
                 planCard = root.findViewById(R.id.cardInterpPlan),
                 planSummary = root.findViewById(R.id.tvInterpPlanSummary),
                 profileSummary = root.findViewById(R.id.tvInterpProfile),
@@ -106,6 +115,7 @@ internal data class ModeHomeViews(
                 audioLevel = root.findViewById(R.id.tvAudioLevel),
                 audioProgress = root.findViewById(R.id.pbAudio),
                 startButton = root.findViewById(R.id.btnToggle),
+                pauseButton = root.findViewById(R.id.btnVideoPause),
                 stopButton = root.findViewById(R.id.btnVideoStop),
                 targetLanguageLabel = root.findViewById(R.id.tvVideoTargetLanguageLabel),
                 currentTranslation = root.findViewById(R.id.tvLiveZh),
@@ -113,6 +123,7 @@ internal data class ModeHomeViews(
                 transcriptPath = root.findViewById(R.id.tvTranscriptPath),
                 sourceLanguage = root.findViewById(R.id.acVideoSourceLang),
                 targetLanguage = root.findViewById(R.id.acVideoTargetLang),
+                languageSwapButton = root.findViewById(R.id.btnVideoSwapLang),
                 planCard = root.findViewById(R.id.cardVideoPlan),
                 planSummary = root.findViewById(R.id.tvVideoPlanSummary),
                 profileSummary = root.findViewById(R.id.tvCurrentProfile),
@@ -150,10 +161,56 @@ internal class ModeHomeController(
         views.planCard.setOnClickListener { openSceneLibrary(mode, returnTabId) }
         views.openSceneLibraryButton.setOnClickListener { openSceneLibrary(mode, returnTabId) }
         views.startButton.setOnClickListener { toggleSession(captureMode) }
-        views.stopButton.setOnClickListener { toggleSession(captureMode) }
+        views.pauseButton.setOnClickListener {
+            context.startService(
+                Intent(context, CaptureService::class.java).setAction(CaptureService.ACTION_TOGGLE_PAUSE),
+            )
+        }
+        views.stopButton.setOnClickListener { confirmStop() }
+        views.languageSwapButton.setOnClickListener { swapLanguages() }
         views.overlayPermissionRow?.setOnClickListener { openOverlaySettings() }
         views.overlayPermissionSettings?.setOnClickListener { openOverlaySettings() }
         refreshConfiguration()
+    }
+
+    private fun confirmStop() {
+        val label = if (mode == TranslationMode.INTERPRETATION) "同传" else "视频字幕"
+        MaterialAlertDialogBuilder(context)
+            .setTitle("停止$label？")
+            .setMessage("停止后需要重新开始会话。")
+            .setNegativeButton("取消", null)
+            .setPositiveButton("停止") { _, _ -> toggleSession(captureMode) }
+            .show()
+    }
+
+    private fun swapLanguages() {
+        if (StatusBus.serviceRunning) {
+            Toast.makeText(context, "运行中无法切换语言", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val plan = TranslationPlanStore.loadDraft(context, mode)
+        if (plan.sourceLanguageCode.equals("auto", ignoreCase = true)) {
+            Toast.makeText(context, "源语言为自动检测时无法交换", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val sourceAsTarget = TranslationLanguageCatalog.targets.any {
+            it.code.equals(plan.sourceLanguageCode, ignoreCase = true)
+        }
+        val targetAsSource = TranslationLanguageCatalog.sources.any {
+            it.code.equals(plan.targetLanguageCode, ignoreCase = true)
+        }
+        if (!sourceAsTarget || !targetAsSource) {
+            Toast.makeText(context, "当前语言方向不支持交换", Toast.LENGTH_SHORT).show()
+            return
+        }
+        TranslationPlanStore.saveDraft(
+            context,
+            plan.copy(
+                sourceLanguageCode = plan.targetLanguageCode,
+                targetLanguageCode = plan.sourceLanguageCode,
+            ),
+        )
+        renderLanguageControls()
     }
 
     fun refreshConfiguration() {
@@ -260,15 +317,27 @@ internal class ModeHomeController(
             views.runningStatusDot,
             context.getColorStateList(status.activeStatusColorRes),
         )
+        views.pauseButton.text = if (status.paused) "继续" else "暂停"
         if (mode == TranslationMode.VIDEO) {
             views.runningSubStatus?.text = buildString {
                 append("其他应用音频 · ")
                 append(if (status.overlayAllowed) "悬浮字幕已开启" else "悬浮字幕未授权")
                 if (status.currentKeyLabel.isNotEmpty()) append(" · ").append(status.currentKeyLabel)
+                val hint = listeningHint(status)
+                if (hint != null) append(" · ").append(hint)
+            }
+        } else {
+            // 同传运行态副状态：静音/聆听提示（C7）。
+            views.runningMeta.text = buildString {
+                append("$direction · $scene")
+                val hint = listeningHint(status)
+                if (hint != null) append(" · ").append(hint)
             }
         }
         views.elapsed.text = formatRunningElapsed(status.startedAtMs, status.sampledAtMs)
-        views.runningMeta.text = "$direction · $scene"
+        if (mode == TranslationMode.VIDEO) {
+            views.runningMeta.text = "$direction · $scene"
+        }
         views.audioLevel.text = "${status.audioLevelPct}%"
         views.audioProgress.progress = status.audioLevelPct
         renderConfirmedTranslations(status.confirmedTranslations)
@@ -292,7 +361,8 @@ internal class ModeHomeController(
     }
 
     private fun renderConfirmedTranslations(translations: List<String>) {
-        val visible = translations.map(String::trim).filter(String::isNotEmpty).takeLast(6)
+        // 展示 StatusBus 提供的全部确认行（当前上限 80），不再截成 6 条。
+        val visible = translations.map(String::trim).filter(String::isNotEmpty)
         val renderKey = visible.joinToString("\u0000")
         if (views.confirmedList.tag == renderKey) return
         views.confirmedList.tag = renderKey
@@ -302,15 +372,36 @@ internal class ModeHomeController(
             return
         }
         visible.forEachIndexed { index, line ->
+            val ageBoost = (index + 1).toFloat() / visible.size
             views.confirmedList.addView(
                 createConfirmedTranslationCard(
                     text = line,
                     textSize = 16f,
-                    alpha = 0.48f + (index + 1).toFloat() / visible.size * 0.34f,
+                    alpha = 0.48f + ageBoost * 0.34f,
                     colorRes = R.color.text_secondary,
                 ),
             )
         }
+        // 新字幕到来时尽量滚到底部（父 NestedScrollView 存在时生效）。
+        views.confirmedList.post {
+            var parent = views.confirmedList.parent
+            while (parent is View) {
+                if (parent is android.widget.ScrollView || parent is androidx.core.widget.NestedScrollView) {
+                    parent.fullScroll(View.FOCUS_DOWN)
+                    break
+                }
+                parent = parent.parent
+            }
+        }
+    }
+
+    private fun listeningHint(status: UiRuntimeStatus): String? {
+        if (status.paused) return null
+        if (status.connState != "ready") return null
+        if (status.audioLevelPct <= 2) return "静音中"
+        val lastChange = status.lastSubtitleAtMs
+        if (lastChange > 0L && status.sampledAtMs - lastChange >= 8_000L) return "聆听中…"
+        return null
     }
 
     private fun createConfirmedTranslationCard(

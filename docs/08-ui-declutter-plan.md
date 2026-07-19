@@ -6,7 +6,7 @@
 
 基线版本：v2.3.1 / versionCode 34（2026-07-18 的界面截图诊断）。若执行时版本已前进，先核对涉及的文件与 View ID 是否仍然存在，行号仅供定位参考，以实际代码为准。
 
-**阶段 A/B 状态：已完成（2026-07-19）**。阶段 C 按需挑选。
+**阶段 A/B/C 状态：已完成（2026-07-19）**。C6 未上 RecyclerView（全量 LinearLayout + 滚底）；C9 历史列表 RecyclerView 未做。
 
 ---
 
@@ -188,6 +188,8 @@
 - **C6 运行态字幕完整回看**：现状 `renderConfirmedTranslations` 只保留最后 6 条（`takeLast(6)`），长会话无法回看。确认行列表改 `RecyclerView`：全量（或分页）展示、自动吸底、用户上滑时暂停跟随、回到底部恢复。需要 `StatusBus` 快照承载更多确认行或提供增量通道。
 - **C7 静音/聆听状态提示**：静音期长时间无输出是正常情况（`CLAUDE.md`），但界面无任何传达，用户会疑心断线。在运行态副状态派生显示：电平持续≈0 →「静音中」；有电平但超过 N 秒无新字幕 →「聆听中…」。只改 UI 派生逻辑，不动连接判定。
 - **C8 悬浮字幕收起态可纵向拖动**：`SubtitleOverlay.dragListener` 现为 `moved && !collapsed`，收起胶囊 y 锁死，挡住目标 App 控件时必须展开-拖-再收。放开 collapsed 态的纵向拖动（x 仍贴边），拖完 clamp。
+> 落地：阶段 C1–C9 已实现（C6/C9 列表未改 RecyclerView，见 dev-log）。
+
 - **C9 历史落盘与导出**：① 空会话（无确认行且时长 < 10s）停止时不落盘，避免历史堆「00:03 · 暂无字幕摘要」垃圾条目；② 历史详情页加系统分享（`ACTION_SEND`，Markdown 文本），与「不自动写公共 Downloads」边界不冲突（用户主动动作）；③ 历史列表 `LinearLayout` 全量 addView 改 `RecyclerView`（会话多时的性能与 B4 分组一起做亦可）。
 
 ---

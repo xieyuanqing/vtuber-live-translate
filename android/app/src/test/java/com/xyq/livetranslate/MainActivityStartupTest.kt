@@ -162,7 +162,8 @@ class MainActivityStartupTest {
         interp.setup()
         video.setup()
 
-        listOf(R.id.btnInterpToggle, R.id.btnInterpStop, R.id.btnToggle, R.id.btnVideoStop)
+        // 开始按钮直接切换；停止按钮需确认对话框，不在此直接触发 toggle。
+        listOf(R.id.btnInterpToggle, R.id.btnToggle)
             .forEach { root.findViewById<View>(it).performClick() }
         listOf(
             R.id.cardInterpPlan,
@@ -174,9 +175,14 @@ class MainActivityStartupTest {
         root.findViewById<View>(R.id.btnOverlayPermissionSettings).performClick()
 
         assertEquals(
-            listOf(StatusBus.MODE_MIC, StatusBus.MODE_MIC, StatusBus.MODE_VIDEO, StatusBus.MODE_VIDEO),
+            listOf(StatusBus.MODE_MIC, StatusBus.MODE_VIDEO),
             toggles,
         )
+        // 暂停按钮存在并可点击（不校验 Service 副作用）。
+        root.findViewById<View>(R.id.btnInterpPause).performClick()
+        root.findViewById<View>(R.id.btnVideoPause).performClick()
+        root.findViewById<View>(R.id.btnInterpSwapLang).performClick()
+        root.findViewById<View>(R.id.btnVideoSwapLang).performClick()
         assertEquals(
             listOf(
                 TranslationMode.INTERPRETATION to R.id.nav_interp,

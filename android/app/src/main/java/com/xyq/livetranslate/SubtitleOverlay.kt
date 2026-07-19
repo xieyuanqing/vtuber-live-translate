@@ -399,15 +399,20 @@ class SubtitleOverlay(private val context: Context) {
                     val dx = event.rawX - downX
                     val dy = event.rawY - downY
                     if (!moved && dx * dx + dy * dy > dp(6) * dp(6)) moved = true
-                    if (moved && !collapsed) {
-                        params.x = startX + dx.toInt()
-                        params.y = startY + dy.toInt()
+                    if (moved) {
+                        if (collapsed) {
+                            // 收起态只允许纵向拖动，x 保持贴边。
+                            params.y = startY + dy.toInt()
+                        } else {
+                            params.x = startX + dx.toInt()
+                            params.y = startY + dy.toInt()
+                        }
                         runCatching { wm.updateViewLayout(container, params) }
                     }
                 }
                 MotionEvent.ACTION_UP,
                 MotionEvent.ACTION_CANCEL,
-                -> if (moved && !collapsed) clampToDisplay(container, params)
+                -> if (moved) clampToDisplay(container, params)
             }
             return true
         }
