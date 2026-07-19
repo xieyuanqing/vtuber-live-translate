@@ -386,9 +386,15 @@ internal class ModeHomeController(
         views.confirmedList.post {
             var parent = views.confirmedList.parent
             while (parent is View) {
-                if (parent is android.widget.ScrollView || parent is androidx.core.widget.NestedScrollView) {
-                    parent.fullScroll(View.FOCUS_DOWN)
-                    break
+                when (parent) {
+                    is android.widget.ScrollView -> {
+                        parent.fullScroll(View.FOCUS_DOWN)
+                        return@post
+                    }
+                    is androidx.core.widget.NestedScrollView -> {
+                        parent.fullScroll(View.FOCUS_DOWN)
+                        return@post
+                    }
                 }
                 parent = parent.parent
             }
