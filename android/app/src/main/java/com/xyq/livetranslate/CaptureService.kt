@@ -422,7 +422,7 @@ class CaptureService : Service() {
             logger?.commitTranslation(c)
             lastConfirmedZh = c
             while (zhLines.size > 4) zhLines.removeFirst()
-            while (sessionLines.size > 20) sessionLines.removeFirst()
+            while (sessionLines.size > 80) sessionLines.removeFirst()
         }
         StatusBus.updateSessionSubtitles(
             confirmed = sessionLines.toList(),

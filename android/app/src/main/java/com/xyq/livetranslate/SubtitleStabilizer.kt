@@ -75,13 +75,17 @@ class SubtitleStabilizer(
         current.setLength(0)
         current.append(rest)
 
+        val committed = ArrayList<String>()
         for (s in splitSentences(done)) {
             val sentence = s.trim()
             if (sentence.isEmpty()) continue
             // 连续重复：和上一句相同，或整句包含在上一句里 → 丢弃
             if (sentence == lastCommitted || lastCommitted.contains(sentence)) continue
             lastCommitted = sentence
+            committed += sentence
         }
+        // 一个服务端碎片可能同时包含多句；合并后一次交给下游，不能只留下最后一句。
+        if (committed.isNotEmpty()) lastCommitted = committed.joinToString(separator = "")
     }
 
     private fun splitSentences(s: String): List<String> {

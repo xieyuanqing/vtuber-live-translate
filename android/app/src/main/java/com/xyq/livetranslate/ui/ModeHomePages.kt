@@ -155,6 +155,7 @@ internal class ModeHomeController(
         TranslationMode.INTERPRETATION -> R.id.nav_interp
         TranslationMode.VIDEO -> R.id.nav_video
     }
+    private var renderedConfirmedTranslations: List<String>? = null
 
     fun setup() {
         setupLanguageControls()
@@ -363,49 +364,89 @@ internal class ModeHomeController(
     private fun renderConfirmedTranslations(translations: List<String>) {
         // 展示 StatusBus 提供的全部确认行（当前上限 80），不再截成 6 条。
         val visible = translations.map(String::trim).filter(String::isNotEmpty)
-        val renderKey = visible.joinToString("\u0000")
-        if (views.confirmedList.tag == renderKey) return
-        views.confirmedList.tag = renderKey
-        views.confirmedList.removeAllViews()
+        if (visible == renderedConfirmedTranslations) return
+        val scrollParent = findConfirmedScrollParent()
+        val shouldFollow = renderedConfirmedTranslations == null || isNearBottom(scrollParent)
         if (visible.isEmpty()) {
+            views.confirmedList.removeAllViews()
             views.confirmedList.addView(createConfirmedTranslationCard("等待语音…", 14f, 1f, R.color.text_muted))
+            renderedConfirmedTranslations = emptyList()
             return
         }
-        visible.forEachIndexed { index, line ->
-            val ageBoost = (index + 1).toFloat() / visible.size
-            views.confirmedList.addView(
-                createConfirmedTranslationCard(
-                    text = line,
-                    textSize = 16f,
-                    alpha = 0.48f + ageBoost * 0.34f,
-                    colorRes = R.color.text_secondary,
-                ),
-            )
-        }
-        // 新字幕到来时尽量滚到底部（父 NestedScrollView 存在时生效）。
-        views.confirmedList.post {
-            var parent = views.confirmedList.parent
-            while (parent is View) {
-                when (parent) {
-                    is android.widget.ScrollView -> {
-                        parent.fullScroll(View.FOCUS_DOWN)
-                        return@post
-                    }
-                    is androidx.core.widget.NestedScrollView -> {
-                        parent.fullScroll(View.FOCUS_DOWN)
-                        return@post
-                    }
-                }
-                parent = parent.parent
+
+        val old = renderedConfirmedTranslations.orEmpty()
+        when {
+            old.isNotEmpty() && visible.size >= old.size && visible.subList(0, old.size) == old -> {
+                visible.drop(old.size).forEach(::appendConfirmedTranslation)
+            }
+            old.isNotEmpty() && old.size == visible.size && old.drop(1) == visible.dropLast(1) -> {
+                views.confirmedList.removeViewAt(0)
+                appendConfirmedTranslation(visible.last())
+            }
+            else -> {
+                views.confirmedList.removeAllViews()
+                visible.forEach(::appendConfirmedTranslation)
             }
         }
+        renderedConfirmedTranslations = visible.toList()
+        visible.indices.forEach { index ->
+            val ageBoost = (index + 1).toFloat() / visible.size
+            views.confirmedList.getChildAt(index)?.alpha = 0.48f + ageBoost * 0.34f
+        }
+
+        // 用户原本就在底部时才继续跟随；上滑回看后不强制拉回。
+        if (shouldFollow) {
+            views.confirmedList.post {
+                when (scrollParent) {
+                    is android.widget.ScrollView -> scrollParent.fullScroll(View.FOCUS_DOWN)
+                    is androidx.core.widget.NestedScrollView -> scrollParent.fullScroll(View.FOCUS_DOWN)
+                }
+            }
+        }
+    }
+
+    private fun appendConfirmedTranslation(line: String) {
+        views.confirmedList.addView(
+            createConfirmedTranslationCard(
+                text = line,
+                textSize = 16f,
+                alpha = 1f,
+                colorRes = R.color.text_secondary,
+            ),
+        )
+    }
+
+    private fun findConfirmedScrollParent(): View? {
+        var parent = views.confirmedList.parent
+        while (parent is View) {
+            if (parent is android.widget.ScrollView || parent is androidx.core.widget.NestedScrollView) {
+                return parent
+            }
+            parent = parent.parent
+        }
+        return null
+    }
+
+    private fun isNearBottom(scrollParent: View?): Boolean {
+        val distance = when (scrollParent) {
+            is android.widget.ScrollView -> {
+                val child = scrollParent.getChildAt(0) ?: return true
+                child.height - (scrollParent.scrollY + scrollParent.height)
+            }
+            is androidx.core.widget.NestedScrollView -> {
+                val child = scrollParent.getChildAt(0) ?: return true
+                child.height - (scrollParent.scrollY + scrollParent.height)
+            }
+            else -> return true
+        }
+        return distance <= context.resources.getDimensionPixelSize(R.dimen.touch_target)
     }
 
     private fun listeningHint(status: UiRuntimeStatus): String? {
         if (status.paused) return null
         if (status.connState != "ready") return null
         if (status.audioLevelPct <= 2) return "静音中"
-        val lastChange = status.lastSubtitleAtMs
+        val lastChange = status.lastSubtitleAtMs.takeIf { it > 0L } ?: status.startedAtMs
         if (lastChange > 0L && status.sampledAtMs - lastChange >= 8_000L) return "聆听中…"
         return null
     }

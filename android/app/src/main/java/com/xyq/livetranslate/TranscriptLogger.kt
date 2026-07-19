@@ -1,10 +1,13 @@
 package com.xyq.livetranslate
 
 import android.content.Context
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * 维护 App 内结构化会话。原文碎片先缓冲，字幕稳定器确认译文时才生成一个
@@ -13,13 +16,21 @@ import java.util.UUID
  * 不自动写入公共 Downloads：历史删除后不应留下包含会议或同传内容的公共副本。
  */
 class TranscriptLogger(
-    private val context: Context,
+    context: Context,
     mode: TranslationMode,
     plan: TranslationPlan,
     sceneLabel: String,
     title: String = "",
     contextSummary: String = "",
 ) {
+    companion object {
+        private const val TAG = "TranscriptLogger"
+    }
+
+    private val appContext = context.applicationContext
+    private val historyWriter: ExecutorService = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "history-writer")
+    }
     private val startedAt = System.currentTimeMillis()
     private val sessionId = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(startedAt)) +
         "_" + UUID.randomUUID().toString().take(8)
@@ -46,7 +57,27 @@ class TranscriptLogger(
     val pathHint: String = "应用内历史"
 
     init {
-        HistoryStore.save(context, session)
+        saveHistory(session)
+    }
+
+    private fun enqueueHistoryWrite(action: () -> Unit) {
+        runCatching {
+            historyWriter.execute {
+                runCatching(action).onFailure { error ->
+                    Log.w(TAG, "history write failed: ${error.message}", error)
+                }
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "history writer unavailable: ${error.message}", error)
+        }
+    }
+
+    private fun saveHistory(snapshot: HistorySession) {
+        enqueueHistoryWrite { HistoryStore.save(appContext, snapshot) }
+    }
+
+    private fun deleteHistory(id: String) {
+        enqueueHistoryWrite { HistoryStore.delete(appContext, id) }
     }
 
     @Synchronized
@@ -81,7 +112,7 @@ class TranscriptLogger(
         )
         segments += segment
         session = session.copy(segments = segments.toList())
-        HistoryStore.save(context, session)
+        saveHistory(session)
     }
 
     @Synchronized
@@ -100,12 +131,13 @@ class TranscriptLogger(
             endedAt = endedAt,
             segments = segments.toList(),
         )
-        // C9：无确认字幕且时长 < 10s 的空会话不落盘，并删掉 init 时的占位文件。
+        // C9：无确认字幕且时长 < 10s 的空会话不落盘。删除与保存共用单线程，顺序可靠。
         val durationMs = (endedAt - startedAt).coerceAtLeast(0L)
         if (segments.isEmpty() && durationMs < 10_000L) {
-            HistoryStore.delete(context, session.id)
-            return
+            deleteHistory(session.id)
+        } else {
+            saveHistory(session)
         }
-        HistoryStore.save(context, session)
+        historyWriter.shutdown()
     }
 }

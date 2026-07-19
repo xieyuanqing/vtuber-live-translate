@@ -92,7 +92,6 @@ object StatusBus {
             old.copy(
                 startedAtMs = old.startedAtMs.takeIf { it > 0L } ?: System.currentTimeMillis(),
                 sourceTail = source.trim(),
-                lastSubtitleAtMs = System.currentTimeMillis(),
             )
         }
     }
