@@ -27,12 +27,14 @@ import com.xyq.livetranslate.ui.SessionHost
 import com.xyq.livetranslate.ui.SettingsController
 import com.xyq.livetranslate.ui.SettingsViews
 import com.xyq.livetranslate.ui.UiRuntimeStatus
+import com.xyq.livetranslate.ui.UpdateController
 
 class MainActivity : AppCompatActivity() {
     private lateinit var navigator: MainNavigator
     private lateinit var historyController: HistoryController
     private lateinit var sceneLibraryController: SceneLibraryController
     private lateinit var settingsController: SettingsController
+    private lateinit var updateController: UpdateController
     private lateinit var sessionContextController: SessionContextController
     private lateinit var sessionCoordinator: SessionCoordinator
     private lateinit var modeHomeControllers: Map<TranslationMode, ModeHomeController>
@@ -102,6 +104,13 @@ class MainActivity : AppCompatActivity() {
         )
         sceneLibraryController.restoreState(savedInstanceState)
 
+        updateController = UpdateController(
+            activity = this,
+            postToUi = { action -> runOnUiThread { action() } },
+            isHostActive = { !isFinishing && !isDestroyed },
+            launchIntent = ::startActivity,
+            toast = ::toast,
+        )
         settingsController = SettingsController(
             context = this,
             views = SettingsViews.bind(root),
@@ -121,7 +130,9 @@ class MainActivity : AppCompatActivity() {
             isHostActive = { !isFinishing && !isDestroyed },
             launchIntent = ::startActivity,
             toast = ::toast,
+            onCheckUpdate = { updateController.check(manual = true) },
         )
+        updateController.onStatusChanged = settingsController::renderUpdateStatus
         sessionContextController = SessionContextController(
             context = this,
             interpretationViews = interpViews,
@@ -168,6 +179,8 @@ class MainActivity : AppCompatActivity() {
 
         renderStatus()
         navigator.setup(savedInstanceState)
+        // 启动自动检查更新（可在关于页关闭）。
+        updateController.autoCheckOnLaunch()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -182,6 +195,9 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (::sessionCoordinator.isInitialized) {
             sessionCoordinator.onHostResume()
+        }
+        if (::updateController.isInitialized) {
+            updateController.onHostResume()
         }
         if (::modeHomeControllers.isInitialized) {
             modeHomeControllers.values.forEach(ModeHomeController::refreshConfiguration)

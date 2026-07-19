@@ -128,6 +128,22 @@ object SettingsStore {
         prefs(c).edit().putString("secondAiModel", model.ifBlank { "models/gemini-3-flash-001" }).apply()
     }
 
+    // ---------- 检查更新 ----------
+
+    fun autoCheckUpdate(c: Context): Boolean =
+        prefs(c).getBoolean("autoCheckUpdate", true)
+
+    fun saveAutoCheckUpdate(c: Context, enabled: Boolean) {
+        prefs(c).edit().putBoolean("autoCheckUpdate", enabled).apply()
+    }
+
+    fun ignoredUpdateVersionCode(c: Context): Long =
+        prefs(c).getLong("ignoredUpdateVersionCode", 0L)
+
+    fun saveIgnoredUpdateVersionCode(c: Context, versionCode: Long) {
+        prefs(c).edit().putLong("ignoredUpdateVersionCode", versionCode.coerceAtLeast(0L)).apply()
+    }
+
     private fun prefs(c: Context): SharedPreferences =
         c.getSharedPreferences("settings", Context.MODE_PRIVATE)
 }

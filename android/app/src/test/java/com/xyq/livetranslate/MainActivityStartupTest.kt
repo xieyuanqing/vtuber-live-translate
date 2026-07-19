@@ -59,6 +59,8 @@ class MainActivityStartupTest {
             R.id.pageSettingsProfileAi,
             R.id.pageSettingsDiagnostics,
             R.id.pageSettingsAbout,
+            R.id.btnCheckUpdate,
+            R.id.swAutoCheckUpdate,
             R.id.pageSceneLibrary,
             // 各 controller 的关键控件仍必须可绑定。
             R.id.rowSetSceneLibrary,

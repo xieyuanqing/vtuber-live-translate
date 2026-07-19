@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/space_24"
+    android:paddingTop="@dimen/space_8"
+    android:paddingBottom="@dimen/space_16">
+
+    <TextView
+        android:id="@+id/tvUpdateProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="准备下载…"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="13sp" />
+
+    <ProgressBar
+        android:id="@+id/pbUpdateProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:indeterminate="true" />
+</LinearLayout>

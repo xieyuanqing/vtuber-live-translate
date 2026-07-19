@@ -57,6 +57,32 @@
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
 
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/swAutoCheckUpdate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_12"
+                                android:text="启动时自动检查更新"
+                                android:textSize="14sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCheckUpdate"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_12"
+                                android:text="检查更新" />
+
+                            <TextView
+                                android:id="@+id/tvUpdateStatus"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:text=""
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="12sp"
+                                android:visibility="gone" />
+
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnAboutRepo"
                                 style="@style/Widget.Material3.Button.TextButton"

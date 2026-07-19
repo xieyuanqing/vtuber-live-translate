@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-19 · v2.4.0 首个正式版：检查更新
+
+- 版本 **2.4.0 / 35**。
+- 新增 `UpdateChecker` / `UpdateDownloader` / `UpdateInstaller` / `UpdateController`。
+- 清单源：`update.json`（GitHub raw → jsDelivr → ghproxy）与 Releases API 兜底。
+- 下载源：GitHub Release APK → ghproxy / mirror.ghproxy 镜像。
+- 关于页：自动检查开关、手动检查、失败小字提示。
+- 弹窗：更新说明、下载并安装、忽略此版本、稍后。
+- FileProvider 安装 APK；未知来源权限返回后续装。
+- 仓库根目录 `update.json` 与 GitHub Release `v2.4.0` 配套。
+
+**验证**：单元测试解析清单；CI assemble + test；Release 产物以 Actions APK 为准。
+
+---
+
 ## 2026-07-19 · UI 交互增强阶段 C（C1–C9）
 
 按 `docs/08` 完成阶段 C 主要交互项（C6 列表未改 RecyclerView，改为全量展示 StatusBus 确认行并自动滚底）。

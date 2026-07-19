@@ -78,6 +78,9 @@ internal data class SettingsViews(
     val btnBattery: Button,
     val tvStatus: TextView,
     val tvAboutVersion: TextView,
+    val swAutoCheckUpdate: MaterialSwitch,
+    val btnCheckUpdate: Button,
+    val tvUpdateStatus: TextView,
     val btnAboutRepo: Button,
     val tvApiStatus: TextView?,
     val tvAudioStatus: TextView?,
@@ -126,6 +129,9 @@ internal data class SettingsViews(
                 btnBattery = root.findViewById(R.id.btnBattery),
                 tvStatus = root.findViewById(R.id.tvStatus),
                 tvAboutVersion = root.findViewById(R.id.tvAboutVersion),
+                swAutoCheckUpdate = root.findViewById(R.id.swAutoCheckUpdate),
+                btnCheckUpdate = root.findViewById(R.id.btnCheckUpdate),
+                tvUpdateStatus = root.findViewById(R.id.tvUpdateStatus),
                 btnAboutRepo = root.findViewById(R.id.btnAboutRepo),
                 tvApiStatus = optionalText("tvApiStatus"),
                 tvAudioStatus = optionalText("tvAudioStatus"),
@@ -147,8 +153,10 @@ internal class SettingsController(
     private val isHostActive: () -> Boolean,
     private val launchIntent: (Intent) -> Unit,
     private val toast: (String) -> Unit,
+    private val onCheckUpdate: () -> Unit = {},
 ) {
     private var syncingFriendGatewayUi = false
+    private var syncingAutoCheckUpdateUi = false
 
     fun setup() {
         views.rowSetTranslate.setOnClickListener { openSubPage(R.id.pageSettingsTranslate) }
@@ -439,6 +447,15 @@ internal class SettingsController(
         } else {
             "版本未知"
         }
+        syncingAutoCheckUpdateUi = true
+        views.swAutoCheckUpdate.isChecked = SettingsStore.autoCheckUpdate(context)
+        syncingAutoCheckUpdateUi = false
+        views.swAutoCheckUpdate.setOnCheckedChangeListener { _, checked ->
+            if (syncingAutoCheckUpdateUi) return@setOnCheckedChangeListener
+            SettingsStore.saveAutoCheckUpdate(context, checked)
+            toast(if (checked) "已开启启动时检查更新" else "已关闭启动时检查更新")
+        }
+        views.btnCheckUpdate.setOnClickListener { onCheckUpdate() }
         views.btnAboutRepo.setOnClickListener {
             runCatching {
                 launchIntent(
@@ -448,6 +465,19 @@ internal class SettingsController(
                     ),
                 )
             }.onFailure { toast("没有可用的浏览器") }
+        }
+    }
+
+    fun renderUpdateStatus(message: String?) {
+        syncingAutoCheckUpdateUi = true
+        views.swAutoCheckUpdate.isChecked = SettingsStore.autoCheckUpdate(context)
+        syncingAutoCheckUpdateUi = false
+        if (message.isNullOrBlank()) {
+            views.tvUpdateStatus.visibility = View.GONE
+            views.tvUpdateStatus.text = ""
+        } else {
+            views.tvUpdateStatus.visibility = View.VISIBLE
+            views.tvUpdateStatus.text = message
         }
     }
 

@@ -1,0 +1,10 @@
+{
+  "versionCode": 35,
+  "versionName": "2.4.0",
+  "title": "流译 2.4.0（首个正式版）",
+  "notes": "首个正式版。\n\n• UI 去噪：同传/视频/场景库/历史/设置结构整理\n• 交互增强：暂停、停止确认、语言交换、本场上下文保留\n• 历史：按日分组、分享、空会话不落盘\n• 新增：检查更新（多下载源 + 忽略版本 + 可关闭自动检查）\n\n安装包为 Debug 签名内测包，可覆盖安装。",
+  "apkName": "LiveTranslate-2.4.0.apk",
+  "downloadUrls": [
+    "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.4.0/LiveTranslate-2.4.0.apk"
+  ]
+}

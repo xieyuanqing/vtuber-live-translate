@@ -3,11 +3,11 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.3.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.4.0-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
-> 当前是个人自用的实验项目，仅提供 Debug 构建，不承诺 API 稳定性或商店分发。产品目标是低延迟理解辅助，而不是发布级字幕制作。
+> 当前提供 GitHub Release 内测包（Debug 签名），不承诺商店分发。支持应用内检查更新。产品目标是低延迟理解辅助，而不是发布级字幕制作。
 
 ## 功能概览
 
@@ -20,6 +20,7 @@
 - **结构化历史**：按会话保存语言、场景、时长、原文和译文，支持搜索、模式筛选、详情查看与 Markdown 复制。
 - **本地安全存储**：API Key 使用 Android Keystore 加密，历史记录保存在 App 私有目录。
 - **好友分享（可选）**：为没有 Gemini Key 的朋友提供邀请码入口，通过持有者自部署的网关代理请求，绑定令牌加密保存并可随时解绑。
+- **检查更新**：启动自动检查（可关）；关于页手动检查；多下载源（GitHub + 国内镜像）；可忽略版本。
 
 ## 页面结构
 
