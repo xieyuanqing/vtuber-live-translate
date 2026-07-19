@@ -153,48 +153,26 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <com.google.android.material.card.MaterialCardView
+            <!-- 场景行：标签 + 摘要 + 场景库入口；chips 单行横滑。 -->
+            <LinearLayout
                 android:id="@+id/cardInterpPlan"
-                style="@style/LuminousCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_24"
-                android:clickable="true"
-                android:focusable="true">
+                android:orientation="vertical">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="@dimen/space_16">
+                    android:orientation="horizontal">
 
-                    <LinearLayout
+                    <TextView
+                        style="@style/LuminousSectionLabel"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView style="@style/CardTitle" android:text="当前场景" />
-
-                        <TextView
-                            android:id="@+id/tvInterpPlanSummary"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/grid_4"
-                            android:text="通用 · 自动 → 中文"
-                            android:textColor="@color/text_muted"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:id="@+id/tvInterpProfile"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/grid_4"
-                            android:text="点击管理场景库"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
+                        android:text="场景" />
 
                     <TextView
                         android:id="@+id/btnInterpOpenPlanLibrary"
@@ -202,28 +180,47 @@
                         android:layout_height="48dp"
                         android:gravity="center"
                         android:paddingHorizontal="@dimen/space_8"
-                        android:text="场景库"
+                        android:text="场景库 ›"
                         android:textColor="@color/brand"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                style="@style/LuminousSectionLabel"
-                android:layout_marginTop="@dimen/space_24"
-                android:text="快捷场景" />
+                <TextView
+                    android:id="@+id/tvInterpPlanSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/grid_4"
+                    android:text="通用 · 自动 → 中文"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp" />
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupInterpHomeScenes"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                app:chipSpacingHorizontal="@dimen/space_8"
-                app:chipSpacingVertical="@dimen/space_8"
-                app:selectionRequired="true"
-                app:singleSelection="true" />
+                <!-- 保留 ID，默认隐藏，不再展示 prompt 原文。 -->
+                <TextView
+                    android:id="@+id/tvInterpProfile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
 
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupInterpHomeScenes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="@dimen/space_8"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- 本场背景：默认折叠一行入口。 -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/LuminousCard"
                 android:layout_width="match_parent"
@@ -236,49 +233,84 @@
                     android:orientation="vertical"
                     android:padding="@dimen/space_16">
 
-                    <TextView style="@style/CardTitle" android:text="本场临时上下文" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:text="只对本场翻译生效"
-                        android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Field"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:hint="本场背景与资料"
-                        app:helperText="例如现场主题、说话人、专名提示">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etInterpSessionContext"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="top"
-                            android:inputType="textCapSentences|textMultiLine"
-                            android:minLines="3"
-                            android:maxLines="7" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnInterpAnalyzeContext"
-                        style="@style/LuminousSecondaryButton"
+                    <LinearLayout
+                        android:id="@+id/rowInterpSessionContextToggle"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:text="AI 整理本场资料" />
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tvInterpAnalyzeStatus"
+                        <TextView
+                            android:id="@+id/tvInterpSessionContextHeader"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="本场背景 · 可选 ›"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvInterpSessionContextSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/interpSessionContextBody"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:text=""
-                        android:textColor="@color/text_muted"
-                        android:textSize="12sp"
-                        android:visibility="gone" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/grid_4"
+                            android:text="只对本场翻译生效"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Field"
+                            android:layout_marginTop="@dimen/space_12"
+                            android:hint="本场背景与资料"
+                            app:helperText="例如现场主题、说话人、专名提示">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etInterpSessionContext"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="top"
+                                android:inputType="textCapSentences|textMultiLine"
+                                android:minLines="3"
+                                android:maxLines="7" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnInterpAnalyzeContext"
+                            style="@style/LuminousSecondaryButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:text="AI 整理本场资料" />
+
+                        <TextView
+                            android:id="@+id/tvInterpAnalyzeStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:text=""
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.xyq.livetranslate.AiTextClient
+import com.xyq.livetranslate.R
 import com.xyq.livetranslate.ApiCredentialMode
 import com.xyq.livetranslate.ContentAnalysisRequest
 import com.xyq.livetranslate.ContentContextAnalyzer
@@ -36,6 +37,15 @@ internal class SessionContextController(
 
     private var latestInterpAnalysisRequestId = ""
     private var latestVideoAnalysisRequestId = ""
+    private var interpContextExpanded = false
+    private val interpContextToggle: View? =
+        interpretationViews.idleContent.findViewById(R.id.rowInterpSessionContextToggle)
+    private val interpContextHeader: TextView? =
+        interpretationViews.idleContent.findViewById(R.id.tvInterpSessionContextHeader)
+    private val interpContextSummary: TextView? =
+        interpretationViews.idleContent.findViewById(R.id.tvInterpSessionContextSummary)
+    private val interpContextBody: View? =
+        interpretationViews.idleContent.findViewById(R.id.interpSessionContextBody)
 
     init {
         check(interpretationViews.videoSessionUrl == null)
@@ -48,6 +58,56 @@ internal class SessionContextController(
         }
         videoViews.analyzeContextButton.setOnClickListener {
             analyzeSessionContext(TranslationMode.VIDEO)
+        }
+        interpContextToggle?.setOnClickListener {
+            interpContextExpanded = !interpContextExpanded
+            renderInterpContextFold()
+            if (interpContextExpanded) {
+                interpretationViews.sessionContext.requestFocus()
+            }
+        }
+        interpretationViews.sessionContext.addTextChangedListener(
+            object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    if (!interpContextExpanded) renderInterpContextFold()
+                    else updateInterpContextSummaryOnly()
+                }
+            },
+        )
+        renderInterpContextFold()
+    }
+
+    private fun renderInterpContextFold() {
+        val body = interpContextBody ?: return
+        body.visibility = if (interpContextExpanded) View.VISIBLE else View.GONE
+        updateInterpContextSummaryOnly()
+        val count = interpretationViews.sessionContext.text?.toString().orEmpty().trim().length
+        interpContextHeader?.text = if (interpContextExpanded) {
+            "本场背景 · 可选"
+        } else {
+            "本场背景 · 可选 ›"
+        }
+        if (!interpContextExpanded && count > 0) {
+            interpContextSummary?.visibility = View.VISIBLE
+            interpContextSummary?.text = "已填写 · ${count} 字"
+        } else if (!interpContextExpanded) {
+            interpContextSummary?.visibility = View.GONE
+            interpContextSummary?.text = ""
+        } else {
+            interpContextSummary?.visibility = View.GONE
+        }
+    }
+
+    private fun updateInterpContextSummaryOnly() {
+        val count = interpretationViews.sessionContext.text?.toString().orEmpty().trim().length
+        if (!interpContextExpanded && count > 0) {
+            interpContextSummary?.visibility = View.VISIBLE
+            interpContextSummary?.text = "已填写 · ${count} 字"
+        } else if (!interpContextExpanded) {
+            interpContextSummary?.visibility = View.GONE
+            interpContextSummary?.text = ""
         }
     }
 
@@ -72,6 +132,9 @@ internal class SessionContextController(
         )
         videoViews.sessionContext.setText(savedState?.getString(STATE_VIDEO_CONTEXT).orEmpty())
         videoViews.videoSessionUrl?.setText(savedState?.getString(STATE_VIDEO_URL).orEmpty())
+        // 恢复后仍默认折叠，仅刷新摘要。
+        interpContextExpanded = false
+        renderInterpContextFold()
     }
 
     override fun current(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
@@ -81,6 +144,10 @@ internal class SessionContextController(
     override fun clearAfterSuccessfulStart(mode: TranslationMode) {
         views(mode).sessionContext.setText("")
         if (mode == TranslationMode.VIDEO) videoViews.videoSessionUrl?.setText("")
+        if (mode == TranslationMode.INTERPRETATION) {
+            interpContextExpanded = false
+            renderInterpContextFold()
+        }
     }
 
     private fun views(mode: TranslationMode): ModeHomeViews = when (mode) {

@@ -220,9 +220,10 @@ internal class ModeHomeController(
     private fun updatePlanSummary() {
         val plan = TranslationPlanStore.loadDraft(context, mode)
         val scene = SceneLibraryStore.resolve(context, mode, plan.scenePresetId)
+        // 主页只显示场景名与语言方向；场景提示词不在主页展开。
         views.planSummary.text = "${scene.label} · ${plan.directionLabel}"
-        views.profileSummary.text = scene.instruction.replace('\n', ' ').take(48)
-            .ifEmpty { "点击管理场景库；本场上下文在主页填写" }
+        views.profileSummary.visibility = View.GONE
+        views.profileSummary.text = ""
     }
 
     fun render(status: UiRuntimeStatus) {

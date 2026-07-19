@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-19 · UI 去噪阶段 B1：同传页结构改造
+
+同传空闲态去噪：去掉「当前场景」大卡与 prompt 原文，场景改为标签 + 摘要 + 单行横滑 chips；本场背景默认折叠。
+
+- 布局：`cardInterpPlan` 改为场景行容器（保留 ID）；`chipGroupInterpHomeScenes` 外包 `HorizontalScrollView` + `singleLine`；本场上下文包进 `interpSessionContextBody`，入口 `rowInterpSessionContextToggle`。
+- `ModeHomeController.updatePlanSummary` 只写场景名与语言方向，隐藏 `tvInterpProfile`。
+- `SessionContextController` 负责同传本场折叠/摘要「已填写 · N 字」。
+
+**版本**：保持 2.3.1 / 34。
+
+**验证**：本地无 SDK，依赖 CI。折叠与 chips 横滑需真机确认。
+
+---
+
 ## 2026-07-19 · UI 去噪阶段 B0：主 Tab 去掉双标题
 
 主 Tab 隐藏 `MaterialToolbar`（logo +「流译」），只保留各页 `PageTitle`；子页仍显示 Toolbar 返回箭头与页名。
