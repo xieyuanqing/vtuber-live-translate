@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-19 · UI 去噪阶段 B0：主 Tab 去掉双标题
+
+主 Tab 隐藏 `MaterialToolbar`（logo +「流译」），只保留各页 `PageTitle`；子页仍显示 Toolbar 返回箭头与页名。
+
+- `MainNavigatorViews` 绑定 `pageContainer`。
+- `renderMain`：`toolbar.visibility=GONE`，并把状态栏高度补偿到 `pageContainer.paddingTop`。
+- `openSub`：恢复 Toolbar 可见与返回图标，取消 pageContainer 顶部补偿。
+- 测试：`MainNavigatorTest` 覆盖主 Tab 隐藏 / 子页显示 / 返回后恢复；启动测试绑定 `pageContainer`。
+
+**版本**：保持 2.3.1 / 34。
+
+**验证**：本地无 SDK，依赖 CI。导航显隐需真机确认状态栏不被遮挡。
+
+---
+
 ## 2026-07-19 · UI 去噪阶段 A：文案与图标清理
 
 按 `docs/08-ui-declutter-plan.md` 完成阶段 A（零结构风险）：

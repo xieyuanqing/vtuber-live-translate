@@ -28,6 +28,8 @@ class MainNavigatorTest {
                 onDestinationShown = observed::add,
             )
             navigator.setup(null)
+            assertEquals(View.GONE, fixture.views.toolbar.visibility)
+            assertEquals(View.VISIBLE, fixture.views.bottomNav.visibility)
             observed.clear()
 
             val deniedSub = NavigationDestination.SubPage(R.id.pageSettingsProfileAi)
@@ -77,6 +79,7 @@ class MainNavigatorTest {
 
             assertEquals(View.VISIBLE, fixture.views.pageSceneLibrary.visibility)
             assertEquals(View.GONE, fixture.views.bottomNav.visibility)
+            assertEquals(View.VISIBLE, fixture.views.toolbar.visibility)
             assertEquals("场景库", fixture.views.toolbar.title.toString())
             assertEquals(listOf(R.id.nav_video), mainHooks)
             assertEquals(listOf(R.id.pageSceneLibrary), subHooks)
@@ -99,11 +102,31 @@ class MainNavigatorTest {
             assertEquals(View.GONE, fixture.views.pageSceneLibrary.visibility)
             assertEquals(View.VISIBLE, fixture.views.pageVideo.visibility)
             assertEquals(View.VISIBLE, fixture.views.bottomNav.visibility)
+            assertEquals(View.GONE, fixture.views.toolbar.visibility)
             assertEquals(R.id.nav_video, fixture.views.bottomNav.selectedItemId)
             assertEquals(R.id.nav_video, mainHooks.last())
             assertEquals(NavigationDestination.MainPage(R.id.nav_video), observed.last())
             assertFalse(navigator.handleBack())
         }
+
+
+    @Test
+    fun mainTabsHideToolbarWhileSubPagesShowIt() = withNavigatorFixture { fixture ->
+        val navigator = MainNavigator(views = fixture.views)
+        navigator.setup(null)
+        assertEquals(View.GONE, fixture.views.toolbar.visibility)
+        assertEquals(View.VISIBLE, fixture.views.pageInterp.visibility)
+
+        assertTrue(navigator.openSub(R.id.pageSettingsAbout, R.id.nav_settings))
+        assertEquals(View.VISIBLE, fixture.views.toolbar.visibility)
+        assertEquals("关于", fixture.views.toolbar.title.toString())
+        assertEquals(View.GONE, fixture.views.bottomNav.visibility)
+
+        assertTrue(navigator.handleBack())
+        assertEquals(View.GONE, fixture.views.toolbar.visibility)
+        assertEquals(View.VISIBLE, fixture.views.pageSettings.visibility)
+        assertEquals(View.VISIBLE, fixture.views.bottomNav.visibility)
+    }
 
     private fun withNavigatorFixture(block: (NavigatorFixture) -> Unit) {
         val controller = Robolectric.buildActivity(AppCompatActivity::class.java).setup()

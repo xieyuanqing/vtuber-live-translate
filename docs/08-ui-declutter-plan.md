@@ -6,7 +6,7 @@
 
 基线版本：v2.3.1 / versionCode 34（2026-07-18 的界面截图诊断）。若执行时版本已前进，先核对涉及的文件与 View ID 是否仍然存在，行号仅供定位参考，以实际代码为准。
 
-**阶段 A 状态：已完成（2026-07-19）**。阶段 B/C 待执行。
+**阶段 A 状态：已完成（2026-07-19）**。**阶段 B0 状态：已完成（2026-07-19）**。B1–B5 / C 待执行。
 
 ---
 
@@ -96,6 +96,8 @@
 实施：`MainNavigator` 已按页面切换 Toolbar 状态，扩展为主 Tab 时 `toolbar.visibility=GONE`。注意状态栏高度补偿，避免内容顶进状态栏。
 
 **验收**：主 Tab 页顶部只有一个标题；子页返回箭头正常；Robolectric 启动测试通过。
+
+> 落地：`MainNavigator` 主 Tab 隐藏 Toolbar + `pageContainer` 状态栏补偿；测试见 `MainNavigatorTest.mainTabsHideToolbarWhileSubPagesShowIt`。
 
 ### B1 同传页（`page_interpretation.xml`）
 

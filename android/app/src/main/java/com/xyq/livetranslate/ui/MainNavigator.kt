@@ -21,6 +21,7 @@ internal sealed interface NavigationDestination {
 internal data class MainNavigatorViews(
     val toolbar: MaterialToolbar,
     val bottomNav: BottomNavigationView,
+    val pageContainer: View,
     val pageInterp: View,
     val pageVideo: View,
     val pageHistory: View,
@@ -53,6 +54,7 @@ internal data class MainNavigatorViews(
         fun bind(root: View): MainNavigatorViews = MainNavigatorViews(
             toolbar = root.findViewById(R.id.toolbar),
             bottomNav = root.findViewById(R.id.bottomNav),
+            pageContainer = root.findViewById(R.id.pageContainer),
             pageInterp = root.findViewById(R.id.pageInterp),
             pageVideo = root.findViewById(R.id.pageVideo),
             pageHistory = root.findViewById(R.id.pageHistory),
@@ -168,9 +170,11 @@ internal class MainNavigator(
         views.subPages.forEach { (id, page) ->
             page.visibility = if (id == pageId) View.VISIBLE else View.GONE
         }
+        views.toolbar.visibility = View.VISIBLE
         views.toolbar.title = SUB_PAGE_TITLES.getValue(pageId)
         views.toolbar.logo = null
         views.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
+        applyStatusBarCompensation(toolbarVisible = true)
         views.bottomNav.visibility = View.GONE
         onSubPageShown(pageId)
         onDestinationShown(destination)
@@ -218,9 +222,12 @@ internal class MainNavigator(
         views.mainPages.forEach { (id, page) ->
             page.visibility = if (id == destination.id) View.VISIBLE else View.GONE
         }
+        // 主 Tab 只保留页面大标题，避免 Toolbar + PageTitle 双头部。
+        views.toolbar.visibility = View.GONE
         views.toolbar.title = "流译"
         views.toolbar.setLogo(R.drawable.ic_brand_translate_24)
         views.toolbar.navigationIcon = null
+        applyStatusBarCompensation(toolbarVisible = false)
         views.bottomNav.visibility = View.VISIBLE
         currentMainTabId = destination.id
         onMainPageShown(destination.id)
@@ -237,10 +244,14 @@ internal class MainNavigator(
         }
     }
 
+    private var statusBarTop = 0
+
     private fun applyWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(views.toolbar) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            statusBarTop = bars.top
             view.updatePadding(top = bars.top)
+            applyStatusBarCompensation(toolbarVisible = views.toolbar.visibility == View.VISIBLE)
             insets
         }
         ViewCompat.setOnApplyWindowInsetsListener(views.bottomNav) { view, insets ->
@@ -248,5 +259,13 @@ internal class MainNavigator(
             view.updatePadding(bottom = bars.bottom)
             insets
         }
+        // 主动请求一次，避免首帧主 Tab 在 toolbar 隐藏后顶进状态栏。
+        ViewCompat.requestApplyInsets(views.toolbar)
+    }
+
+    /** 主 Tab 隐藏 Toolbar 时，把状态栏高度补偿到 pageContainer。 */
+    private fun applyStatusBarCompensation(toolbarVisible: Boolean) {
+        views.pageContainer.updatePadding(top = if (toolbarVisible) 0 else statusBarTop)
     }
 }
+

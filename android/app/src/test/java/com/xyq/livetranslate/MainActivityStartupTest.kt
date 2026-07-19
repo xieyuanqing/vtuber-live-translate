@@ -48,6 +48,7 @@ class MainActivityStartupTest {
             // MainNavigatorViews.bind(root) 必须覆盖完整 shell，且每个 page root 只有这一处绑定真源。
             R.id.toolbar,
             R.id.bottomNav,
+            R.id.pageContainer,
             R.id.pageInterp,
             R.id.pageVideo,
             R.id.pageHistory,
