@@ -15,30 +15,9 @@
         android:paddingTop="@dimen/space_16"
         android:paddingBottom="@dimen/page_bottom_padding">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                style="@style/PageTitle"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:text="历史" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRefreshHistory"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="刷新历史"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:text="↻"
-                android:textColor="@color/brand"
-                android:textSize="22sp" />
-        </LinearLayout>
+        <TextView
+            style="@style/PageTitle"
+            android:text="历史" />
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Field"

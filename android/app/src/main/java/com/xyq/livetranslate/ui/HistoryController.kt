@@ -16,9 +16,12 @@ import com.xyq.livetranslate.HistoryStore
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.TranslationLanguageCatalog
 import com.xyq.livetranslate.TranslationMode
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 internal data class HistoryViews(
-    val refreshButton: Button,
     val searchInput: EditText,
     val allChip: Chip,
     val interpretationChip: Chip,
@@ -35,7 +38,6 @@ internal data class HistoryViews(
 ) {
     companion object {
         fun bind(root: View): HistoryViews = HistoryViews(
-            refreshButton = root.findViewById(R.id.btnRefreshHistory),
             searchInput = root.findViewById(R.id.etHistorySearch),
             allChip = root.findViewById(R.id.chipHistoryAll),
             interpretationChip = root.findViewById(R.id.chipHistoryInterp),
@@ -64,7 +66,6 @@ internal class HistoryController(
     private var modeFilter: TranslationMode? = null
 
     fun setup() {
-        views.refreshButton.setOnClickListener { reload() }
         views.searchInput.doAfterTextChanged { renderList() }
         views.allChip.setOnCheckedChangeListener { _, checked ->
             if (checked) {
@@ -112,39 +113,102 @@ internal class HistoryController(
         views.list.removeAllViews()
         views.emptyText.text = if (allItems.isEmpty()) "暂无历史记录" else "没有匹配的记录"
         views.emptyText.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        var lastGroupKey: String? = null
         items.forEach { item ->
-            val card = layoutInflater.inflate(R.layout.item_history_session, views.list, false)
-            val icon = card.findViewById<TextView>(R.id.tvHistoryItemIcon)
-            val mode = card.findViewById<TextView>(R.id.tvHistoryItemMode)
-            val title = card.findViewById<TextView>(R.id.tvHistoryItemTitle)
-            val time = card.findViewById<TextView>(R.id.tvHistoryItemTime)
-            val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
-            val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
-            val isInterpretation = item.mode == TranslationMode.INTERPRETATION
-            icon.text = if (isInterpretation) "麦" else "播"
-            icon.setTextColor(context.getColor(if (isInterpretation) R.color.brand else R.color.warning))
-            ViewCompat.setBackgroundTintList(
-                icon,
-                context.getColorStateList(
-                    if (isInterpretation) R.color.primary_fixed else R.color.warning_container,
-                ),
-            )
-            mode.text = item.mode.label
-            mode.setTextColor(context.getColor(if (isInterpretation) R.color.brand else R.color.warning))
-            title.text = item.title
-            time.text = HistoryStore.formatTime(item.updatedAt)
-            val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
-                TranslationLanguageCatalog.target(item.targetLanguageCode).label
-            meta.text = "$direction · ${item.sceneLabel} · ${HistoryStore.formatDuration(item.durationMs)}"
-            summary.text = item.summary.trim().replace('\n', ' ').ifBlank { "暂无字幕摘要" }
-            card.setOnClickListener { showDetail(item) }
-            card.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = context.resources.getDimensionPixelSize(R.dimen.space_12) }
-            views.list.addView(card)
+            val groupKey = dayGroupKey(item.updatedAt)
+            if (groupKey != lastGroupKey) {
+                views.list.addView(buildDayHeader(dayGroupLabel(item.updatedAt)))
+                lastGroupKey = groupKey
+            }
+            views.list.addView(buildSessionCard(item))
         }
     }
+
+    private fun buildDayHeader(label: String): TextView {
+        return TextView(context).apply {
+            text = label
+            setTextColor(context.getColor(R.color.text_muted))
+            textSize = 12f
+            setPadding(0, context.resources.getDimensionPixelSize(R.dimen.space_12), 0, context.resources.getDimensionPixelSize(R.dimen.space_8))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+        }
+    }
+
+    private fun buildSessionCard(item: HistoryStore.HistoryItem): View {
+        val card = layoutInflater.inflate(R.layout.item_history_session, views.list, false)
+        val icon = card.findViewById<TextView>(R.id.tvHistoryItemIcon)
+        val mode = card.findViewById<TextView>(R.id.tvHistoryItemMode)
+        val title = card.findViewById<TextView>(R.id.tvHistoryItemTitle)
+        val time = card.findViewById<TextView>(R.id.tvHistoryItemTime)
+        val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
+        val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
+        val isInterpretation = item.mode == TranslationMode.INTERPRETATION
+        icon.text = if (isInterpretation) "麦" else "播"
+        icon.setTextColor(context.getColor(if (isInterpretation) R.color.brand else R.color.warning))
+        ViewCompat.setBackgroundTintList(
+            icon,
+            context.getColorStateList(
+                if (isInterpretation) R.color.primary_fixed else R.color.warning_container,
+            ),
+        )
+        mode.visibility = View.GONE
+        // 列表标题优先场景名；视频若自定义过会话标题（非「视频 ·」自动名）则用标题。
+        title.text = displayTitle(item)
+        time.text = formatClock(item.updatedAt)
+        val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
+            TranslationLanguageCatalog.target(item.targetLanguageCode).label
+        meta.text = "$direction · ${HistoryStore.formatDuration(item.durationMs)}"
+        summary.text = item.summary.trim().replace('\n', ' ').ifBlank { "暂无字幕摘要" }
+        card.setOnClickListener { showDetail(item) }
+        card.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { bottomMargin = context.resources.getDimensionPixelSize(R.dimen.space_12) }
+        return card
+    }
+
+    private fun displayTitle(item: HistoryStore.HistoryItem): String {
+        val scene = item.sceneLabel.trim()
+        val rawTitle = item.title.trim()
+        val autoPrefix = item.mode.label + " · "
+        val looksAuto = rawTitle.startsWith(autoPrefix) || rawTitle.isBlank()
+        return when {
+            !looksAuto -> rawTitle
+            scene.isNotEmpty() -> scene
+            else -> rawTitle.ifBlank { item.mode.label }
+        }
+    }
+
+    private fun dayGroupKey(ms: Long): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ms))
+
+    private fun dayGroupLabel(ms: Long): String {
+        val dayStart = startOfDay(ms)
+        val today = startOfDay(System.currentTimeMillis())
+        val yesterday = today - 24L * 60L * 60L * 1000L
+        return when (dayStart) {
+            today -> "今天"
+            yesterday -> "昨天"
+            else -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ms))
+        }
+    }
+
+    private fun startOfDay(ms: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = ms
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    private fun formatClock(ms: Long): String =
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
+
 
     private fun showDetail(item: HistoryStore.HistoryItem) {
         val session = HistoryStore.load(context, item.fileName)

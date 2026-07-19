@@ -103,13 +103,17 @@ class MainActivityStartupTest {
             R.id.bottomNav,
         ).selectedItemId = R.id.nav_history
 
-        assertEquals(1, historyList.childCount)
+        // 日期分组头 + 会话卡
+        assertEquals(2, historyList.childCount)
+        val sessionCard = (0 until historyList.childCount)
+            .map(historyList::getChildAt)
+            .first { it.findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle) != null }
         assertEquals(
-            "切入历史后可见",
-            historyList.getChildAt(0).findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
+            "历史测试场景",
+            sessionCard.findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
         )
 
-        historyList.getChildAt(0).performClick()
+        sessionCard.performClick()
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
         activity.onBackPressed()
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistory).visibility)
