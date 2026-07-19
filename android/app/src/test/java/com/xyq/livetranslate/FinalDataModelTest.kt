@@ -82,15 +82,16 @@ class FinalDataModelTest {
     fun `status bus publishes immutable capped session snapshot`() {
         StatusBus.reset()
         StatusBus.startSession(123L)
-        val lines = (1..30).map { "字幕 $it" }
+        val lines = (1..100).map { "字幕 $it" }
         StatusBus.updateSessionSubtitles(lines, "当前字幕", "source")
 
         val snapshot = StatusBus.sessionSnapshot()
         assertTrue(snapshot.isActive)
         assertEquals(123L, snapshot.startedAtMs)
-        assertEquals(20, snapshot.confirmedTranslations.size)
-        assertEquals("字幕 11", snapshot.confirmedTranslations.first())
-        assertEquals("字幕 30", snapshot.confirmedTranslations.last())
+        // C6：确认行上限 80
+        assertEquals(80, snapshot.confirmedTranslations.size)
+        assertEquals("字幕 21", snapshot.confirmedTranslations.first())
+        assertEquals("字幕 100", snapshot.confirmedTranslations.last())
         assertEquals("当前字幕", snapshot.currentTranslation)
     }
 

@@ -192,9 +192,11 @@ internal class HistoryController(
         val autoPrefix = item.mode.label + " · "
         val looksAuto = rawTitle.startsWith(autoPrefix) || rawTitle.isBlank()
         return when {
-            !looksAuto -> rawTitle
+            // 视频用户手填标题优先；同传/自动标题则优先场景名。
+            item.mode == TranslationMode.VIDEO && !looksAuto -> rawTitle
             scene.isNotEmpty() -> scene
-            else -> rawTitle.ifBlank { item.mode.label }
+            rawTitle.isNotEmpty() -> rawTitle
+            else -> item.mode.label
         }
     }
 
