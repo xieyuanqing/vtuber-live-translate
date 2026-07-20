@@ -2,6 +2,7 @@ package com.xyq.livetranslate
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import com.xyq.livetranslate.ui.ModeHomeController
@@ -77,6 +78,18 @@ class MainActivityStartupTest {
         ).forEach { id ->
             require(activity.findViewById<View>(id) != null) { "缺少视图 id=$id" }
         }
+    }
+
+    @Test
+    fun historyContextUsesCardRadiusInsteadOfLanguagePill() = withActivity { activity ->
+        val context = activity.findViewById<android.widget.TextView>(R.id.tvHistoryDetailContext)
+        val background = context.background as GradientDrawable
+
+        assertEquals(
+            activity.resources.getDimension(R.dimen.field_radius),
+            background.cornerRadius,
+            0.1f,
+        )
     }
 
     @Test
