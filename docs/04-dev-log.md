@@ -16,7 +16,7 @@
 
 **版本**：不变，保持 2.4.0 / 35。纯内部清理，无新增用户可见功能；仅修复检查更新误报。
 
-**验证**：本地 Android 工具链无法验证——egress 策略拦截 `dl.google.com`（AGP 8.7.3 拉取 403），Gradle wrapper 发行版下载亦被 GitHub 403。改由 GitHub Actions `workflow_dispatch` 在本分支跑 `testDebugUnitTest + lintDebug + assembleDebug`，结果见下条更新。
+**验证**：本地 Android 工具链无法验证——egress 策略拦截 `dl.google.com`（AGP 8.7.3 拉取 403），Gradle wrapper 发行版下载亦被 GitHub 403。改由 GitHub Actions `workflow_dispatch` 在本分支跑 `testDebugUnitTest + lintDebug + assembleDebug`：Run `29719156454`（#44）成功，`headSha` 精确匹配提交 `6203a14`，产物 `LiveTranslate-debug-apk`（5,257,545 字节，sha256 `e41f9b6dbee92c3c98f00da25dd6cc5c9612e9badba10e37c22baeddde055337`）。
 
 ## 2026-07-19 · 实时字幕稳定性修复（CI 构建）
 
