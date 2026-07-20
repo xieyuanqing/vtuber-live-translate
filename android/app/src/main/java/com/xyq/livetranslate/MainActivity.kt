@@ -212,6 +212,11 @@ class MainActivity : AppCompatActivity() {
         ui.removeCallbacks(refresh)
     }
 
+    override fun onDestroy() {
+        if (::sessionContextController.isInitialized) sessionContextController.destroy()
+        super.onDestroy()
+    }
+
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (!navigator.handleBack()) {

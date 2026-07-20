@@ -127,7 +127,6 @@ object DefaultSceneCatalog {
 }
 
 data class SessionPromptContext(
-    val video: YouTubeVideoInfo? = null,
     val manualContext: String = "",
 )
 
@@ -152,7 +151,6 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
-        val modeContext = context.forMode(normalized.mode)
         val sourceLanguage = TranslationLanguageCatalog.source(normalized.sourceLanguageCode)
         val targetLanguage = TranslationLanguageCatalog.target(normalized.targetLanguageCode)
 
@@ -171,7 +169,7 @@ object PromptBuilder {
             appendLine()
             appendLine("【场景：${scene.label}】")
             appendLine(scene.instruction)
-            appendSessionContext(modeContext)
+            appendSessionContext(context)
         }.trim()
     }
 
@@ -182,30 +180,21 @@ object PromptBuilder {
         plan: TranslationPlan,
     ): String {
         val normalized = plan.normalized()
-        val modeContext = context.forMode(normalized.mode)
         return buildString {
             appendLine("翻译：${normalized.directionLabel}")
             appendLine("模式：${normalized.mode.label}")
             appendLine("场景：${scene.label}")
             appendLine("场景要求：${scene.instruction}")
-            appendSessionContext(modeContext)
+            appendSessionContext(context)
         }.trim()
     }
 
-    private fun SessionPromptContext.forMode(mode: TranslationMode): SessionPromptContext =
-        if (mode == TranslationMode.INTERPRETATION) copy(video = null) else this
-
     private fun StringBuilder.appendSessionContext(context: SessionPromptContext) {
-        val video = context.video
         val manual = context.manualContext.trim()
-        if (video == null && manual.isEmpty()) return
+        if (manual.isEmpty()) return
 
         appendLine()
         appendLine("【仅本场有效的上下文】")
-        if (video != null) {
-            if (video.title.isNotEmpty()) appendLine("视频标题：${video.title}")
-            if (video.authorName.isNotEmpty()) appendLine("频道/作者：${video.authorName}")
-        }
-        if (manual.isNotEmpty()) appendLine(manual)
+        appendLine(manual)
     }
 }

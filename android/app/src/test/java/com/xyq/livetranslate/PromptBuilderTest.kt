@@ -27,7 +27,7 @@ class PromptBuilderTest {
     }
 
     @Test
-    fun `video prompt includes session metadata without changing scene`() {
+    fun `video prompt includes analyzed session context without changing scene`() {
         val scene = DefaultSceneCatalog.resolve(TranslationMode.VIDEO, "general_video")
         val plan = TranslationPlan(
             mode = TranslationMode.VIDEO,
@@ -39,18 +39,11 @@ class PromptBuilderTest {
         val prompt = PromptBuilder.build(
             scene = scene,
             context = SessionPromptContext(
-                video = YouTubeVideoInfo(
-                    url = "https://youtu.be/demo",
-                    title = "Android 音频课程",
-                    authorName = "Demo Channel",
-                ),
                 manualContext = "讲者会比较 AudioRecord。",
             ),
             plan = plan,
         )
 
-        assertTrue(prompt.contains("Android 音频课程"))
-        assertTrue(prompt.contains("Demo Channel"))
         assertTrue(prompt.contains("讲者会比较 AudioRecord"))
         assertTrue(prompt.contains(scene.instruction))
     }

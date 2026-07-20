@@ -16,7 +16,7 @@ import com.xyq.livetranslate.SettingsStore
 import com.xyq.livetranslate.TranslationLanguageCatalog
 import com.xyq.livetranslate.TranslationMode
 import com.xyq.livetranslate.TranslationPlanStore
-import com.xyq.livetranslate.YouTubeOEmbedClient
+import com.xyq.livetranslate.VideoMetadataClient
 import java.util.UUID
 
 /** 两个模式的本场临时上下文、视频 URL 与独立 AI 请求守卫。 */
@@ -35,7 +35,10 @@ internal class SessionContextController(
         const val STATE_VIDEO_URL = "video_url"
     }
 
+    @Volatile
     private var latestInterpAnalysisRequestId = ""
+
+    @Volatile
     private var latestVideoAnalysisRequestId = ""
     private var interpContextExpanded = false
     private val interpContextToggle: View? =
@@ -213,6 +216,11 @@ internal class SessionContextController(
         renderVideoContextFold()
     }
 
+    fun destroy() {
+        latestInterpAnalysisRequestId = ""
+        latestVideoAnalysisRequestId = ""
+    }
+
     override fun current(mode: TranslationMode): SessionPromptContext = SessionPromptContext(
         manualContext = views(mode).sessionContext.text?.toString().orEmpty().trim(),
     )
@@ -282,7 +290,10 @@ internal class SessionContextController(
             return
         }
         if (mode == TranslationMode.VIDEO && url.isBlank()) {
-            showAnalyzeStatus(statusView, "解析视频需要先填写 YouTube 链接")
+            showAnalyzeStatus(
+                statusView,
+                "解析视频需要先填写 YouTube、哔哩哔哩或 Twitch 链接",
+            )
             return
         }
 
@@ -321,10 +332,11 @@ internal class SessionContextController(
             Thread({
                 runCatching {
                     val videoInfo = if (mode == TranslationMode.VIDEO) {
-                        YouTubeOEmbedClient.fetch(url)
+                        VideoMetadataClient.fetch(url)
                     } else {
                         null
                     }
+                    check(isHostActive() && requestId == latestRequestId(mode)) { "分析已取消" }
                     val source = TranslationLanguageCatalog.source(plan.sourceLanguageCode)
                     val target = TranslationLanguageCatalog.target(plan.targetLanguageCode)
                     ContentContextAnalyzer.analyze(
@@ -342,8 +354,8 @@ internal class SessionContextController(
                         credentialMode = credentialMode,
                         deviceId = deviceId,
                         requestSignatureProvider = requestSignatureProvider,
-                    ) to videoInfo
-                }.onSuccess { (result, videoInfo) ->
+                    )
+                }.onSuccess { result ->
                     postToUi success@{
                         if (!isHostActive() || requestId != latestRequestId(mode)) return@success
                         val inputChanged = when (mode) {
@@ -362,15 +374,7 @@ internal class SessionContextController(
                         if (result.sessionContext.isBlank()) {
                             showAnalyzeStatus(statusView, "AI 没有返回可用背景，请补充资料后重试")
                         } else {
-                            val composed = buildString {
-                                if (videoInfo != null) {
-                                    if (videoInfo.title.isNotBlank()) appendLine("视频标题：${videoInfo.title}")
-                                    if (videoInfo.authorName.isNotBlank()) appendLine("频道/作者：${videoInfo.authorName}")
-                                    if (isNotEmpty()) appendLine()
-                                }
-                                append(result.sessionContext)
-                            }.trim()
-                            modeViews.sessionContext.setText(composed)
+                            modeViews.sessionContext.setText(result.sessionContext)
                             showAnalyzeStatus(statusView, result.note.ifBlank { "本场资料已整理" })
                         }
                         button.isEnabled = true
