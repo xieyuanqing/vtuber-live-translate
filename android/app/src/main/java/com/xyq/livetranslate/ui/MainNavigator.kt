@@ -9,14 +9,6 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.xyq.livetranslate.R
 
-/** 可供访问控制与导航审计使用的强类型目的地；当前默认不拦截、不记录。 */
-internal sealed interface NavigationDestination {
-    val id: Int
-
-    data class MainPage(override val id: Int) : NavigationDestination
-    data class SubPage(override val id: Int) : NavigationDestination
-}
-
 /** 壳层 View 的唯一绑定真源。页面 controller 只从这里取得自己的 root 或子控件。 */
 internal data class MainNavigatorViews(
     val toolbar: MaterialToolbar,
@@ -79,8 +71,6 @@ internal class MainNavigator(
     private val onMainPageShown: (Int) -> Unit = {},
     private val onSubPageShown: (Int) -> Unit = {},
     private val beforeSubPageClosed: (Int) -> Unit = {},
-    private val accessGate: (NavigationDestination) -> Boolean = { true },
-    private val onDestinationShown: (NavigationDestination) -> Unit = {},
 ) {
     companion object {
         const val STATE_MAIN_TAB = "main_tab"
@@ -149,18 +139,14 @@ internal class MainNavigator(
 
     fun showMain(pageId: Int): Boolean {
         if (pageId !in MAIN_PAGE_IDS) return false
-        val destination = NavigationDestination.MainPage(pageId)
-        if (!accessGate(destination)) return false
         closeCurrentSubForNavigation()
         syncBottomSelection(pageId)
-        renderMain(destination)
+        renderMain(pageId)
         return true
     }
 
     fun openSub(pageId: Int, returnTabId: Int = R.id.nav_settings): Boolean {
         if (pageId !in SUB_PAGE_IDS || returnTabId !in MAIN_PAGE_IDS) return false
-        val destination = NavigationDestination.SubPage(pageId)
-        if (!accessGate(destination)) return false
         if (settingsSubId != 0 && settingsSubId != pageId) {
             beforeSubPageClosed(settingsSubId)
         }
@@ -177,20 +163,17 @@ internal class MainNavigator(
         applyStatusBarCompensation(toolbarVisible = true)
         views.bottomNav.visibility = View.GONE
         onSubPageShown(pageId)
-        onDestinationShown(destination)
         return true
     }
 
     fun closeSub(): Boolean {
         if (settingsSubId == 0) return false
         val returnTabId = settingsReturnTabId
-        val destination = NavigationDestination.MainPage(returnTabId)
-        if (!accessGate(destination)) return false
         beforeSubPageClosed(settingsSubId)
         settingsSubId = 0
         settingsReturnTabId = R.id.nav_settings
         syncBottomSelection(returnTabId)
-        renderMain(destination)
+        renderMain(returnTabId)
         return true
     }
 
@@ -204,10 +187,8 @@ internal class MainNavigator(
 
     private fun showMainFromBottom(pageId: Int): Boolean {
         if (pageId !in MAIN_PAGE_IDS) return false
-        val destination = NavigationDestination.MainPage(pageId)
-        if (!accessGate(destination)) return false
         closeCurrentSubForNavigation()
-        renderMain(destination)
+        renderMain(pageId)
         return true
     }
 
@@ -217,10 +198,10 @@ internal class MainNavigator(
         settingsReturnTabId = R.id.nav_settings
     }
 
-    private fun renderMain(destination: NavigationDestination.MainPage) {
+    private fun renderMain(pageId: Int) {
         views.subPages.values.forEach { it.visibility = View.GONE }
         views.mainPages.forEach { (id, page) ->
-            page.visibility = if (id == destination.id) View.VISIBLE else View.GONE
+            page.visibility = if (id == pageId) View.VISIBLE else View.GONE
         }
         // 主 Tab 只保留页面大标题，避免 Toolbar + PageTitle 双头部。
         views.toolbar.visibility = View.GONE
@@ -229,9 +210,8 @@ internal class MainNavigator(
         views.toolbar.navigationIcon = null
         applyStatusBarCompensation(toolbarVisible = false)
         views.bottomNav.visibility = View.VISIBLE
-        currentMainTabId = destination.id
-        onMainPageShown(destination.id)
-        onDestinationShown(destination)
+        currentMainTabId = pageId
+        onMainPageShown(pageId)
     }
 
     private fun syncBottomSelection(pageId: Int) {

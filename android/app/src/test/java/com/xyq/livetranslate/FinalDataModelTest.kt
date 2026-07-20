@@ -1,30 +1,11 @@
 package com.xyq.livetranslate
 
-import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FinalDataModelTest {
-    @Test
-    fun `glossary json normalizes and round trips`() {
-        val original = GlossaryProfile(
-            id = "meeting",
-            name = "  项目会议  ",
-            aliases = listOf(" API ", "API", ""),
-            terms = listOf("SDK = SDK"),
-            corrections = listOf("爱批爱→API"),
-        )
-
-        val decoded = GlossaryProfileJson.decode(GlossaryProfileJson.encode(original))
-
-        assertEquals("项目会议", decoded.name)
-        assertEquals(listOf("API"), decoded.aliases)
-        assertEquals(listOf("SDK = SDK"), decoded.terms)
-    }
-
     @Test
     fun `history json preserves mode metadata and paired segments`() {
         val session = HistorySession(
@@ -54,34 +35,21 @@ class FinalDataModelTest {
     }
 
     @Test
-    fun `content analysis parser returns generic context and glossary`() {
+    fun `content analysis parser returns generic context and note`() {
         val json = JSONObject()
             .put("sessionContext", "本场讨论 Android 音频捕获。")
             .put("note", "资料充分")
-            .put(
-                "glossary",
-                JSONObject()
-                    .put("name", "Android 会议")
-                    .put("category", "会议")
-                    .put("description", "音频捕获方案")
-                    .put("aliases", JSONArray(listOf("AAudio")))
-                    .put("terms", JSONArray(listOf("AudioRecord = AudioRecord")))
-                    .put("corrections", JSONArray())
-                    .put("style", "简洁"),
-            )
 
         val parsed = ContentContextAnalyzer.parse(json)
 
         assertEquals("本场讨论 Android 音频捕获。", parsed.sessionContext)
-        assertEquals("Android 会议", parsed.glossary?.name)
-        assertEquals(listOf("AAudio"), parsed.glossary?.aliases)
-        assertFalse(parsed.glossary?.id.isNullOrBlank())
+        assertEquals("资料充分", parsed.note)
     }
 
     @Test
     fun `status bus publishes immutable capped session snapshot`() {
         StatusBus.reset()
-        StatusBus.startSession(123L)
+        StatusBus.startSession(TranslationPlan.default(TranslationMode.INTERPRETATION), 123L)
         val lines = (1..100).map { "字幕 $it" }
         StatusBus.updateSessionSubtitles(lines, "当前字幕", "source")
 

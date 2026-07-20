@@ -3,31 +3,20 @@ package com.xyq.livetranslate
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
 
 object UpdateInstaller {
 
-    fun canRequestPackageInstalls(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
-    }
+    fun canRequestPackageInstalls(context: Context): Boolean =
+        context.packageManager.canRequestPackageInstalls()
 
-    fun unknownSourcesSettingsIntent(context: Context): Intent {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${context.packageName}"),
-            )
-        } else {
-            Intent(Settings.ACTION_SECURITY_SETTINGS)
-        }
-    }
+    fun unknownSourcesSettingsIntent(context: Context): Intent =
+        Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}"),
+        )
 
     fun installIntent(context: Context, apk: File): Intent {
         val uri = FileProvider.getUriForFile(

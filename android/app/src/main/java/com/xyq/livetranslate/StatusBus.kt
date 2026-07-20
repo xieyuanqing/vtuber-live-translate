@@ -50,10 +50,6 @@ object StatusBus {
 
     fun sessionSnapshot(): TranslationSessionSnapshot = sessionRef.get()
 
-    fun startSession(nowMs: Long = System.currentTimeMillis()) {
-        sessionRef.set(TranslationSessionSnapshot(startedAtMs = nowMs))
-    }
-
     fun startSession(
         plan: TranslationPlan,
         nowMs: Long = System.currentTimeMillis(),

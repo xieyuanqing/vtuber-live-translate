@@ -18,41 +18,26 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33], application = android.app.Application::class)
 class MainNavigatorTest {
     @Test
-    fun accessGateRejectsWithoutChangingPageAndObserverOnlySeesSuccessfulNavigation() =
+    fun rejectsUnknownDestinationsAndSwitchesBetweenValidPages() =
         withNavigatorFixture { fixture ->
-            val denied = mutableSetOf<NavigationDestination>()
-            val observed = mutableListOf<NavigationDestination>()
-            val navigator = MainNavigator(
-                views = fixture.views,
-                accessGate = { destination -> destination !in denied },
-                onDestinationShown = observed::add,
-            )
+            val navigator = MainNavigator(views = fixture.views)
             navigator.setup(null)
             assertEquals(View.GONE, fixture.views.toolbar.visibility)
             assertEquals(View.VISIBLE, fixture.views.bottomNav.visibility)
-            observed.clear()
-
-            val deniedSub = NavigationDestination.SubPage(R.id.pageSettingsProfileAi)
-            denied += deniedSub
-            assertFalse(navigator.openSub(R.id.pageSettingsProfileAi, R.id.nav_interp))
             assertEquals(View.VISIBLE, fixture.views.pageInterp.visibility)
-            assertEquals(View.GONE, fixture.views.pageSettingsProfileAi.visibility)
-            assertTrue(observed.isEmpty())
 
+            // 主页 id 集合外的目的地被拒，不改变当前页。
+            assertFalse(navigator.showMain(R.id.pageSettingsAbout))
+            assertEquals(View.VISIBLE, fixture.views.pageInterp.visibility)
+
+            // 合法主页切换成功。
             assertTrue(navigator.showMain(R.id.nav_history))
             assertEquals(View.VISIBLE, fixture.views.pageHistory.visibility)
-            assertEquals(
-                listOf(NavigationDestination.MainPage(R.id.nav_history)),
-                observed,
-            )
 
-            denied += NavigationDestination.MainPage(R.id.nav_settings)
-            assertFalse(navigator.showMain(R.id.nav_settings))
+            // 非子页 id、或返回 tab 不是主页 id 的 openSub 都被拒。
+            assertFalse(navigator.openSub(R.id.nav_interp, R.id.nav_settings))
+            assertFalse(navigator.openSub(R.id.pageSettingsAbout, R.id.pageSettingsAbout))
             assertEquals(View.VISIBLE, fixture.views.pageHistory.visibility)
-            assertEquals(
-                listOf(NavigationDestination.MainPage(R.id.nav_history)),
-                observed,
-            )
         }
 
     @Test
@@ -61,7 +46,6 @@ class MainNavigatorTest {
             val mainHooks = mutableListOf<Int>()
             val subHooks = mutableListOf<Int>()
             val closedHooks = mutableListOf<Int>()
-            val observed = mutableListOf<NavigationDestination>()
             val restoredState = Bundle().apply {
                 putInt(MainNavigator.STATE_MAIN_TAB, R.id.nav_video)
                 putInt(MainNavigator.STATE_SETTINGS_SUB, R.id.pageSceneLibrary)
@@ -72,7 +56,6 @@ class MainNavigatorTest {
                 onMainPageShown = mainHooks::add,
                 onSubPageShown = subHooks::add,
                 beforeSubPageClosed = closedHooks::add,
-                onDestinationShown = observed::add,
             )
 
             navigator.setup(restoredState)
@@ -83,13 +66,6 @@ class MainNavigatorTest {
             assertEquals("场景库", fixture.views.toolbar.title.toString())
             assertEquals(listOf(R.id.nav_video), mainHooks)
             assertEquals(listOf(R.id.pageSceneLibrary), subHooks)
-            assertEquals(
-                listOf(
-                    NavigationDestination.MainPage(R.id.nav_video),
-                    NavigationDestination.SubPage(R.id.pageSceneLibrary),
-                ),
-                observed,
-            )
 
             val savedState = Bundle()
             navigator.saveState(savedState)
@@ -105,7 +81,6 @@ class MainNavigatorTest {
             assertEquals(View.GONE, fixture.views.toolbar.visibility)
             assertEquals(R.id.nav_video, fixture.views.bottomNav.selectedItemId)
             assertEquals(R.id.nav_video, mainHooks.last())
-            assertEquals(NavigationDestination.MainPage(R.id.nav_video), observed.last())
             assertFalse(navigator.handleBack())
         }
 

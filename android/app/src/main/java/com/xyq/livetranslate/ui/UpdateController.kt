@@ -29,10 +29,8 @@ internal class UpdateController(
     private val busy = AtomicBoolean(false)
     private var pendingInstallApk: java.io.File? = null
 
-    fun currentVersionCode(context: Context = activity): Long {
-        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        return if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()
-    }
+    fun currentVersionCode(context: Context = activity): Long =
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
 
     fun currentVersionName(context: Context = activity): String {
         return runCatching {

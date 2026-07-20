@@ -71,8 +71,6 @@ internal class SessionCoordinator(
     private companion object {
         const val STATE_PENDING_START_MODE = "pending_start_mode"
         const val STATE_PENDING_CREDENTIAL_MODE = "pending_credential_mode"
-        const val STATE_PERMISSION_REQUESTED = "permission_requested"
-        const val STATE_PROJECTION_REQUESTED = "projection_requested"
         const val STATE_PENDING_STAGE = "pending_session_stage"
         const val STATE_PENDING_PROMPT = "pending_prompt"
         const val STATE_PENDING_SOURCE = "pending_source"
@@ -144,14 +142,6 @@ internal class SessionCoordinator(
         val snapshot = pendingSnapshot ?: return
         outState.putString(STATE_PENDING_START_MODE, snapshot.captureMode)
         outState.putString(STATE_PENDING_CREDENTIAL_MODE, snapshot.credentialMode)
-        outState.putBoolean(
-            STATE_PERMISSION_REQUESTED,
-            snapshot.stage == PendingSessionStage.WAITING_PERMISSION,
-        )
-        outState.putBoolean(
-            STATE_PROJECTION_REQUESTED,
-            snapshot.stage == PendingSessionStage.WAITING_PROJECTION,
-        )
         outState.putString(STATE_PENDING_STAGE, snapshot.stage.name)
         outState.putString(STATE_PENDING_PROMPT, snapshot.prompt)
         outState.putString(STATE_PENDING_SOURCE, snapshot.sourceLanguageCode)
@@ -172,13 +162,7 @@ internal class SessionCoordinator(
             ?: return
         val stage = savedState.getString(STATE_PENDING_STAGE)
             ?.let { stored -> PendingSessionStage.entries.firstOrNull { it.name == stored } }
-            ?: when {
-                savedState.getBoolean(STATE_PROJECTION_REQUESTED) ->
-                    PendingSessionStage.WAITING_PROJECTION
-                savedState.getBoolean(STATE_PERMISSION_REQUESTED) ->
-                    PendingSessionStage.WAITING_PERMISSION
-                else -> PendingSessionStage.READY
-            }
+            ?: PendingSessionStage.READY
         val restored = PendingSessionSnapshot(
             captureMode = captureMode,
             credentialMode = credentialMode,

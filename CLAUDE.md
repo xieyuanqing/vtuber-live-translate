@@ -69,7 +69,7 @@ CaptureService
 | `PromptBuilder.kt` | 翻译 systemInstruction 组合 |
 | `StatusBus.kt` | 服务到界面的会话状态与字幕快照 |
 | `HistorySession.kt` / `HistoryStore.kt` | 结构化历史模型与私有目录存储 |
-| `AiTextClient.kt` / `ProfileGenerator.kt` | 独立内容分析 AI，不参与实时连接 |
+| `AiTextClient.kt` / `ContentContextAnalyzer.kt` | 独立内容分析 AI，不参与实时连接 |
 | `SettingsStore.kt` / `KeystoreCrypto.kt` | 设置持久化与 API Key 加密 |
 
 布局位于 `android/app/src/main/res/layout/`。四个主页面始终由 `activity_main.xml` 引入，Robolectric 启动测试会覆盖关键 ID 绑定。

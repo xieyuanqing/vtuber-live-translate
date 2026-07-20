@@ -68,18 +68,6 @@ object HistoryStore {
         }.getOrNull()
     }
 
-    /** 供现有详情视图使用；新版详情页直接使用 [load]。 */
-    fun read(context: Context, fileName: String): String =
-        load(context, fileName)?.let(::toMarkdown).orEmpty()
-
-    fun rename(context: Context, fileNameOrId: String, newTitle: String): Boolean {
-        val session = load(context, fileNameOrId) ?: return false
-        val title = newTitle.trim()
-        if (title.isEmpty()) return false
-        save(context, session.copy(title = title))
-        return true
-    }
-
     fun delete(context: Context, fileNameOrId: String): Boolean =
         File(historyDir(context), safeFileName(fileNameOrId.removeSuffix(".json"))).delete()
 

@@ -91,13 +91,6 @@ object SettingsStore {
 
     // ---------- 第二 AI（资料自动分析） ----------
 
-    fun secondAiEnabled(c: Context): Boolean =
-        prefs(c).getBoolean("secondAiEnabled", false)
-
-    fun setSecondAiEnabled(c: Context, enabled: Boolean) {
-        prefs(c).edit().putBoolean("secondAiEnabled", enabled).apply()
-    }
-
     fun secondAiBaseUrl(c: Context): String =
         prefs(c).getString("secondAiBaseUrl", DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
 

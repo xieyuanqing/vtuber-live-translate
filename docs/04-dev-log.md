@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-20 · 清理过度设计与死代码
+
+对照「GPT 爱过度设计」的自查，清掉为想象需求写的抽象、删功能没删干净的残留、以及会造成错误结果的多余兜底。核心实时管线（连接轮换、快照冻结、音频回退、悬浮窗竞态、网关签名限流）都是有记录的真实事故防御，保留不动。
+
+- **术语库死链彻底清除**（唯一有运行时成本的）：删除零引用的 `GlossaryStore.kt`、`GlossaryProfile.kt`；`ContentContextAnalyzer` 去掉 `glossary` 字段、解析逻辑与 systemPrompt 里的术语库 JSON 段——此前每次内容分析都在为从不被读取的术语库输出付 token 和延迟（生产链路只用 `sessionContext` 和 `note`）。
+- **UpdateChecker 误报兜底**：删掉 `extractVersionCode` 最后一级「versionName 数字拼接」，它会把 `2.4.0` 解析成 `240`，让已装最新版的用户永远看到更新提示；保留显式字段 → body `versionCode:` → 纯数字 tag 三级。
+- **MainNavigator 投机抽象**：删除 `NavigationDestination`、`accessGate`（导航访问控制）、`onDestinationShown`（导航审计）——生产代码从未传入这两个钩子，唯一使用者是为测试它们而写的用例。退回普通 pageId 回调，重写对应单测。
+- **零散死代码**：`HistoryStore.read()/rename()`（无入口）、`SettingsStore.secondAiEnabled` 开关（从未接线）、`StatusBus.startSession(nowMs)` 单参重载（仅测试用）、`SessionCoordinator` 旧布尔状态兼容层（`saveState` 已总是写新 stage，回退不可达）、minSdk 29 下恒真的 `SDK_INT >= 26/28` 分支（`UpdateInstaller`、`UpdateController`）。
+- **文档**：CLAUDE.md 文件表把不存在的 `ProfileGenerator.kt` 修正为实际的 `ContentContextAnalyzer.kt`。
+
+**版本**：不变，保持 2.4.0 / 35。纯内部清理，无新增用户可见功能；仅修复检查更新误报。
+
+**验证**：本地 Android 工具链无法验证——egress 策略拦截 `dl.google.com`（AGP 8.7.3 拉取 403），Gradle wrapper 发行版下载亦被 GitHub 403。改由 GitHub Actions `workflow_dispatch` 在本分支跑 `testDebugUnitTest + lintDebug + assembleDebug`，结果见下条更新。
+
 ## 2026-07-19 · 实时字幕稳定性修复（CI 构建）
 
 - 不改变既有音频积压策略与连接参数。

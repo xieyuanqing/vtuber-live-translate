@@ -114,9 +114,9 @@ object UpdateChecker {
             if (apkUrl.isNotEmpty()) break
         }
         require(apkUrl.isNotEmpty()) { "Release 中没有 APK" }
-        // tag 形如 2.4.0 时用 versionName 兜底；优先 body 外自定义字段没有则从 tag 推导 code 失败则用 published 时间不可靠。
-        // 正式清单仍以 update.json 为准；API 路径要求 tag 为纯数字 versionCode 或 name 含 code=。
-        val versionCode = extractVersionCode(json, tag, versionName)
+        // versionCode 依次取：显式字段 → body 内 versionCode: N → 纯数字 tag。
+        // 正式清单仍以 update.json 为准；带小数点的 tag（如 2.4.0）不当作 versionCode。
+        val versionCode = extractVersionCode(json, tag)
         require(versionCode > 0L) { "无法解析 versionCode，请使用 update.json" }
         return AppUpdateInfo(
             versionCode = versionCode,
@@ -143,7 +143,7 @@ object UpdateChecker {
         return out.toList()
     }
 
-    private fun extractVersionCode(json: JSONObject, tag: String, versionName: String): Long {
+    private fun extractVersionCode(json: JSONObject, tag: String): Long {
         if (json.has("versionCode")) {
             val v = json.optLong("versionCode", -1L)
             if (v > 0L) return v
@@ -157,8 +157,6 @@ object UpdateChecker {
             ?.toLongOrNull()
             ?.let { if (it > 0L) return it }
         tag.toLongOrNull()?.let { if (it > 0L) return it }
-        // 最后：versionName 全是数字
-        versionName.filter { it.isDigit() }.toLongOrNull()?.let { if (it > 0L) return it }
         return -1L
     }
 
