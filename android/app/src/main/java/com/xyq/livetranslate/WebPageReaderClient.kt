@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  * 目标 URL 仍需先拒绝本地、私网和带凭据地址，避免把敏感地址交给第三方抓取。
  */
 object WebPageReaderClient {
-    private const val USER_AGENT = "LiveTranslate/2.4.0 (Android)"
+    private const val USER_AGENT = "LiveTranslate/2.4.1 (Android)"
     private const val MAX_CONTENT_CHARS = 12_000
     private val DEFAULT_ENDPOINT = "https://r.jina.ai/".toHttpUrl()
     private val URL_PATTERN = Regex("https?://\\S+", RegexOption.IGNORE_CASE)

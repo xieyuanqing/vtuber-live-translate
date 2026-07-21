@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.4.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.4.1-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
