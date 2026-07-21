@@ -87,6 +87,7 @@ internal class SessionContextController(
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                 override fun afterTextChanged(s: android.text.Editable?) {
+                    invalidateAnalysisForInputChange(TranslationMode.INTERPRETATION)
                     if (!interpContextExpanded) renderInterpContextFold()
                     else updateInterpContextSummaryOnly()
                 }
@@ -104,6 +105,7 @@ internal class SessionContextController(
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(s: android.text.Editable?) {
+                invalidateAnalysisForInputChange(TranslationMode.VIDEO)
                 if (!videoContextExpanded) renderVideoContextFold()
                 else updateVideoContextSummaryOnly()
             }
@@ -124,6 +126,14 @@ internal class SessionContextController(
             toast("已清除本场视频资料")
         }
         renderVideoContextFold()
+    }
+
+    private fun invalidateAnalysisForInputChange(mode: TranslationMode) {
+        if (latestRequestId(mode).isEmpty()) return
+        setLatestRequestId(mode, "")
+        val modeViews = views(mode)
+        modeViews.analyzeContextButton.isEnabled = true
+        showAnalyzeStatus(modeViews.analyzeContextStatus, "输入已修改，之前的分析已取消")
     }
 
     private fun renderInterpContextFold() {
@@ -292,7 +302,7 @@ internal class SessionContextController(
         if (mode == TranslationMode.VIDEO && url.isBlank()) {
             showAnalyzeStatus(
                 statusView,
-                "解析视频需要先填写 YouTube、哔哩哔哩或 Twitch 链接",
+                "解析网页需要先填写一个公网视频或播放页面链接",
             )
             return
         }
@@ -371,8 +381,14 @@ internal class SessionContextController(
                             button.isEnabled = true
                             return@success
                         }
+                        setLatestRequestId(mode, "")
                         if (result.sessionContext.isBlank()) {
-                            showAnalyzeStatus(statusView, "AI 没有返回可用背景，请补充资料后重试")
+                            showAnalyzeStatus(
+                                statusView,
+                                result.note.take(200).ifBlank {
+                                    "AI 没有返回可用背景，请补充资料后重试"
+                                },
+                            )
                         } else {
                             modeViews.sessionContext.setText(result.sessionContext)
                             showAnalyzeStatus(statusView, result.note.ifBlank { "本场资料已整理" })
@@ -382,6 +398,7 @@ internal class SessionContextController(
                 }.onFailure { error ->
                     postToUi failure@{
                         if (!isHostActive() || requestId != latestRequestId(mode)) return@failure
+                        setLatestRequestId(mode, "")
                         showAnalyzeStatus(statusView, "整理失败：${error.message ?: "未知错误"}")
                         button.isEnabled = true
                     }

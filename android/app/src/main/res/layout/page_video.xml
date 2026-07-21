@@ -272,7 +272,7 @@
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Field"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:hint="YouTube / 哔哩哔哩 / Twitch 链接（用于 AI 解析背景）">
+                                android:hint="YouTube / 哔哩哔哩 / Twitch 或其他公网播放页面">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etVideoSessionUrl"

@@ -3,6 +3,7 @@ package com.xyq.livetranslate.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
@@ -13,6 +14,7 @@ import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.widget.doAfterTextChanged
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.xyq.livetranslate.HistoryStore
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.TranslationLanguageCatalog
@@ -32,6 +34,7 @@ internal data class HistoryViews(
     val detailTitle: TextView,
     val shareButton: Button,
     val copyButton: Button,
+    val deleteButton: Button,
     val detailText: TextView,
     val detailMeta: TextView,
     val detailContext: TextView,
@@ -49,6 +52,7 @@ internal data class HistoryViews(
             detailTitle = root.findViewById(R.id.tvHistoryTitle),
             shareButton = root.findViewById(R.id.btnShareHistory),
             copyButton = root.findViewById(R.id.btnCopyHistory),
+            deleteButton = root.findViewById(R.id.btnDeleteHistory),
             detailText = root.findViewById(R.id.tvHistoryDetail),
             detailMeta = root.findViewById(R.id.tvHistoryDetailMeta),
             detailContext = root.findViewById(R.id.tvHistoryDetailContext),
@@ -62,11 +66,14 @@ internal class HistoryController(
     private val context: Context,
     private val views: HistoryViews,
     private val openDetailPage: (returnTabId: Int) -> Unit,
+    private val closeDetailPage: () -> Unit,
     private val toast: (String) -> Unit,
 ) {
     private val layoutInflater = LayoutInflater.from(context)
     private var allItems: List<HistoryStore.HistoryItem> = emptyList()
     private var modeFilter: TranslationMode? = null
+    private var currentDetailFileName: String? = null
+    private var currentDetailIsActive = false
 
     fun setup() {
         views.searchInput.doAfterTextChanged { renderList() }
@@ -107,6 +114,36 @@ internal class HistoryController(
                 putExtra(Intent.EXTRA_TEXT, text)
             }
             context.startActivity(Intent.createChooser(send, "分享历史记录"))
+        }
+        views.deleteButton.setOnClickListener {
+            val fileName = currentDetailFileName ?: return@setOnClickListener
+            if (currentDetailIsActive) {
+                toast("正在进行的会话不能删除，请先停止翻译")
+                return@setOnClickListener
+            }
+            val dialog = MaterialAlertDialogBuilder(context)
+                .setTitle("删除这条历史记录？")
+                .setMessage("删除后无法恢复。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("删除") { _, _ ->
+                    if (HistoryStore.delete(context, fileName)) {
+                        currentDetailFileName = null
+                        currentDetailIsActive = false
+                        views.detailText.text = ""
+                        reload()
+                        closeDetailPage()
+                        toast("历史记录已删除")
+                    } else {
+                        toast("删除失败，记录可能已经不存在")
+                        reload()
+                    }
+                }
+                .create()
+            dialog.setOnShowListener {
+                dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+                    .setTextColor(context.getColor(R.color.error))
+            }
+            dialog.show()
         }
     }
 
@@ -231,10 +268,14 @@ internal class HistoryController(
     private fun showDetail(item: HistoryStore.HistoryItem) {
         val session = HistoryStore.load(context, item.fileName)
         if (session == null) {
+            currentDetailFileName = null
+            currentDetailIsActive = false
             toast("记录不存在或已损坏")
             reload()
             return
         }
+        currentDetailFileName = item.fileName
+        currentDetailIsActive = session.endedAt == null
         views.detailTitle.text = session.title
         views.detailText.text = HistoryStore.toMarkdown(session)
         views.detailMeta.text = buildString {

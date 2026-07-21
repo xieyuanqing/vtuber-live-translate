@@ -1,5 +1,6 @@
 package com.xyq.livetranslate
 
+import okhttp3.Dns
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
@@ -13,11 +14,20 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.net.InetAddress
 
 class VideoMetadataClientTest {
     private lateinit var server: MockWebServer
     private lateinit var endpoints: VideoMetadataEndpoints
-    private val client = OkHttpClient()
+    private val testDns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> =
+            if (hostname == "localhost") {
+                Dns.SYSTEM.lookup(hostname)
+            } else {
+                listOf(InetAddress.getByAddress(hostname, byteArrayOf(8, 8, 8, 8)))
+            }
+    }
+    private val client = OkHttpClient.Builder().dns(testDns).build()
 
     @Before
     fun setUp() {
@@ -29,6 +39,7 @@ class VideoMetadataClientTest {
             bilibiliLiveRoom = server.url("/bilibili-live"),
             bilibiliLiveUser = server.url("/bilibili-user"),
             twitchGraphQl = server.url("/twitch"),
+            webReader = server.url("/"),
         )
     }
 
@@ -95,10 +106,11 @@ class VideoMetadataClientTest {
     }
 
     @Test
-    fun `rejects lookalike and unsupported hosts`() {
-        assertThrows(IllegalStateException::class.java) {
-            VideoMetadataClient.parseLink("https://evilyoutube.com/watch?v=demo")
-        }
+    fun `routes unknown public hosts to generic page reader and rejects reserved Twitch paths`() {
+        val generic = VideoMetadataClient.parseLink("https://evilyoutube.com/watch?v=demo")
+        assertEquals(VideoLinkKind.GENERIC_PAGE, generic.kind)
+        assertEquals("https://evilyoutube.com/watch?v=demo", generic.normalizedUrl)
+
         assertThrows(IllegalArgumentException::class.java) {
             VideoMetadataClient.parseLink("https://www.twitch.tv/directory")
         }
@@ -138,7 +150,7 @@ class VideoMetadataClientTest {
                 "http://127.0.0.1/private",
             )
         }
-        assertThrows(IllegalStateException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             VideoMetadataClient.validateBilibiliRedirect(
                 current,
                 "https://example.com/private",
@@ -171,6 +183,29 @@ class VideoMetadataClientTest {
         assertThrows(IllegalStateException::class.java) {
             VideoMetadataClient.fetch("https://www.twitch.tv/demolive", client, endpoints)
         }
+    }
+
+    @Test
+    fun `fetches unknown public page through generic reader`() {
+        server.enqueue(
+            jsonResponse(
+                """
+                {"code":200,"data":{"title":"未知播放页","description":"页面简介","text":"节目正文内容","httpStatus":200}}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = VideoMetadataClient.fetch(
+            "https://media.example/live/abc",
+            client,
+            endpoints,
+        )
+
+        assertEquals(VideoPlatform.WEB, result.platform)
+        assertEquals("未知播放页", result.title)
+        assertEquals("页面简介", result.description)
+        assertEquals("节目正文内容", result.content)
+        assertEquals("/https://media.example/live/abc", server.takeRequest().path)
     }
 
     @Test

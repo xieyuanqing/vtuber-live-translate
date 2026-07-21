@@ -1,8 +1,10 @@
 package com.xyq.livetranslate
 
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import com.xyq.livetranslate.ui.ModeHomeController
@@ -17,8 +19,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = android.app.Application::class)
@@ -130,8 +135,48 @@ class MainActivityStartupTest {
 
         sessionCard.performClick()
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
-        activity.onBackPressed()
+
+        val deleteButton = activity.findViewById<android.widget.Button>(R.id.btnDeleteHistory)
+        assertEquals(activity.getColor(R.color.error), deleteButton.currentTextColor)
+        deleteButton.performClick()
+
+        val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(dialog.isShowing)
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(HistoryStore.list(activity).isEmpty())
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistory).visibility)
+        assertEquals(0, historyList.childCount)
+    }
+
+    @Test
+    fun activeHistoryCannotBeDeletedWhileLoggerMayStillWrite() = withActivity { activity ->
+        HistoryStore.save(
+            activity,
+            HistorySession(
+                id = "active-session",
+                title = "正在翻译",
+                mode = TranslationMode.INTERPRETATION,
+                sourceLanguageCode = "ja",
+                targetLanguageCode = "zh-Hans",
+                scenePresetId = "general",
+                sceneLabel = "通用",
+                contextSummary = "",
+                startedAt = 1_000L,
+                endedAt = null,
+                segments = listOf(TranscriptSegment(500L, "原文", "译文")),
+            ),
+        )
+
+        activity.findViewById<View>(R.id.nav_history).performClick()
+        val historyList = activity.findViewById<android.widget.LinearLayout>(R.id.historyList)
+        historyList.getChildAt(1).performClick()
+        activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
+
+        assertEquals("正在进行的会话不能删除，请先停止翻译", ShadowToast.getTextOfLatestToast())
+        assertEquals(1, HistoryStore.list(activity).size)
+        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
     }
 
     @Test

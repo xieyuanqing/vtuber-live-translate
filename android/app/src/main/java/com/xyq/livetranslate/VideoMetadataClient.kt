@@ -18,6 +18,7 @@ enum class VideoLinkKind {
     TWITCH_CHANNEL,
     TWITCH_VIDEO,
     TWITCH_CLIP,
+    GENERIC_PAGE,
 }
 
 data class ParsedVideoLink(
@@ -37,6 +38,7 @@ internal data class VideoMetadataEndpoints(
     val bilibiliLiveRoom: HttpUrl = "https://api.live.bilibili.com/room/v1/Room/get_info".toHttpUrl(),
     val bilibiliLiveUser: HttpUrl = "https://api.live.bilibili.com/live_user/v1/Master/info".toHttpUrl(),
     val twitchGraphQl: HttpUrl = "https://gql.twitch.tv/gql".toHttpUrl(),
+    val webReader: HttpUrl = "https://r.jina.ai/".toHttpUrl(),
 )
 
 /** 自动识别视频平台并获取公开元数据，UI 与 AI 整理层只依赖这个入口。 */
@@ -80,6 +82,11 @@ object VideoMetadataClient {
             VideoLinkKind.TWITCH_VIDEO,
             VideoLinkKind.TWITCH_CLIP,
             -> fetchTwitch(link, client, endpoints)
+            VideoLinkKind.GENERIC_PAGE -> WebPageReaderClient.fetch(
+                link.normalizedUrl,
+                client,
+                endpoints.webReader,
+            )
             VideoLinkKind.BILIBILI_SHORT -> error("B站短链未能解析为视频或直播链接")
         }
     }
@@ -173,7 +180,12 @@ object VideoMetadataClient {
             )
         }
 
-        error("目前只支持 YouTube、哔哩哔哩和 Twitch 链接")
+        val publicUrl = WebPageReaderClient.validateTargetUrl(url.toString())
+        return ParsedVideoLink(
+            VideoLinkKind.GENERIC_PAGE,
+            "",
+            publicUrl.toString(),
+        )
     }
 
     private fun fetchYouTube(

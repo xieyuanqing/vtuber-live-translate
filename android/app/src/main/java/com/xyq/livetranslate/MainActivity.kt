@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
             openDetailPage = { returnTabId ->
                 navigator.openSub(R.id.pageHistoryDetail, returnTabId)
             },
+            closeDetailPage = { navigator.closeSub() },
             toast = ::toast,
         )
         sceneLibraryController = SceneLibraryController(
