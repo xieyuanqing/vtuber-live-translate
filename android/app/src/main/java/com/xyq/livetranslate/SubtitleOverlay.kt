@@ -29,6 +29,7 @@ class SubtitleOverlay(private val context: Context) {
     private var collapsedHandle: TextView? = null
     private var statusLabel: TextView? = null
     private var pauseButton: TextView? = null
+    private var openButton: TextView? = null
     private var collapseButton: TextView? = null
     private var tvConfirmed: TextView? = null
     private var tvCurrent: TextView? = null
@@ -81,10 +82,17 @@ class SubtitleOverlay(private val context: Context) {
         val pause = controlButton("Ⅱ", "暂停或继续翻译").apply {
             setOnClickListener { togglePause() }
         }
+        val open = controlButton("⤢", "打开主应用").apply {
+            setOnClickListener { openMainApp() }
+        }
         val collapse = controlButton("⇥", "收起到屏幕侧边").apply {
             setOnClickListener { toggleCollapsed() }
         }
         headerRow.addView(pause, LinearLayout.LayoutParams(dp(36), dp(36)))
+        headerRow.addView(
+            open,
+            LinearLayout.LayoutParams(dp(36), dp(36)).apply { leftMargin = dp(4) },
+        )
         headerRow.addView(
             collapse,
             LinearLayout.LayoutParams(dp(36), dp(36)).apply { leftMargin = dp(4) },
@@ -187,6 +195,7 @@ class SubtitleOverlay(private val context: Context) {
         collapsedHandle = sideHandle
         statusLabel = stateText
         pauseButton = pause
+        openButton = open
         collapseButton = collapse
         tvConfirmed = confirmed
         tvCurrent = current
@@ -205,6 +214,7 @@ class SubtitleOverlay(private val context: Context) {
         collapsedHandle = null
         statusLabel = null
         pauseButton = null
+        openButton = null
         collapseButton = null
         tvConfirmed = null
         tvCurrent = null
@@ -237,6 +247,13 @@ class SubtitleOverlay(private val context: Context) {
             Intent(context, CaptureService::class.java).setAction(CaptureService.ACTION_TOGGLE_PAUSE),
         )
         pauseButton?.postDelayed({ maybeReapplyStyle() }, 80L)
+    }
+
+    private fun openMainApp() {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
     }
 
     private fun toggleCollapsed() {
@@ -324,6 +341,7 @@ class SubtitleOverlay(private val context: Context) {
             )
             statusLabel?.visibility = View.VISIBLE
             pauseButton?.visibility = View.VISIBLE
+            openButton?.visibility = View.VISIBLE
             collapseButton?.apply {
                 text = "⇥"
                 setTextColor(Color.WHITE)

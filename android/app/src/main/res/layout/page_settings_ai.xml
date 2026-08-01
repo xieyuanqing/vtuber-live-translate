@@ -110,10 +110,13 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Field"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="模型名">
-                    <com.google.android.material.textfield.TextInputEditText
+                    android:hint="模型名"
+                    app:helperText="点开下拉可拉取远端模型，也可手动输入">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/etSecondAiModel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -121,6 +124,23 @@
                         android:inputType="text"
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRefreshSecondAiModels"
+                    style="@style/LuminousSecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:text="刷新模型列表" />
+
+                <TextView
+                    android:id="@+id/tvSecondAiModelsHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
 
                 <TextView
                     style="@style/FieldLabel"

@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-08-01 · 悬浮窗打开主应用 + AI 模型远端下拉
+
+- 视频字幕悬浮窗头部在「暂停」与「收起」之间新增 `⤢` 按钮，点击以 `FLAG_ACTIVITY_NEW_TASK` 启动 `MainActivity`，系统会把现有实例提到前台、不重启会话，省去下拉通知栏再回 App 的割裂操作。展开态可见、收起态随容器隐藏，行为与暂停/收起一致。
+- 设置 → 内容分析 AI 的模型名从手动 `TextInputEditText` 改为 `MaterialAutoCompleteTextView`（带框 ExposedDropdown，避开语言胶囊那种 `boxBackgroundMode=none` 启动崩溃坑）：点开下拉若未拉过则自动拉取远端模型列表，旁置「刷新模型列表」按钮可显式重拉，输入框仍可手动覆盖。
+- 拉取来源按凭据模式分流：好友网关已绑定（`FriendGatewayStore.isActive`）时走 `GET {gateway}/gateway/v1beta/models` 带设备签名，否则走用户配置代理（Gemini 原生 `GET {base}/v1beta/models` 过滤 `generateContent` 项，OpenAI 兼容 `GET {base}/v1/models` 取 `data[].id`）。列表为空或拉取失败时显示橙色警告「远端未返回模型，请自行输入模型名」，并保留手动输入兜底。切换 API 格式后旧列表失效、自动清空并标记需重新拉取。
+- 好友网关此前只有 `POST /gateway/v1beta/models/:generateContent`，缺列模型端点。补 `GET /gateway/v1beta/models`，同样走 `_authenticate` 设备签名鉴权，以 Gemini 标准格式返回 `allowed_text_models`，确保好友模式下 App 仍从网关拉真实可用列表、不绕过签名直连官方，符合「持有者代理」边界。
+
+**版本**：不变，保持 2.4.1 / 36。
+
+**验证**：网关新增 `test_models_list_returns_allowed_text_models_behind_auth`（无签名 401 + 有签名返回 allowed 列表），全量 9 项 friend_gateway API 测试通过；App 新增 `AiTextClientListModelsTest`（Gemini 过滤 / OpenAI / 网关路径带签名 / 空列表），`./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` 全部通过，`git diff --check` 干净。
+
+---
+
 ## 2026-07-21 · v2.4.1 多平台网页分析正式版
 
 - 版本升级为 **2.4.1 / versionCode 36**，`update.json` 与正式 Release 统一指向 `v2.4.1/LiveTranslate-2.4.1.apk`。

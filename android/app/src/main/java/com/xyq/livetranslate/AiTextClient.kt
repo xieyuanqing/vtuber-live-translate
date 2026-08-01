@@ -72,6 +72,92 @@ object AiTextClient {
         }
     }
 
+    /**
+     * 拉取当前配置下可用的文本模型列表，供设置页下拉选择。
+     *
+     * - Gemini 原生格式：请求 [baseUrl]/v1beta/models，过滤掉不支持 generateContent 的项。
+     * - OpenAI 兼容格式：请求 [baseUrl]/v1/models，返回 data[].id。
+     * - 好友网关模式（BEARER_TOKEN）：走 [baseUrl]/gateway/v1beta/models，由网关返回其开放模型。
+     *
+     * 调用方必须自行放到后台线程执行（同步阻塞）。
+     * 失败时抛 [Exception]，调用方捕获后回退为手动输入并提示。
+     */
+    fun listModels(
+        baseUrl: String,
+        apiKey: String,
+        format: Format,
+        credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
+        deviceId: String = "",
+        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
+    ): List<String> {
+        val url = buildModelsUrl(baseUrl, format, apiKey, credentialMode)
+        val bodyBytes = ByteArray(0)
+        val req = Request.Builder()
+            .url(url)
+            .apply {
+                if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                    header("Authorization", "Bearer $apiKey")
+                    if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
+                    val path = url.toHttpUrl().encodedPath
+                    requestSignatureProvider
+                        ?.invoke("GET", path, bodyBytes, apiKey)
+                        ?.forEach(::header)
+                } else if (format == Format.OPENAI) {
+                    header("Authorization", "Bearer $apiKey")
+                }
+            }
+            .get()
+            .build()
+        http.newCall(req).execute().use { resp ->
+            val body = resp.body?.string().orEmpty()
+            if (!resp.isSuccessful) {
+                Log.w(TAG, "listModels error ${resp.code}: ${body.take(300)}")
+                error("拉取模型列表失败（${resp.code}）")
+            }
+            return parseModels(body, format)
+        }
+    }
+
+    private fun buildModelsUrl(
+        baseUrl: String,
+        format: Format,
+        apiKey: String,
+        credentialMode: ApiCredentialMode,
+    ): String = when (format) {
+        Format.GEMINI -> {
+            val base = baseUrl.trimEnd('/')
+            val path = if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
+                "/gateway/v1beta/models"
+            } else {
+                "/v1beta/models"
+            }
+            base + path + if (credentialMode == ApiCredentialMode.QUERY_API_KEY) "?key=$apiKey" else ""
+        }
+        Format.OPENAI -> baseUrl.trimEnd('/') + "/v1/models"
+    }
+
+    private fun parseModels(body: String, format: Format): List<String> {
+        val root = JSONObject(body)
+        return when (format) {
+            Format.GEMINI -> {
+                val arr = root.optJSONArray("models") ?: return emptyList()
+                (0 until arr.length()).mapNotNull { i ->
+                    val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+                    val name = obj.optString("name", "")
+                    val methods = obj.optJSONArray("supportedGenerationMethods") ?: org.json.JSONArray()
+                    val supports = (0 until methods.length()).any { methods.optString(it) == "generateContent" }
+                    if (supports) name.ifEmpty { null } else null
+                }
+            }
+            Format.OPENAI -> {
+                val arr = root.optJSONArray("data") ?: return emptyList()
+                (0 until arr.length()).mapNotNull { i ->
+                    arr.optJSONObject(i)?.optString("id", "")?.ifEmpty { null }
+                }
+            }
+        }
+    }
+
     // ---------- Gemini 原生 REST ----------
 
     private fun generateGemini(

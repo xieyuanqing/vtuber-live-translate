@@ -267,6 +267,31 @@ def test_text_proxy_keeps_friend_token_away_from_upstream(tmp_path: Path) -> Non
     assert request.url.path == "/v1beta/models/gemini-2.5-flash:generateContent"
 
 
+def test_models_list_returns_allowed_text_models_behind_auth(tmp_path: Path) -> None:
+    app = create_app(settings(tmp_path, text_api_key="cch-text-secret"))
+    code = app.state.store.create_invites(1, "friend-list", 30)[0]
+    private, public_key, device_id = device()
+
+    with TestClient(app) as client:
+        token = bind(client, code, private, public_key)
+        path = "/gateway/v1beta/models"
+        unauth = client.get(path, headers={})
+        assert unauth.status_code == 401
+        assert unauth.json()["error"]["code"] == "auth_required"
+        response = client.get(
+            path,
+            headers=signed_headers(private, device_id, token, "GET", path),
+        )
+        assert response.status_code == 200
+        names = [item["name"] for item in response.json()["models"]]
+        assert names == ["models/gemini-2.5-flash"]
+        assert all(
+            "generateContent" in item["supportedGenerationMethods"]
+            for item in response.json()["models"]
+        )
+
+
+
 def test_live_proxy_forwards_setup_and_realtime_messages(tmp_path: Path, monkeypatch) -> None:
     class FakeUpstream:
         def __init__(self) -> None:

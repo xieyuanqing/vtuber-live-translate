@@ -369,6 +369,18 @@ def create_app(settings: Settings) -> FastAPI:
             },
         }
 
+    @app.get("/gateway/v1beta/models")
+    async def list_models(request: Request) -> dict[str, object]:
+        auth = _authenticate(store, request.headers, "GET", request.url.path)
+        models = [
+            {
+                "name": f"models/{name}" if not name.startswith("models/") else name,
+                "supportedGenerationMethods": ["generateContent"],
+            }
+            for name in settings.allowed_text_models
+        ]
+        return {"models": models}
+
     @app.post("/gateway/v1beta/models/{model}:generateContent")
     async def generate(model: str, request: Request) -> Response:
         content_length = int(request.headers.get("content-length", "0") or 0)

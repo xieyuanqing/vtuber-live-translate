@@ -12,7 +12,10 @@ import android.widget.EditText
 import android.widget.TextView
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.xyq.livetranslate.AiTextClient
+import com.xyq.livetranslate.ApiCredentialMode
+import com.xyq.livetranslate.FriendDeviceIdentity
 import com.xyq.livetranslate.FriendGatewayBindingPhase
 import com.xyq.livetranslate.FriendGatewayBindingState
 import com.xyq.livetranslate.FriendGatewayClient
@@ -64,7 +67,9 @@ internal data class SettingsViews(
     val tvLinesVal: TextView,
     val etSecondAiKey: EditText,
     val etSecondAiUrl: EditText,
-    val etSecondAiModel: EditText,
+    val etSecondAiModel: MaterialAutoCompleteTextView,
+    val btnRefreshSecondAiModels: Button,
+    val tvSecondAiModelsHint: TextView,
     val btnSecondAiFormat: Button,
     val swEchoTarget: MaterialSwitch,
     val slRotate: Slider,
@@ -116,6 +121,8 @@ internal data class SettingsViews(
                 etSecondAiKey = root.findViewById(R.id.etSecondAiKey),
                 etSecondAiUrl = root.findViewById(R.id.etSecondAiUrl),
                 etSecondAiModel = root.findViewById(R.id.etSecondAiModel),
+                btnRefreshSecondAiModels = root.findViewById(R.id.btnRefreshSecondAiModels),
+                tvSecondAiModelsHint = root.findViewById(R.id.tvSecondAiModelsHint),
                 btnSecondAiFormat = root.findViewById(R.id.btnSecondAiFormat),
                 swEchoTarget = root.findViewById(R.id.swEchoTarget),
                 slRotate = root.findViewById(R.id.slRotate),
@@ -173,6 +180,7 @@ internal class SettingsController(
         views.etSecondAiModel.setText(SettingsStore.secondAiModel(context))
         updateSecondAiFormatLabel()
         views.btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
+        setupSecondAiModelDropdown()
 
         setupFriendGatewayUi()
         setupStyleSliders()
@@ -338,6 +346,93 @@ internal class SettingsController(
         }
     }
 
+    private var secondAiModelsFetched = false
+    private var secondAiModelsFetching = false
+    private var secondAiModels: List<String> = emptyList()
+
+    private fun setupSecondAiModelDropdown() {
+        views.etSecondAiModel.setSimpleItems(emptyArray())
+        views.etSecondAiModel.setOnClickListener {
+            if (!secondAiModelsFetched && !secondAiModelsFetching) {
+                fetchSecondAiModels(lazy = true)
+            }
+            views.etSecondAiModel.showDropDown()
+        }
+        views.btnRefreshSecondAiModels.setOnClickListener { fetchSecondAiModels(lazy = false) }
+    }
+
+    private fun fetchSecondAiModels(lazy: Boolean) {
+        if (secondAiModelsFetching) return
+        val friendAccess = FriendGatewayStore.isActive(context)
+        val apiKey = if (friendAccess) {
+            FriendGatewayStore.token(context)
+        } else {
+            SettingsStore.secondAiApiKey(context)
+        }
+        if (!friendAccess && apiKey.isBlank()) {
+            renderSecondAiModelsHint(true, "未填写 API Key，无法拉取模型列表，请手动输入")
+            return
+        }
+        val baseUrl = if (friendAccess) {
+            FriendGatewayStore.GATEWAY_BASE_URL + "/gateway"
+        } else {
+            SettingsStore.secondAiBaseUrl(context)
+        }
+        val format = if (friendAccess) AiTextClient.Format.GEMINI else secondAiFormat()
+        val credentialMode = if (friendAccess) {
+            ApiCredentialMode.BEARER_TOKEN
+        } else {
+            ApiCredentialMode.QUERY_API_KEY
+        }
+        val deviceId = if (friendAccess) FriendGatewayStore.deviceId(context) else ""
+        val requestSignatureProvider:
+            ((String, String, ByteArray, String) -> Map<String, String>)? = if (friendAccess) {
+            { method, path, body, token ->
+                FriendDeviceIdentity.signRequest(context, method, path, body, token).asMap()
+            }
+        } else {
+            null
+        }
+        secondAiModelsFetching = true
+        if (lazy) renderSecondAiModelsHint(false, "正在拉取模型列表…")
+        Thread({
+            val result = runCatching {
+                AiTextClient.listModels(
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    format = format,
+                    credentialMode = credentialMode,
+                    deviceId = deviceId,
+                    requestSignatureProvider = requestSignatureProvider,
+                )
+            }
+            secondAiModelsFetching = false
+            postToUi {
+                if (!isHostActive()) return@postToUi
+                secondAiModelsFetched = true
+                result.onSuccess { models ->
+                    secondAiModels = models
+                    views.etSecondAiModel.setSimpleItems(models.toTypedArray())
+                    val empty = models.isEmpty()
+                    renderSecondAiModelsHint(
+                        empty,
+                        if (empty) "远端未返回模型，请自行输入模型名" else "已加载 ${models.size} 个模型，没有合适的可手动输入",
+                    )
+                }.onFailure { error ->
+                    renderSecondAiModelsHint(true, "拉取失败：${error.message ?: "请检查 Key/Base URL"}，可手动输入")
+                }
+            }
+        }, "ai-models-fetch").start()
+    }
+
+    private fun renderSecondAiModelsHint(warn: Boolean, message: String) {
+        views.tvSecondAiModelsHint.apply {
+            text = message
+            visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+            setTextColor(context.getColor(if (warn) R.color.warning else R.color.text_muted))
+        }
+    }
+
     private fun toggleSecondAiFormat() {
         val next = when (secondAiFormat()) {
             AiTextClient.Format.GEMINI -> AiTextClient.Format.OPENAI
@@ -345,6 +440,10 @@ internal class SettingsController(
         }
         SettingsStore.saveSecondAiFormat(context, next.key)
         updateSecondAiFormatLabel()
+        // 切换格式后旧列表不再适用，标记需重新拉取；清空下拉避免误选。
+        secondAiModelsFetched = false
+        secondAiModels = emptyList()
+        views.etSecondAiModel.setSimpleItems(emptyArray())
         toast("已切换到 ${next.key} 格式")
     }
 
