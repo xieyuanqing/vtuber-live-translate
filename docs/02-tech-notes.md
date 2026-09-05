@@ -56,10 +56,25 @@ wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.G
 
 - **云端可调参数就这么多**：`translationConfig` 只有 `targetLanguageCode`（BCP-47，默认 `en`）和 `echoTargetLanguage`（默认 `false`；true=输入已是目标语言时照常复述输出，false=保持沉默）两个字段，外加 `inputAudioTranscription` / `outputAudioTranscription` 两个转写开关。没有 VAD、voice、temperature 等常规 Live API 配置
 - **官方示例把转写开关放 generationConfig 里**，与我们实测的"必须放 setup 顶层"不一致；我们的结构实测可用，不改。若某天升级报 1007，先试官方结构
-- **官方声称翻译模式"不支持 tools 和 instructions"**，但 `systemInstruction` 实测可用且对场景约束、专名和翻译风格有改善——依赖的是未文档化行为，模型更新后可能失效，届时需要评估 transcript 后处理等替代方案
+- **官方声称翻译模式"不支持 tools 和 instructions"**，但 `systemInstruction` 实测可用且对场景约束、专名和翻译风格有改善（影响程度量化见下一节）——依赖的是未文档化行为，模型更新后可能失效，届时需要评估 transcript 后处理等替代方案
 - 语言代码表：中文官方写法是 `zh-Hans`（简体）/ `zh-Hant`（繁体）；我们用的 `zh` 实测可用
 - 模型能力表：函数调用 / Search grounding / 结构化输出 / 思考均不支持；输入仅音频（文本输入不支持）；翻译语音输出为 24kHz PCM（本 App 丢弃不播）
 - token 限制：输入 131,072 / 输出 65,536（直播场景配合 8 分半轮换用不满）
+
+### systemInstruction 影响程度实测（2026-09-06，Node 探针直连 WS）
+
+同一段 21.8 秒英语 TTS 音频（内含两处陌生英文名 Lupusregina），三种 setup 各连一场对照译文。探针零依赖（Node 原生 WebSocket），脚本未入库，在本机 `D:\lt-probe\probe.mjs`，复测：`GK=<key> node probe.mjs <none|instr|meta>`。
+
+| setup | 人名处理 | 形式要求（每句结尾加「喵」） |
+|---|---|---|
+| 无 systemInstruction | 原样保留 "Lupus Regina"，不音译 | — |
+| 指令式：译法要求 + 加喵 | 「露普斯蕾吉娜」2/2 | 仅机会性出现 1 次，位置也不对 |
+| 仅围栏背景资料（人名对照表，无命令语气） | 「露普斯蕾吉娜」2/2 | — |
+
+- **内容性信息可靠生效**：人名、术语、译名对照这类知识，不需要命令语气、纯信息注入就被采纳——元数据注入和长期背景对照表两条链路实测有效。基线对陌生专名的默认行为是原样保留原文，注入译名对照是从「观众看不懂」到「看懂」的质变；但收益限于与标题/简介/背景资料词汇重叠的内容。
+- **形式性约束是软引导**：「每句加喵」只被机会性执行，别指望 systemInstruction 做格式控制或严格行为约束。
+- 输入转写有会话间随机性（同一音频两次转写出 "Lupus Regina" / "Lupusregina"），对照实验要看定向差异，不能凭单次波动下结论。
+- 顺带验证：`{"realtimeInput":{"audioStreamEnd":true}}` 结束信号可用，服务端正常收尾；整场 21.8s 音频实时速率推送无丢块。
 
 ### 音频推送
 
