@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>流译</title>
+  </head>
+  <body>
+    <header>
+      <span class="dot" id="dot"></span>
+      <span class="title">流译</span>
+      <span class="grow"></span>
+      <button class="ghost small" id="openOptions">设置</button>
+    </header>
+
+    <section id="body">
+      <div id="banner" class="banner hidden"></div>
+
+      <div class="video">
+        <div id="videoTitle" class="video-title">未在 YouTube 视频页</div>
+        <div id="videoMeta" class="muted small"></div>
+      </div>
+
+      <button class="primary toggle" id="toggle">开始翻译</button>
+
+      <div class="stats">
+        <div class="stat"><span class="muted">状态</span><span id="stConn">—</span></div>
+        <div class="stat"><span class="muted">方向</span><span id="stDir">—</span></div>
+        <div class="stat"><span class="muted">场景</span><span id="stScene">—</span></div>
+        <div class="stat"><span class="muted">已运行</span><span id="stTime">—</span></div>
+      </div>
+
+      <div class="level-wrap">
+        <span class="muted small">输入音量</span>
+        <div class="level"><i id="level"></i></div>
+      </div>
+
+      <div class="quick">
+        <div class="field">
+          <span class="label">源语言</span>
+          <select id="sourceLang"></select>
+        </div>
+        <div class="field">
+          <span class="label">目标语言</span>
+          <select id="targetLang"></select>
+        </div>
+        <div class="field">
+          <span class="label">场景</span>
+          <select id="scene"></select>
+        </div>
+      </div>
+
+      <div id="hint" class="muted small"></div>
+    </section>
+
+    <script src="../common/constants.js"></script>
+    <script src="../common/settings.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

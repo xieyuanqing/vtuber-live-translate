@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="options.css" />
+    <title>流译 · 设置</title>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>流译 · 设置</h1>
+        <span class="grow"></span>
+        <span id="saved" class="muted small">改动即时保存</span>
+      </header>
+
+      <section class="card">
+        <h2>连接</h2>
+        <div class="field">
+          <span class="label">Gemini API Key（多个用英文逗号分隔，每场会话随机用一个）</span>
+          <textarea id="apiKeys" rows="2" placeholder="AIza..., AIza..."></textarea>
+          <p class="muted small">
+            Key 明文存在浏览器本地存储里，只适合自己用的电脑。需要能访问
+            <code>generativelanguage.googleapis.com</code>，国内要给浏览器配代理。
+          </p>
+        </div>
+        <div class="field">
+          <span class="label">WebSocket Base URL</span>
+          <input type="text" id="baseUrl" placeholder="wss://generativelanguage.googleapis.com" />
+          <p class="muted small">用自建 wss 转发时改这里，留空恢复默认。</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>翻译</h2>
+        <div class="two">
+          <div class="field">
+            <span class="label">源语言</span>
+            <select id="sourceLang"></select>
+          </div>
+          <div class="field">
+            <span class="label">目标语言</span>
+            <select id="targetLang"></select>
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="autoStartLive" />
+          <span>打开 YouTube 直播页时自动开始翻译<br /><span class="muted small">录播和点播仍然需要手动开始或按 Alt+T</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="pauseOnAd" />
+          <span>播广告时暂停送音频<br /><span class="muted small">省点额度，也避免广告词混进字幕</span></span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>背景资料</h2>
+        <label class="check">
+          <input type="checkbox" id="useMetadata" />
+          <span>把视频标题、频道、标签和简介注入提示词<br /><span class="muted small">对人名、组合名、游戏名的翻译帮助最大</span></span>
+        </label>
+        <div class="field">
+          <span class="label">简介截断长度：<b id="metadataLimitVal"></b> 字</span>
+          <input type="range" id="metadataLimit" min="0" max="4000" step="100" />
+        </div>
+        <div class="field">
+          <span class="label">长期背景（每场都会带上，适合放固定的人名表、称呼习惯）</span>
+          <textarea id="manualContext" rows="4" placeholder="例：ホロライブ 相关名字统一用官方中文译名；「にゃっはろ〜」保留原文不翻。"></textarea>
+        </div>
+        <p class="muted small">
+          标题和简介是任何人都能写的文本，会被当作不可信资料用围栏包起来送给模型，模型不会执行里面的指令。
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>场景库</h2>
+        <p class="muted small">
+          场景 = 名称 + 提示词，是唯一的可复用配置层。语言方向不进场景，随时单独调。
+        </p>
+        <div id="scenes" class="scenes"></div>
+        <div class="row">
+          <button id="addScene">新增场景</button>
+          <button id="resetScenes" class="ghost">恢复默认模板</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>字幕外观</h2>
+        <div class="two">
+          <div class="field">
+            <span class="label">保留已确认行数：<b id="captionLinesVal"></b></span>
+            <input type="range" id="captionLines" min="1" max="5" step="1" />
+          </div>
+          <div class="field">
+            <span class="label">字号缩放：<b id="captionScaleVal"></b>×</span>
+            <input type="range" id="captionScale" min="0.6" max="2.5" step="0.05" />
+          </div>
+          <div class="field">
+            <span class="label">距播放器底部：<b id="captionBottomVal"></b>%</span>
+            <input type="range" id="captionBottom" min="2" max="60" step="1" />
+          </div>
+          <div class="field">
+            <span class="label">背景不透明度：<b id="captionOpacityVal"></b>%</span>
+            <input type="range" id="captionOpacity" min="0" max="100" step="5" />
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="showSource" />
+          <span>同时显示识别到的原文（双语字幕）</span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>高级</h2>
+        <p class="muted small">这几个值来自安卓版实测默认，没有明确理由不建议动。</p>
+        <div class="two">
+          <div class="field">
+            <span class="label">连接主动轮换：<b id="rotateSecondsVal"></b> 秒</span>
+            <input type="range" id="rotateSeconds" min="120" max="580" step="5" />
+            <p class="muted small">服务端约 590 秒会断，必须提前换。</p>
+          </div>
+          <div class="field">
+            <span class="label">当前行静默转正：<b id="stabIdleMsVal"></b> ms</span>
+            <input type="range" id="stabIdleMs" min="1000" max="6000" step="100" />
+          </div>
+          <div class="field">
+            <span class="label">当前行最长字数：<b id="stabMaxCharsVal"></b></span>
+            <input type="range" id="stabMaxChars" min="20" max="80" step="1" />
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="echoTargetLanguage" />
+          <span>输入已经是目标语言时照样输出<br /><span class="muted small">关掉的话，说中文时模型会保持沉默</span></span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>提示词预览</h2>
+        <p class="muted small">这就是开始翻译时发给模型的 systemInstruction（元数据部分用示例占位）。</p>
+        <pre id="preview" class="preview"></pre>
+      </section>
+    </div>
+
+    <script src="../common/constants.js"></script>
+    <script src="../common/settings.js"></script>
+    <script src="../common/prompt.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

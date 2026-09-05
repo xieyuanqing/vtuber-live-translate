@@ -1,0 +1,164 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f0f0f;
+  --card: #1b1b1b;
+  --line: #2f2f2f;
+  --fg: #f1f1f1;
+  --muted: #aaa;
+  --accent: #3ea6ff;
+  --ok: #4caf50;
+  --warn: #ffb300;
+  --err: #ef5350;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Roboto, 'Microsoft YaHei', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+a {
+  color: var(--accent);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: #2a2a2a;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #343434;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #05233b;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  filter: brightness(1.08);
+}
+
+button.danger {
+  background: #3a1f1f;
+  border-color: #5c2b2b;
+  color: #ffb4ab;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='password'],
+select,
+textarea {
+  width: 100%;
+  background: #121212;
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+input[type='range'] {
+  width: 100%;
+}
+
+label {
+  display: block;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.row > * {
+  min-width: 0;
+}
+
+.grow {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field > .label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.check input {
+  margin-top: 3px;
+  flex: 0 0 auto;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #777;
+  flex: 0 0 auto;
+}
+
+.dot.ok {
+  background: var(--ok);
+}
+
+.dot.warn {
+  background: var(--warn);
+}
+
+.dot.err {
+  background: var(--err);
+}

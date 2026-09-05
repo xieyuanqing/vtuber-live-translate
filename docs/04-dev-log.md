@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-09-05 · Chrome 扩展版首个完整实现（分支 feat/chrome-extension）
+
+- 新增 `extension/`，MV3 扩展，只做 YouTube 直播：抓播放器音频 → Gemini Live Translate → 字幕叠在 `#movie_player` 里。不做已有字幕轨的文本翻译，那是另一条管线。分支成熟后独立成新仓库，安卓版不受影响。
+- **协议与算法直接移植**：`GeminiLiveClient`（setup 字段层级、505s 主动轮换、goAway 即时轮换、异常重连回填 1 秒 overlap、200 块有界队列）、`PcmProcessor`（混单声道 + 线性插值重采样 + 跨批相位连续）、`SubtitleStabilizer`（重叠合并 / 切句 / 去复读）、`PromptBuilder`（不可信资料围栏 + 围栏后重申任务）。安卓版的 scheduler 单线程约定在浏览器里由事件循环天然满足，但 `generation` 代际计数必须保留——轮换后旧 socket 的 onclose 还会到达。
+- **音频走 `createMediaElementSource` 而不是 `chrome.tabCapture`**：tabCapture 需要用户手势（做不到「打开直播页自动开始」）、会静音标签页并要求把声音回灌。直接挂 video 元素没这些问题，也只抓视频声音。代价是两条必须记住的约束：source 必须一直接着 destination 且 context 绝不能 close（否则页面永久没声），一个元素只能建一次 MediaElementSource。
+- **整页共用一个 AudioContext**。第一版按元素各建一个，YouTube 每次换视频都可能重建 `<video>`，而 Chrome 每页只允许约 6 个 AudioContext，切几次视频就爆。改成 module 级共享 context + 按元素缓存 source。
+- 字幕层作为 `#movie_player` 的子元素注入，全屏 / 剧场模式自动跟随，不需要单独适配；控制条露出时按 `ytp-autohide` 类上移让位。PiP 里显示不了 DOM，属于浏览器限制。
+- 元数据走 MAIN world 的 `movie_player.getPlayerResponse()`：比解析 DOM 稳（不依赖 class 名，简介不用展开就是全文），也比 `ytInitialPlayerResponse` 稳（SPA 切视频后那个全局变量是旧的）。
+- AudioWorklet 加载失败时退回 ScriptProcessorNode。扩展资源作为 worklet 模块在个别页面 CSP 下可能加载不了，一旦失败整个功能直接死且没有任何提示，所以留了这条兜底；哪条路生效会显示在弹窗里。`src/audio/pcm16k.js` 一份代码被当作内容脚本和 worklet 模块加载两次，靠 `typeof registerProcessor` 判断作用域，避免重采样逻辑写两遍。
+
+**版本**：安卓版不变，仍为 2.4.1 / 36。扩展独立编号 0.1.0。
+
+**验证**：`node extension/tools/selftest.js` 全部通过——重采样（48k/44.1k/16k 各批大小下不漂移、跨批相位连续、立体声反相混音归零）、字幕稳定器（重叠合并、单字重叠按巧合处理、切句、整句复读丢弃、单碎片多句全保留、flush 残留）、提示词围栏顺序与简介截断、设置范围收敛、manifest 引用完整性。所有 JS 过 `node --check`。**浏览器侧未实测**：音频挂载、Live WebSocket 直连、字幕注入、自动开始都还没在真实 Chrome + YouTube 直播上跑过，其中「浏览器能否直连 Live Translate WebSocket」是唯一的生死判定项。
+
+---
+
 ## 2026-08-01 · 悬浮窗打开主应用 + AI 模型远端下拉
 
 - 视频字幕悬浮窗头部在「暂停」与「收起」之间新增 `⤢` 按钮，点击以 `FLAG_ACTIVITY_NEW_TASK` 启动 `MainActivity`，系统会把现有实例提到前台、不重启会话，省去下拉通知栏再回 App 的割裂操作。展开态可见、收起态随容器隐藏，行为与暂停/收起一致。
