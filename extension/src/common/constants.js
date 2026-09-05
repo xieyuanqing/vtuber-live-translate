@@ -134,6 +134,7 @@ globalThis.LT = globalThis.LT || {};
     STOP: 'lt:stop',
     TOGGLE: 'lt:toggle',
     SETTINGS_CHANGED: 'lt:settings-changed',
+    SET_TEMP_CONTEXT: 'lt:set-temp-context',
   };
 
   // 页面桥（MAIN world）与内容脚本之间的 window.postMessage 协议

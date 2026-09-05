@@ -39,11 +39,11 @@ globalThis.LT = globalThis.LT || {};
     return lines.join('\n');
   }
 
-  /**
-   * @param {{scene:object, sourceLang:string, targetLang:string,
-   *          metadataText:string, manualContext:string}} args
-   */
-  function build(args) {
+    /**
+     * @param {{scene:object, sourceLang:string, targetLang:string,
+     *          metadataText:string, manualContext:string, tempContext?:string}} args
+     */
+    function build(args) {
     const src = LT.sourceLabel(args.sourceLang);
     const dst = LT.targetLabel(args.targetLang);
     const out = [];
@@ -62,7 +62,8 @@ globalThis.LT = globalThis.LT || {};
     out.push(`【场景：${args.scene.label}】`);
     out.push(args.scene.instruction);
 
-    const context = [args.manualContext, args.metadataText]
+    // 顺序：长期背景 → 本场临时补充 → 页面元数据
+    const context = [args.manualContext, args.tempContext, args.metadataText]
       .map((t) => String(t || '').trim())
       .filter(Boolean)
       .join('\n\n');

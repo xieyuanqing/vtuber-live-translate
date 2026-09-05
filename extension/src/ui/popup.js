@@ -27,10 +27,10 @@
     el.value = value;
   }
 
-  async function send(type) {
+  async function send(type, payload) {
     if (tabId == null) return null;
     try {
-      return await chrome.tabs.sendMessage(tabId, { type });
+      return await chrome.tabs.sendMessage(tabId, { type, payload });
     } catch (_) {
       return null; // 内容脚本还没注入（比如刚装完扩展没刷新页面）
     }
@@ -72,6 +72,8 @@
     if (!status) {
       $('videoTitle').textContent = '请在 YouTube 视频页打开';
       $('videoMeta').textContent = '装好扩展后需要刷新一次已打开的页面';
+      $('tempContext').disabled = true;
+      $('tempHint').textContent = '';
       return;
     }
     if (!status.onWatchPage) {
@@ -82,6 +84,7 @@
       $('videoMeta').textContent = [
         status.isLive ? '直播中' : '录播/点播',
         status.usedMetadata ? '已注入标题简介' : '',
+        status.usedTemp ? '已注入临时补充' : '',
         status.mode === 'script-processor' ? '兼容音频模式' : '',
       ]
         .filter(Boolean)
@@ -98,6 +101,15 @@
     $('stScene').textContent = status.sceneLabel || '—';
     $('stTime').textContent = fmtTime(status.elapsedMs);
     $('level').style.width = `${running ? status.level : 0}%`;
+
+    // 临时补充输入框：状态里存的是内容脚本的当前值，没在打字时才回填，避免打断输入
+    const ta = $('tempContext');
+    const temp = status.tempContext || '';
+    if (document.activeElement !== ta && ta.value !== temp) ta.value = temp;
+    ta.disabled = false;
+    $('tempHint').textContent = running
+      ? '本场已冻结：停止再开始后生效。'
+      : '开始翻译时生效；换视频或刷新后清空。';
 
     if (LT.Settings.keyList(settings).length === 0) {
       banner('还没有填 API Key，先去设置里填一个再开始。', '');
@@ -135,6 +147,11 @@
 
   $('toggle').addEventListener('click', async () => {
     const running = !!status && status.phase !== 'idle';
+    if (!running) {
+      // 启动前先把手头没发出去的临时补充落进去，否则快照冻不住刚打完的字
+      clearTimeout(tempSaveTimer);
+      await send(LT.MSG.SET_TEMP_CONTEXT, $('tempContext').value);
+    }
     await send(running ? LT.MSG.STOP : LT.MSG.START);
     setTimeout(refresh, 150);
   });
@@ -154,6 +171,15 @@
       renderStatus();
     });
   }
+
+  // 临时补充：输入即存（防抖），只发给内容脚本内存，不落 storage
+  let tempSaveTimer = null;
+  $('tempContext').addEventListener('input', (e) => {
+    clearTimeout(tempSaveTimer);
+    tempSaveTimer = setTimeout(() => {
+      send(LT.MSG.SET_TEMP_CONTEXT, e.target.value);
+    }, 400);
+  });
 
   window.addEventListener('unload', () => clearInterval(timer));
   init();

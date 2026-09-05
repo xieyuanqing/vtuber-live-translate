@@ -32,6 +32,9 @@ globalThis.LT = globalThis.LT || {};
   let autoStartedFor = '';
   let userStoppedFor = '';
   let gateHint = ''; // applyGate 自己挂上去的提示，条件消失后要由它负责收掉
+  // 本场临时补充（弹窗输入）：只活在内容脚本内存里，不进 storage，
+  // 换视频 / 刷新页面即消失。开始翻译时冻结进快照，运行中改动要重开一场才生效。
+  let tempContext = '';
 
   // ---------- 与扩展其他部分通信 ----------
 
@@ -54,6 +57,8 @@ globalThis.LT = globalThis.LT || {};
           )}`
         : '',
       usedMetadata: session.snapshot ? !!session.snapshot.metaUsed : false,
+      usedTemp: session.snapshot ? !!session.snapshot.tempUsed : false,
+      tempContext,
     };
   }
 
@@ -145,6 +150,7 @@ globalThis.LT = globalThis.LT || {};
         targetLang: settings.targetLang,
         metadataText,
         manualContext: settings.manualContext,
+        tempContext,
       });
       session.snapshot = {
         prompt,
@@ -152,6 +158,7 @@ globalThis.LT = globalThis.LT || {};
         sourceLang: settings.sourceLang,
         targetLang: settings.targetLang,
         metaUsed: !!metadataText,
+        tempUsed: !!tempContext,
         videoId: LT.YouTube.videoIdFromUrl(),
       };
       console.info(
@@ -159,7 +166,7 @@ globalThis.LT = globalThis.LT || {};
           settings.sourceLang
         )} → ${LT.targetLabel(settings.targetLang)}｜元数据 ${
           metadataText ? '已注入' : '未使用'
-        }`
+        }｜临时补充 ${tempContext ? '已注入' : '未使用'}`
       );
 
       // ---- 字幕稳定器 ----
@@ -295,6 +302,7 @@ globalThis.LT = globalThis.LT || {};
     if (id === currentVideoId) return;
     currentVideoId = id;
     currentMeta = null;
+    tempContext = ''; // 临时补充跟着视频走，换视频即作废
     if (session.phase !== 'idle') await stop();
     ensureMounted();
     if (!id) {
@@ -345,6 +353,9 @@ globalThis.LT = globalThis.LT || {};
           settings = s;
           caption.applySettings(s);
         });
+        break;
+      case LT.MSG.SET_TEMP_CONTEXT:
+        tempContext = String(msg.payload || '').trim();
         break;
       default:
         break;

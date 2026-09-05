@@ -194,6 +194,31 @@ console.log('\n[3] 提示词组合');
 
   const cut = LT.Prompt.formatMetadata({ description: 'あ'.repeat(3000) }, 100);
   check('简介按设置截断', cut.includes('（简介已截断）') && cut.length < 200, `长度 ${cut.length}`);
+
+  const withTemp = LT.Prompt.build({
+    scene,
+    sourceLang: 'ja',
+    targetLang: 'zh',
+    metadataText: LT.Prompt.formatMetadata({ title: '标题', author: '频道' }, 1200),
+    manualContext: '长期背景甲',
+    tempContext: '临时补充乙',
+  });
+  check(
+    '临时补充进围栏且顺序正确',
+    withTemp.includes('临时补充乙') &&
+      withTemp.indexOf('长期背景甲') < withTemp.indexOf('临时补充乙') &&
+      withTemp.indexOf('临时补充乙') < withTemp.indexOf('视频标题'),
+    ''
+  );
+  const tempOnly = LT.Prompt.build({
+    scene,
+    sourceLang: 'ja',
+    targetLang: 'zh',
+    metadataText: '',
+    manualContext: '',
+    tempContext: '只有临时补充',
+  });
+  check('只有临时补充也有围栏', tempOnly.includes('<session_context>') && tempOnly.includes('只有临时补充'));
 }
 
 // ---------- 4. 设置归一化 ----------
