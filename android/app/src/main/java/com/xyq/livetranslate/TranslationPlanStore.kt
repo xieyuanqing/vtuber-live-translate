@@ -29,12 +29,6 @@ object TranslationPlanStore {
             .apply()
     }
 
-    fun resetDraft(context: Context, mode: TranslationMode) {
-        prefs(context).edit()
-            .remove(KEY_DRAFT_PREFIX + mode.storageKey)
-            .apply()
-    }
-
     /**
      * 一次性迁移：把旧方案库中带额外提示词的命名方案折算成场景库条目
      * （场景提示词 = 原引用场景提示词 + 方案额外提示词），然后清空方案存储。

@@ -148,7 +148,6 @@ internal class SettingsController(
     private val views: SettingsViews,
     private val openSubPage: (pageId: Int) -> Unit,
     private val openSceneLibrary: (mode: TranslationMode) -> Unit,
-    private val onTranslateParamsReset: () -> Unit,
     private val postToUi: (() -> Unit) -> Unit,
     private val isHostActive: () -> Boolean,
     private val launchIntent: (Intent) -> Unit,
@@ -389,7 +388,6 @@ internal class SettingsController(
             SettingsStore.saveEchoTargetLanguage(context, true)
             SettingsStore.saveRotateSeconds(context, SettingsStore.DEFAULT_ROTATE_SECONDS)
             renderParamValues()
-            onTranslateParamsReset()
             toast("翻译参数已恢复默认，下次开始翻译时生效")
         }
         views.btnResetSubtitle.setOnClickListener {

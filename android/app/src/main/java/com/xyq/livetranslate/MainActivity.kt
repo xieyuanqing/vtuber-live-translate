@@ -115,9 +115,6 @@ class MainActivity : AppCompatActivity() {
             views = SettingsViews.bind(root),
             openSubPage = { pageId -> navigator.openSub(pageId) },
             openSceneLibrary = { mode -> openSceneLibrary(mode) },
-            onTranslateParamsReset = {
-                homeControllers.values.forEach(ModeHomeController::refreshConfiguration)
-            },
             postToUi = { action -> runOnUiThread { action() } },
             isHostActive = { !isFinishing && !isDestroyed },
             launchIntent = ::startActivity,

@@ -585,6 +585,16 @@ class MainActivityStartupTest {
 
     @Test
     fun resetTranslateParametersKeepsLanguageAndSceneDrafts() = withActivity { activity ->
+        TranslationMode.entries.forEach { mode ->
+            TranslationPlanStore.saveDraft(
+                activity,
+                TranslationPlanStore.loadDraft(activity, mode).copy(
+                    sourceLanguageCode = "ja",
+                    targetLanguageCode = "en",
+                    scenePresetId = SceneLibraryStore.list(activity, mode).last().id,
+                ),
+            )
+        }
         val before = TranslationMode.entries.associateWith { TranslationPlanStore.loadDraft(activity, it) }
         activity.findViewById<View>(R.id.btnResetTranslate).performClick()
         before.forEach { (mode, draft) ->
