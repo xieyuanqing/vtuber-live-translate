@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -39,9 +40,12 @@ class AiTextClientListModelsTest {
             baseUrl = server.url("/").toString(),
             apiKey = "test-key",
             format = AiTextClient.Format.GEMINI,
-            credentialMode = ApiCredentialMode.QUERY_API_KEY,
         )
         assertEquals(listOf("models/gemini-3-flash-001", "models/gemini-3-pro-001"), models)
+        val request = server.takeRequest()
+        assertEquals("/v1beta/models?key=test-key", request.path)
+        assertNull(request.getHeader("Authorization"))
+        assertNull(request.getHeader("X-Device-Signature"))
     }
 
     @Test
@@ -60,30 +64,12 @@ class AiTextClientListModelsTest {
             baseUrl = server.url("/").toString(),
             apiKey = "test-key",
             format = AiTextClient.Format.OPENAI,
-            credentialMode = ApiCredentialMode.QUERY_API_KEY,
         )
         assertEquals(listOf("gpt-4o", "gpt-4o-mini"), models)
-    }
-
-    @Test
-    fun gatewayPathUsesGatewayPrefixForFriendBearerMode() {
-        server.enqueue(MockResponse().setBody("""{"models":[{"name":"models/gemini-3.5-flash","supportedGenerationMethods":["generateContent"]}]}"""))
-        AiTextClient.listModels(
-            baseUrl = server.url("/").toString(),
-            apiKey = "token",
-            format = AiTextClient.Format.GEMINI,
-            credentialMode = ApiCredentialMode.BEARER_TOKEN,
-            deviceId = "device-id",
-            requestSignatureProvider = { _, _, _, _ ->
-                mapOf("X-Device-Signature" to "sig")
-            },
-        )
         val request = server.takeRequest()
-        // 好友网关路径必须走 /gateway/v1beta/models，不能直连官方端点
-        assertEquals("/gateway/v1beta/models", request.path)
-        assertEquals("Bearer token", request.getHeader("Authorization"))
-        assertEquals("device-id", request.getHeader("X-Device-ID"))
-        assertEquals("sig", request.getHeader("X-Device-Signature"))
+        assertEquals("/v1/models", request.path)
+        assertEquals("Bearer test-key", request.getHeader("Authorization"))
+        assertNull(request.getHeader("X-Device-ID"))
     }
 
     @Test
@@ -93,7 +79,6 @@ class AiTextClientListModelsTest {
             baseUrl = server.url("/").toString(),
             apiKey = "test-key",
             format = AiTextClient.Format.GEMINI,
-            credentialMode = ApiCredentialMode.QUERY_API_KEY,
         )
         assertTrue(models.isEmpty())
     }

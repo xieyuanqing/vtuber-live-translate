@@ -6,11 +6,8 @@ import android.view.View
 import android.widget.TextView
 import com.xyq.livetranslate.AiTextClient
 import com.xyq.livetranslate.R
-import com.xyq.livetranslate.ApiCredentialMode
 import com.xyq.livetranslate.ContentAnalysisRequest
 import com.xyq.livetranslate.ContentContextAnalyzer
-import com.xyq.livetranslate.FriendDeviceIdentity
-import com.xyq.livetranslate.FriendGatewayStore
 import com.xyq.livetranslate.SessionPromptContext
 import com.xyq.livetranslate.SettingsStore
 import com.xyq.livetranslate.TranslationLanguageCatalog
@@ -262,31 +259,12 @@ internal class SessionContextController(
 
     private fun analyzeSessionContext(mode: TranslationMode) {
         persistSecondAiInputs()
-        val friendAccess = FriendGatewayStore.isActive(context)
-        val apiKey = if (friendAccess) {
-            FriendGatewayStore.token(context)
-        } else {
-            SettingsStore.secondAiApiKey(context)
-        }
+        val apiKey = SettingsStore.secondAiApiKey(context)
         val modeViews = views(mode)
         val statusView = modeViews.analyzeContextStatus
         val button = modeViews.analyzeContextButton
-        if (
-            FriendGatewayStore.mode(context) == FriendGatewayStore.MODE_FRIEND &&
-            !friendAccess
-        ) {
-            showAnalyzeStatus(statusView, "好友测试凭据已失效，请回到设置重新绑定")
-            return
-        }
         if (apiKey.isBlank()) {
-            showAnalyzeStatus(
-                statusView,
-                if (friendAccess) {
-                    "好友测试凭据已失效，请回到设置重新绑定"
-                } else {
-                    "请先在设置 → 内容分析 AI 中填写 API Key"
-                },
-            )
+            showAnalyzeStatus(statusView, "请先在设置 → 内容分析 AI 中填写 API Key")
             return
         }
         val material = modeViews.sessionContext.text?.toString().orEmpty().trim()
@@ -310,31 +288,9 @@ internal class SessionContextController(
         val requestId = UUID.randomUUID().toString()
         setLatestRequestId(mode, requestId)
         val plan = TranslationPlanStore.loadDraft(context, mode).normalized()
-        val baseUrl = if (friendAccess) {
-            FriendGatewayStore.GATEWAY_BASE_URL + "/gateway"
-        } else {
-            SettingsStore.secondAiBaseUrl(context)
-        }
-        val model = if (friendAccess) "gemini-3.5-flash" else SettingsStore.secondAiModel(context)
-        val format = if (friendAccess) {
-            AiTextClient.Format.GEMINI
-        } else {
-            AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
-        }
-        val credentialMode = if (friendAccess) {
-            ApiCredentialMode.BEARER_TOKEN
-        } else {
-            ApiCredentialMode.QUERY_API_KEY
-        }
-        val deviceId = if (friendAccess) FriendGatewayStore.deviceId(context) else ""
-        val requestSignatureProvider:
-            ((String, String, ByteArray, String) -> Map<String, String>)? = if (friendAccess) {
-                { method, path, body, token ->
-                    FriendDeviceIdentity.signRequest(context, method, path, body, token).asMap()
-                }
-            } else {
-                null
-            }
+        val baseUrl = SettingsStore.secondAiBaseUrl(context)
+        val model = SettingsStore.secondAiModel(context)
+        val format = AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
         button.isEnabled = false
         showAnalyzeStatus(statusView, "正在整理，请稍候…")
 
@@ -361,9 +317,6 @@ internal class SessionContextController(
                         apiKey = apiKey,
                         model = model,
                         format = format,
-                        credentialMode = credentialMode,
-                        deviceId = deviceId,
-                        requestSignatureProvider = requestSignatureProvider,
                     )
                 }.onSuccess { result ->
                     postToUi success@{

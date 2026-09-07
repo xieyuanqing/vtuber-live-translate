@@ -8,7 +8,6 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import com.xyq.livetranslate.CaptureService
-import com.xyq.livetranslate.FriendGatewayStore
 import com.xyq.livetranslate.PromptBuilder
 import com.xyq.livetranslate.SceneLibraryStore
 import com.xyq.livetranslate.SessionPromptContext
@@ -27,12 +26,11 @@ internal enum class PendingSessionStage {
 /**
  * Activity 在启动外部权限流程前冻结的内容/模式快照。
  *
- * 这里只保存 Service Intent 所需的非敏感内容和凭据模式选择；API Key、好友 token 与运行参数
+ * 这里只保存 Service Intent 所需的非敏感内容；API Key 与运行参数
  * 仍由 CaptureService 在真正启动时从 Store 读取并冻结。
  */
 internal data class PendingSessionSnapshot(
     val captureMode: String,
-    val credentialMode: String,
     val prompt: String,
     val sourceLanguageCode: String,
     val targetLanguageCode: String,
@@ -70,7 +68,6 @@ internal class SessionCoordinator(
 ) {
     private companion object {
         const val STATE_PENDING_START_MODE = "pending_start_mode"
-        const val STATE_PENDING_CREDENTIAL_MODE = "pending_credential_mode"
         const val STATE_PENDING_STAGE = "pending_session_stage"
         const val STATE_PENDING_PROMPT = "pending_prompt"
         const val STATE_PENDING_SOURCE = "pending_source"
@@ -141,7 +138,6 @@ internal class SessionCoordinator(
     fun saveState(outState: Bundle) {
         val snapshot = pendingSnapshot ?: return
         outState.putString(STATE_PENDING_START_MODE, snapshot.captureMode)
-        outState.putString(STATE_PENDING_CREDENTIAL_MODE, snapshot.credentialMode)
         outState.putString(STATE_PENDING_STAGE, snapshot.stage.name)
         outState.putString(STATE_PENDING_PROMPT, snapshot.prompt)
         outState.putString(STATE_PENDING_SOURCE, snapshot.sourceLanguageCode)
@@ -157,15 +153,11 @@ internal class SessionCoordinator(
         val captureMode = savedState.getString(STATE_PENDING_START_MODE)
             ?.takeIf(::isCaptureMode)
             ?: return
-        val credentialMode = savedState.getString(STATE_PENDING_CREDENTIAL_MODE)
-            ?.takeIf(::isCredentialMode)
-            ?: return
         val stage = savedState.getString(STATE_PENDING_STAGE)
             ?.let { stored -> PendingSessionStage.entries.firstOrNull { it.name == stored } }
             ?: PendingSessionStage.READY
         val restored = PendingSessionSnapshot(
             captureMode = captureMode,
-            credentialMode = credentialMode,
             prompt = savedState.getString(STATE_PENDING_PROMPT).orEmpty(),
             sourceLanguageCode = savedState.getString(STATE_PENDING_SOURCE).orEmpty(),
             targetLanguageCode = savedState.getString(STATE_PENDING_TARGET).orEmpty(),
@@ -201,19 +193,7 @@ internal class SessionCoordinator(
         val mode = promptMode(captureMode)
         persistDraftInputs()
         val plan = TranslationPlanStore.loadDraft(context, mode)
-        val friendSelected = FriendGatewayStore.mode(context) == FriendGatewayStore.MODE_FRIEND
-        val friendAccess = FriendGatewayStore.isActive(context)
-        val credentialMode = if (friendSelected) {
-            FriendGatewayStore.MODE_FRIEND
-        } else {
-            FriendGatewayStore.MODE_PERSONAL
-        }
-        if (friendSelected && !friendAccess) {
-            host.toast("好友测试凭据已失效，请重新绑定邀请码")
-            host.openTranslationSettings()
-            return null
-        }
-        if (!friendAccess && SettingsStore.apiKeyList(context).isEmpty()) {
+        if (SettingsStore.apiKeyList(context).isEmpty()) {
             host.toast("请先填 Gemini API Key")
             host.openTranslationSettings()
             return null
@@ -223,7 +203,6 @@ internal class SessionCoordinator(
         val sessionContext = requireSessionContextAccess().current(mode)
         return PendingSessionSnapshot(
             captureMode = captureMode,
-            credentialMode = credentialMode,
             prompt = PromptBuilder.build(
                 scene = scene,
                 context = sessionContext,
@@ -307,7 +286,6 @@ internal class SessionCoordinator(
         Intent(context, CaptureService::class.java)
             .setAction(CaptureService.ACTION_START)
             .putExtra(CaptureService.EXTRA_MODE, snapshot.captureMode)
-            .putExtra(CaptureService.EXTRA_CREDENTIAL_MODE, snapshot.credentialMode)
             .putExtra(CaptureService.EXTRA_SESSION_PROMPT, snapshot.prompt)
             .putExtra(CaptureService.EXTRA_SOURCE_LANGUAGE, snapshot.sourceLanguageCode)
             .putExtra(CaptureService.EXTRA_TARGET_LANGUAGE, snapshot.targetLanguageCode)
@@ -326,12 +304,8 @@ internal class SessionCoordinator(
     private fun isCaptureMode(value: String): Boolean =
         value == StatusBus.MODE_MIC || value == StatusBus.MODE_VIDEO
 
-    private fun isCredentialMode(value: String): Boolean =
-        value == FriendGatewayStore.MODE_PERSONAL || value == FriendGatewayStore.MODE_FRIEND
-
     private fun isValidSnapshot(snapshot: PendingSessionSnapshot): Boolean =
         isCaptureMode(snapshot.captureMode) &&
-            isCredentialMode(snapshot.credentialMode) &&
             snapshot.prompt.isNotBlank() &&
             snapshot.sourceLanguageCode.isNotBlank() &&
             snapshot.targetLanguageCode.isNotBlank() &&

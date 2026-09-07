@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.xyq.livetranslate.CaptureService
-import com.xyq.livetranslate.FriendGatewayStore
 import com.xyq.livetranslate.SessionPromptContext
 import com.xyq.livetranslate.StatusBus
 import com.xyq.livetranslate.TranslationMode
@@ -208,7 +207,6 @@ class SessionCoordinatorTest {
         title: String = "frozen-title",
     ) = PendingSessionSnapshot(
         captureMode = captureMode,
-        credentialMode = FriendGatewayStore.MODE_FRIEND,
         prompt = "frozen-prompt",
         sourceLanguageCode = "ja",
         targetLanguageCode = "zh",
@@ -225,7 +223,6 @@ class SessionCoordinatorTest {
     ) {
         assertEquals(CaptureService.ACTION_START, intent.action)
         assertEquals(snapshot.captureMode, intent.getStringExtra(CaptureService.EXTRA_MODE))
-        assertEquals(snapshot.credentialMode, intent.getStringExtra(CaptureService.EXTRA_CREDENTIAL_MODE))
         assertEquals(snapshot.prompt, intent.getStringExtra(CaptureService.EXTRA_SESSION_PROMPT))
         assertEquals(snapshot.sourceLanguageCode, intent.getStringExtra(CaptureService.EXTRA_SOURCE_LANGUAGE))
         assertEquals(snapshot.targetLanguageCode, intent.getStringExtra(CaptureService.EXTRA_TARGET_LANGUAGE))
@@ -235,7 +232,6 @@ class SessionCoordinatorTest {
         assertEquals(snapshot.sessionContext, intent.getStringExtra(CaptureService.EXTRA_SESSION_CONTEXT))
         val contentKeys = setOf(
             CaptureService.EXTRA_MODE,
-            CaptureService.EXTRA_CREDENTIAL_MODE,
             CaptureService.EXTRA_SESSION_PROMPT,
             CaptureService.EXTRA_SOURCE_LANGUAGE,
             CaptureService.EXTRA_TARGET_LANGUAGE,

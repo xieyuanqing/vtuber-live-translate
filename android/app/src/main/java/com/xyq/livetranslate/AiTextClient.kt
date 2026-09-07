@@ -5,7 +5,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -46,9 +45,6 @@ object AiTextClient {
         apiKey: String,
         model: String,
         format: Format,
-        credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
-        deviceId: String = "",
-        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
     ): JSONObject {
         when (format) {
             Format.GEMINI -> return generateGemini(
@@ -57,9 +53,6 @@ object AiTextClient {
                 baseUrl,
                 apiKey,
                 model,
-                credentialMode,
-                deviceId,
-                requestSignatureProvider,
             )
             Format.OPENAI -> return generateOpenAI(
                 systemPrompt,
@@ -67,7 +60,6 @@ object AiTextClient {
                 baseUrl,
                 apiKey,
                 model,
-                deviceId,
             )
         }
     }
@@ -77,7 +69,6 @@ object AiTextClient {
      *
      * - Gemini 原生格式：请求 [baseUrl]/v1beta/models，过滤掉不支持 generateContent 的项。
      * - OpenAI 兼容格式：请求 [baseUrl]/v1/models，返回 data[].id。
-     * - 好友网关模式（BEARER_TOKEN）：走 [baseUrl]/gateway/v1beta/models，由网关返回其开放模型。
      *
      * 调用方必须自行放到后台线程执行（同步阻塞）。
      * 失败时抛 [Exception]，调用方捕获后回退为手动输入并提示。
@@ -86,23 +77,12 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         format: Format,
-        credentialMode: ApiCredentialMode = ApiCredentialMode.QUERY_API_KEY,
-        deviceId: String = "",
-        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)? = null,
     ): List<String> {
-        val url = buildModelsUrl(baseUrl, format, apiKey, credentialMode)
-        val bodyBytes = ByteArray(0)
+        val url = buildModelsUrl(baseUrl, format, apiKey)
         val req = Request.Builder()
             .url(url)
             .apply {
-                if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
-                    header("Authorization", "Bearer $apiKey")
-                    if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
-                    val path = url.toHttpUrl().encodedPath
-                    requestSignatureProvider
-                        ?.invoke("GET", path, bodyBytes, apiKey)
-                        ?.forEach(::header)
-                } else if (format == Format.OPENAI) {
+                if (format == Format.OPENAI) {
                     header("Authorization", "Bearer $apiKey")
                 }
             }
@@ -122,16 +102,10 @@ object AiTextClient {
         baseUrl: String,
         format: Format,
         apiKey: String,
-        credentialMode: ApiCredentialMode,
     ): String = when (format) {
         Format.GEMINI -> {
             val base = baseUrl.trimEnd('/')
-            val path = if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
-                "/gateway/v1beta/models"
-            } else {
-                "/v1beta/models"
-            }
-            base + path + if (credentialMode == ApiCredentialMode.QUERY_API_KEY) "?key=$apiKey" else ""
+            base + "/v1beta/models?key=$apiKey"
         }
         Format.OPENAI -> baseUrl.trimEnd('/') + "/v1/models"
     }
@@ -166,13 +140,9 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
-        credentialMode: ApiCredentialMode,
-        deviceId: String,
-        requestSignatureProvider: ((String, String, ByteArray, String) -> Map<String, String>)?,
     ): JSONObject {
         val modelId = model.removePrefix("models/")
-        val url = baseUrl.trimEnd('/') + "/v1beta/models/${modelId}:generateContent" +
-            if (credentialMode == ApiCredentialMode.QUERY_API_KEY) "?key=$apiKey" else ""
+        val url = baseUrl.trimEnd('/') + "/v1beta/models/${modelId}:generateContent?key=$apiKey"
 
         val parts = org.json.JSONArray()
         parts.put(JSONObject().put("text", userPrompt))
@@ -207,16 +177,6 @@ object AiTextClient {
         val bodyBytes = bodyObj.toString().toByteArray(Charsets.UTF_8)
         val req = Request.Builder()
             .url(url)
-            .apply {
-                if (credentialMode == ApiCredentialMode.BEARER_TOKEN) {
-                    header("Authorization", "Bearer $apiKey")
-                    if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
-                    val path = url.toHttpUrl().encodedPath
-                    requestSignatureProvider
-                        ?.invoke("POST", path, bodyBytes, apiKey)
-                        ?.forEach(::header)
-                }
-            }
             .post(bodyBytes.toRequestBody(jsonMedia))
             .build()
 
@@ -253,7 +213,6 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
-        deviceId: String,
     ): JSONObject {
         val url = baseUrl.trimEnd('/') + "/v1/chat/completions"
 
@@ -284,9 +243,6 @@ object AiTextClient {
         val req = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $apiKey")
-            .apply {
-                if (deviceId.isNotBlank()) header("X-Device-ID", deviceId)
-            }
             .post(bodyObj.toString().toRequestBody(jsonMedia))
             .build()
 

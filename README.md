@@ -19,7 +19,6 @@
 - **实时字幕**：提供 App 内字幕流，以及可拖动、独立暂停、可收进屏幕侧边且保持翻译运行的系统悬浮字幕。
 - **结构化历史**：按会话保存语言、场景、时长、原文和译文，支持搜索、模式筛选、详情查看、Markdown 复制和二次确认删除。
 - **本地安全存储**：API Key 使用 Android Keystore 加密，历史记录保存在 App 私有目录。
-- **好友分享（可选）**：为没有 Gemini Key 的朋友提供邀请码入口，通过持有者自部署的网关代理请求，绑定令牌加密保存并可随时解绑。
 - **检查更新**：启动自动检查（可关）；关于页手动检查；多下载源（GitHub + 国内镜像）；可忽略版本。
 
 ## 页面结构
@@ -29,7 +28,7 @@
 1. **同传**：麦克风实时翻译、本场背景和场景快捷配置。
 2. **视频**：应用内音频捕获、视频链接分析和悬浮字幕。
 3. **历史**：会话搜索、模式筛选与独立详情页。
-4. **设置**：翻译服务、内容分析 AI、场景库、字幕、诊断和关于信息。
+4. **设置**：常用设置（翻译服务、字幕）、场景与辅助（场景库、内容分析 AI）、维护（诊断、关于与更新）。
 
 长期配置与临时信息有明确边界：
 
@@ -136,7 +135,6 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - 本场上下文会进入当前会话提示词；历史仅保存截断后的上下文摘要。
 - 解析未知平台页面时，完整目标 URL（包括 query 参数）会发送给第三方 Jina Reader 提取文本；已知的 YouTube、哔哩哔哩和 Twitch 链接不走该服务。通用抓取会拒绝单标签/内网域名、本地/私网/保留地址、带凭据 URL 和非标准端口，并在发送前检查域名的全部 A/AAAA 解析结果。
 - 项目不包含账号系统、广告 SDK 或分析 SDK。
-- 唯一的服务端是可选的好友邀请网关 `server/friend_gateway`，由持有者自行部署，仅用于代理转发好友请求；不部署时 App 保持纯本地运行。网关不保存音频或字幕内容，只维护设备绑定、令牌与限流计数。
 
 使用自定义 Base URL 或内容分析服务时，数据处理规则取决于对应服务提供方，请自行评估可信度。
 
@@ -149,9 +147,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 │       ├── main/java/.../           # Kotlin 业务代码
 │       ├── main/res/                # XML 布局、主题与图形资源
 │       └── test/java/.../           # JVM / Robolectric 回归测试
-├── server/friend_gateway/           # 可选好友邀请网关（FastAPI + SQLite，持有者自部署）
 ├── docs/                            # 路线图、技术记录和开发日志
-├── .github/workflows/               # Android Debug CI 与网关测试
+├── .github/workflows/               # Android 单元测试、Lint 与 Debug 构建
 ├── CLAUDE.md                        # AI 辅助开发速览
 └── README.md
 ```
@@ -174,25 +171,24 @@ GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/w
 
 1. 校验 Gradle Wrapper；
 2. 配置 JDK 17 与 Android SDK；
-3. 执行 `:app:assembleDebug`；
+3. 执行 `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug`；
 4. 上传可下载的 Debug APK artifact。
 
-好友邀请网关有独立工作流 [`.github/workflows/friend-gateway.yml`](.github/workflows/friend-gateway.yml)，在涉及 `server/friend_gateway/**` 的 `main` 推送 / Pull Request 及手动触发时用 uv 安装依赖并执行 `pytest`。
 
-本地交付前还应运行单元测试与 Lint，不能只以 CI 的 `assembleDebug` 代替全部验证。
+CI 与本地交付均执行单元测试、Lint 和 APK 构建。
 
 ## 当前状态
 
-当前版本：**v2.3.0（versionCode 33）**。
+当前版本：**v2.4.1（versionCode 36）**。
 
-v2.3.0 将方案库并入场景库：场景（名称 + 提示词）成为唯一的长期配置，场景库支持使用、设为默认、编辑、删除与模板恢复，旧的命名方案在首次启动时自动折算为场景；语言方向独立于场景、随时可调。v2.2.0 新增可选的好友邀请网关：为没有 Gemini Key 的朋友提供分享入口，App 端通过 `ApiCredentialMode` 在个人 Key 直连与好友网关（Bearer 令牌 + 设备签名）之间切换，个人路径不依赖网关。详细变更和真实验证记录见 [开发日志](docs/04-dev-log.md)。
+当前开发分支整理设置页：常用设置、场景与辅助、维护分组；字幕提供样式预览，连接地址和高级参数按需展开。应用仅使用个人 API Key（支持自定义反代地址）；已移除好友邀请网关、绑定和设备签名链路。详细变更和验证记录见 [开发日志](docs/04-dev-log.md)。
 
 ## 已知限制
 
 - Gemini Live Translate 使用预览模型，模型名称、可用区域和配额可能由上游调整。
 - 实时输出适合快速理解，不保证完整、逐字或可直接发布的字幕质量。
 - Android 厂商后台策略、悬浮窗策略和目标应用的内录策略可能影响体验。
-- 当前没有正式 Release、自动更新、账号同步或跨设备历史同步。
+- 当前使用 Debug 签名内测包；支持检查更新，不提供静默自动安装、账号同步或跨设备历史同步。
 - 项目未针对无障碍、平板、横屏和所有厂商 ROM 做完整测试。
 
 ## 参与开发

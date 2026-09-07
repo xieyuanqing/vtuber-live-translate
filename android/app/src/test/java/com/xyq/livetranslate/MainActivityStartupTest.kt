@@ -38,7 +38,6 @@ class MainActivityStartupTest {
             "scene_library_v1",
             "translation_plans_v3",
             "settings",
-            "friend_gateway_v1",
         ).forEach { name ->
             context.getSharedPreferences(name, Context.MODE_PRIVATE)
                 .edit()
@@ -537,18 +536,7 @@ class MainActivityStartupTest {
     }
 
     @Test
-    fun friendBindingDisablesAllMutableControls() = withActivity { activity ->
-        activity.renderFriendGatewayBindingForTest(bindingInProgress = true)
-
-        assertFalse(activity.findViewById<View>(R.id.swFriendGateway).isEnabled)
-        assertFalse(activity.findViewById<View>(R.id.etFriendInviteCode).isEnabled)
-        assertFalse(activity.findViewById<View>(R.id.btnBindFriendGateway).isEnabled)
-        assertFalse(activity.findViewById<View>(R.id.btnClearFriendGateway).isEnabled)
-    }
-
-    @Test
     fun prepareSessionSettingsPersistsControllerDraftInputs() = withActivity { activity ->
-        FriendGatewayStore.usePersonal(activity)
         val settingsPrefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
         settingsPrefs.edit().remove("apiKeysEnc").commit()
         activity.findViewById<android.widget.EditText>(R.id.etApiKeys).setText("[REDACTED]")
@@ -563,23 +551,44 @@ class MainActivityStartupTest {
     }
 
     @Test
-    fun friendBindingStateSynchronousReplaySurvivesRecreate() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
-        try {
-            val viewModel = MainActivity::class.java.getDeclaredField("friendBindingViewModel").run {
-                isAccessible = true
-                get(controller.get()) as FriendGatewayBindingViewModel
-            }
-            viewModel.clearBinding()
+    fun settingsAdvancedSectionsAreCollapsedAndCanBeToggled() = withActivity { activity ->
+        listOf(
+            R.id.btnConnectionOptions to R.id.connectionOptions,
+            R.id.btnTranslateAdvanced to R.id.translateAdvanced,
+            R.id.btnSubtitleAdvanced to R.id.subtitleAdvanced,
+        ).forEach { (buttonId, contentId) ->
+            val button = activity.findViewById<View>(buttonId)
+            val content = activity.findViewById<View>(contentId)
+            assertEquals(View.GONE, content.visibility)
+            button.performClick()
+            assertEquals(View.VISIBLE, content.visibility)
+            button.performClick()
+            assertEquals(View.GONE, content.visibility)
+        }
+    }
 
-            controller.recreate()
+    @Test
+    fun subtitlePreviewFollowsSlidersAndReset() = withActivity { activity ->
+        val preview = activity.findViewById<android.widget.TextView>(R.id.tvSubtitlePreview)
+        activity.findViewById<com.google.android.material.slider.Slider>(R.id.slFont).value = 24f
+        activity.findViewById<com.google.android.material.slider.Slider>(R.id.slLines).value = 1f
+        activity.findViewById<com.google.android.material.slider.Slider>(R.id.slOpacity).value = 90f
+        assertEquals(24f * activity.resources.displayMetrics.scaledDensity, preview.textSize, 0.1f)
+        assertEquals(1, preview.maxLines)
+        val background = preview.background as android.graphics.drawable.GradientDrawable
+        assertEquals(229, android.graphics.Color.alpha(requireNotNull(background.color).defaultColor))
+        activity.findViewById<View>(R.id.btnResetSubtitle).performClick()
+        assertEquals(SettingsStore.DEFAULT_OVERLAY_LINES, preview.maxLines)
+        assertEquals(SettingsStore.DEFAULT_FONT_SP, SettingsStore.fontSizeSp(activity))
+        assertEquals(SettingsStore.DEFAULT_BG_OPACITY, SettingsStore.bgOpacityPct(activity))
+    }
 
-            assertEquals(
-                "当前使用你自己的 API Key",
-                controller.get().findViewById<android.widget.TextView>(R.id.tvFriendGatewayStatus).text,
-            )
-        } finally {
-            controller.pause().stop().destroy()
+    @Test
+    fun resetTranslateParametersKeepsLanguageAndSceneDrafts() = withActivity { activity ->
+        val before = TranslationMode.entries.associateWith { TranslationPlanStore.loadDraft(activity, it) }
+        activity.findViewById<View>(R.id.btnResetTranslate).performClick()
+        before.forEach { (mode, draft) ->
+            assertEquals(draft, TranslationPlanStore.loadDraft(activity, mode))
         }
     }
 
@@ -599,7 +608,6 @@ class MainActivityStartupTest {
 
     private fun distinctPendingSnapshot(): PendingSessionSnapshot = PendingSessionSnapshot(
         captureMode = StatusBus.MODE_MIC,
-        credentialMode = FriendGatewayStore.MODE_FRIEND,
         prompt = "frozen-prompt",
         sourceLanguageCode = "ja",
         targetLanguageCode = "zh",
@@ -610,7 +618,6 @@ class MainActivityStartupTest {
     ).also { snapshot ->
         val values = listOf(
             snapshot.captureMode,
-            snapshot.credentialMode,
             snapshot.prompt,
             snapshot.sourceLanguageCode,
             snapshot.targetLanguageCode,
@@ -632,10 +639,6 @@ class MainActivityStartupTest {
     private fun assertCaptureIntentMatches(snapshot: PendingSessionSnapshot, intent: Intent) {
         assertEquals(CaptureService.ACTION_START, intent.action)
         assertEquals(snapshot.captureMode, intent.getStringExtra(CaptureService.EXTRA_MODE))
-        assertEquals(
-            snapshot.credentialMode,
-            intent.getStringExtra(CaptureService.EXTRA_CREDENTIAL_MODE),
-        )
         assertEquals(snapshot.prompt, intent.getStringExtra(CaptureService.EXTRA_SESSION_PROMPT))
         assertEquals(snapshot.sourceLanguageCode, intent.getStringExtra(CaptureService.EXTRA_SOURCE_LANGUAGE))
         assertEquals(snapshot.targetLanguageCode, intent.getStringExtra(CaptureService.EXTRA_TARGET_LANGUAGE))
@@ -648,7 +651,6 @@ class MainActivityStartupTest {
         assertEquals(
             setOf(
                 CaptureService.EXTRA_MODE,
-                CaptureService.EXTRA_CREDENTIAL_MODE,
                 CaptureService.EXTRA_SESSION_PROMPT,
                 CaptureService.EXTRA_SOURCE_LANGUAGE,
                 CaptureService.EXTRA_TARGET_LANGUAGE,

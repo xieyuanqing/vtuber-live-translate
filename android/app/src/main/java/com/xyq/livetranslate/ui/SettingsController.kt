@@ -2,6 +2,10 @@ package com.xyq.livetranslate.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import androidx.core.view.ViewCompat
+import androidx.core.widget.doAfterTextChanged
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
@@ -14,23 +18,9 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.xyq.livetranslate.AiTextClient
-import com.xyq.livetranslate.ApiCredentialMode
-import com.xyq.livetranslate.FriendDeviceIdentity
-import com.xyq.livetranslate.FriendGatewayBindingPhase
-import com.xyq.livetranslate.FriendGatewayBindingState
-import com.xyq.livetranslate.FriendGatewayClient
-import com.xyq.livetranslate.FriendGatewayStatus
-import com.xyq.livetranslate.FriendGatewayStore
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.SettingsStore
 import com.xyq.livetranslate.TranslationMode
-import com.xyq.livetranslate.TranslationPlanStore
-
-internal data class FriendGatewayBindingActions(
-    val bind: (inviteCode: String, appVersion: String, enableFriendOnSuccess: Boolean) -> Unit,
-    val clear: () -> Unit,
-    val isBinding: () -> Boolean,
-)
 
 /** 一次状态采集产生的设置诊断快照；controller 不直接读取 StatusBus。 */
 internal data class SettingsDiagnosticsState(
@@ -52,13 +42,15 @@ internal data class SettingsViews(
     val rowSetProfileAi: View,
     val rowSetDiagnostics: View,
     val rowSetAbout: View,
+    val btnConnectionOptions: Button,
+    val connectionOptions: View,
+    val btnTranslateAdvanced: Button,
+    val translateAdvanced: View,
+    val btnSubtitleAdvanced: Button,
+    val subtitleAdvanced: View,
+    val tvSubtitlePreview: TextView,
     val etApiKeys: EditText,
     val etBaseUrl: EditText,
-    val swFriendGateway: MaterialSwitch,
-    val etFriendInviteCode: EditText,
-    val tvFriendGatewayStatus: TextView,
-    val btnBindFriendGateway: Button,
-    val btnClearFriendGateway: Button,
     val slFont: Slider,
     val slOpacity: Slider,
     val slLines: Slider,
@@ -105,13 +97,15 @@ internal data class SettingsViews(
                 rowSetProfileAi = root.findViewById(R.id.rowSetProfileAi),
                 rowSetDiagnostics = root.findViewById(R.id.rowSetDiagnostics),
                 rowSetAbout = root.findViewById(R.id.rowSetAbout),
+                btnConnectionOptions = root.findViewById(R.id.btnConnectionOptions),
+                connectionOptions = root.findViewById(R.id.connectionOptions),
+                btnTranslateAdvanced = root.findViewById(R.id.btnTranslateAdvanced),
+                translateAdvanced = root.findViewById(R.id.translateAdvanced),
+                btnSubtitleAdvanced = root.findViewById(R.id.btnSubtitleAdvanced),
+                subtitleAdvanced = root.findViewById(R.id.subtitleAdvanced),
+                tvSubtitlePreview = root.findViewById(R.id.tvSubtitlePreview),
                 etApiKeys = root.findViewById(R.id.etApiKeys),
                 etBaseUrl = root.findViewById(R.id.etBaseUrl),
-                swFriendGateway = root.findViewById(R.id.swFriendGateway),
-                etFriendInviteCode = root.findViewById(R.id.etFriendInviteCode),
-                tvFriendGatewayStatus = root.findViewById(R.id.tvFriendGatewayStatus),
-                btnBindFriendGateway = root.findViewById(R.id.btnBindFriendGateway),
-                btnClearFriendGateway = root.findViewById(R.id.btnClearFriendGateway),
                 slFont = root.findViewById(R.id.slFont),
                 slOpacity = root.findViewById(R.id.slOpacity),
                 slLines = root.findViewById(R.id.slLines),
@@ -152,7 +146,6 @@ internal data class SettingsViews(
 internal class SettingsController(
     private val context: Context,
     private val views: SettingsViews,
-    private val friendActions: FriendGatewayBindingActions,
     private val openSubPage: (pageId: Int) -> Unit,
     private val openSceneLibrary: (mode: TranslationMode) -> Unit,
     private val onTranslateParamsReset: () -> Unit,
@@ -162,7 +155,6 @@ internal class SettingsController(
     private val toast: (String) -> Unit,
     private val onCheckUpdate: () -> Unit = {},
 ) {
-    private var syncingFriendGatewayUi = false
     private var syncingAutoCheckUpdateUi = false
 
     fun setup() {
@@ -182,11 +174,26 @@ internal class SettingsController(
         views.btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
         setupSecondAiModelDropdown()
 
-        setupFriendGatewayUi()
+        setupDisclosure(views.btnConnectionOptions, views.connectionOptions, "自定义服务地址")
+        setupDisclosure(views.btnTranslateAdvanced, views.translateAdvanced, "高级翻译参数")
+        setupDisclosure(views.btnSubtitleAdvanced, views.subtitleAdvanced, "高级断句参数")
         setupStyleSliders()
         setupParamControls()
         setupAbout()
         views.btnBattery.setOnClickListener { requestBatteryWhitelist() }
+    }
+
+    private fun setupDisclosure(button: Button, content: View, title: String) {
+        fun render() {
+            val expanded = content.visibility == View.VISIBLE
+            button.text = "$title · ${if (expanded) "收起" else "展开"}"
+            ViewCompat.setStateDescription(button, if (expanded) "已展开" else "已折叠")
+        }
+        render()
+        button.setOnClickListener {
+            content.visibility = if (content.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            render()
+        }
     }
 
     fun persistSecondAiInputs() {
@@ -210,26 +217,6 @@ internal class SettingsController(
         persistSecondAiInputs()
     }
 
-    fun renderFriendBindingState(state: FriendGatewayBindingState) {
-        val binding = state.phase == FriendGatewayBindingPhase.BINDING
-        renderFriendGatewayUi(bindingInProgress = binding)
-        when (state.phase) {
-            FriendGatewayBindingPhase.BINDING -> {
-                views.tvFriendGatewayStatus.text = "正在验证邀请码并绑定当前设备…"
-            }
-            FriendGatewayBindingPhase.SUCCESS -> {
-                views.etFriendInviteCode.setText("")
-                if (FriendGatewayStore.isBound(context)) refreshFriendGatewayStatus()
-            }
-            FriendGatewayBindingPhase.FAILURE -> views.tvFriendGatewayStatus.text = state.message
-            FriendGatewayBindingPhase.IDLE -> Unit
-        }
-    }
-
-    internal fun renderFriendGatewayUiForTest(bindingInProgress: Boolean) {
-        renderFriendGatewayUi(bindingInProgress = bindingInProgress)
-    }
-
     fun renderDiagnostics(state: SettingsDiagnosticsState) {
         val level = state.audioLevelPct.coerceIn(0, 100)
         views.tvStatus.text = buildString {
@@ -251,91 +238,6 @@ internal class SettingsController(
         views.tvCredentialStatus?.text = state.currentKeyLabel.ifBlank { "未选择凭据" }
     }
 
-    private fun setupFriendGatewayUi() {
-        views.swFriendGateway.setOnCheckedChangeListener { _, checked ->
-            if (syncingFriendGatewayUi) return@setOnCheckedChangeListener
-            if (checked) {
-                if (!FriendGatewayStore.useFriend(context)) toast("请先输入邀请码并完成绑定")
-            } else {
-                FriendGatewayStore.usePersonal(context)
-            }
-            renderFriendGatewayUi()
-        }
-        views.btnBindFriendGateway.setOnClickListener { bindFriendGateway() }
-        views.btnClearFriendGateway.setOnClickListener {
-            friendActions.clear()
-            views.etFriendInviteCode.setText("")
-            toast("已清除本机好友凭据")
-        }
-        renderFriendGatewayUi()
-        if (FriendGatewayStore.isBound(context)) refreshFriendGatewayStatus()
-    }
-
-    private fun renderFriendGatewayUi(
-        remote: FriendGatewayStatus? = null,
-        bindingInProgress: Boolean = friendActions.isBinding(),
-    ) {
-        val bound = FriendGatewayStore.isBound(context)
-        val active = FriendGatewayStore.isActive(context)
-        syncingFriendGatewayUi = true
-        views.swFriendGateway.isEnabled = bound && !bindingInProgress
-        views.swFriendGateway.isChecked = active
-        syncingFriendGatewayUi = false
-        views.etFriendInviteCode.isEnabled = !bindingInProgress
-        views.btnBindFriendGateway.isEnabled = !bindingInProgress
-        views.btnClearFriendGateway.visibility = if (bound) View.VISIBLE else View.GONE
-        views.btnClearFriendGateway.isEnabled = bound && !bindingInProgress
-        views.btnBindFriendGateway.text = if (bound) "重新绑定" else "绑定并启用"
-        views.tvFriendGatewayStatus.text = when {
-            remote != null && active -> {
-                val name = remote.label.ifBlank { "好友测试" }
-                "$name 已启用 · 今日实时 ${remote.liveSessions} 次 · 内容分析 ${remote.textRequests} 次"
-            }
-            active -> "好友测试通道已启用，翻译和内容分析均由服务器提供"
-            bound -> "邀请码已绑定，当前仍使用你自己的 API Key"
-            else -> "当前使用你自己的 API Key"
-        }
-    }
-
-    private fun bindFriendGateway() {
-        val code = views.etFriendInviteCode.text?.toString().orEmpty().trim()
-        if (code.isBlank()) {
-            toast("请输入好友邀请码")
-            return
-        }
-        val version = runCatching {
-            val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            "${info.versionName}(${info.longVersionCode})"
-        }.getOrDefault("unknown")
-        val enableOnSuccess =
-            !FriendGatewayStore.isBound(context) || FriendGatewayStore.isActive(context)
-        friendActions.bind(code, version, enableOnSuccess)
-    }
-
-    private fun refreshFriendGatewayStatus() {
-        val token = FriendGatewayStore.token(context)
-        if (token.isBlank()) return
-        Thread({
-            runCatching { FriendGatewayClient(context).status(token) }
-                .onSuccess { status ->
-                    postToUi {
-                        if (isHostActive() && !friendActions.isBinding()) renderFriendGatewayUi(status)
-                    }
-                }
-                .onFailure { error ->
-                    postToUi {
-                        if (
-                            isHostActive() && !friendActions.isBinding() &&
-                            FriendGatewayStore.isActive(context)
-                        ) {
-                            views.tvFriendGatewayStatus.text =
-                                "好友通道验证失败：${error.message ?: "未知错误"}"
-                        }
-                    }
-                }
-        }, "friend-gateway-status").start()
-    }
-
     private fun secondAiFormat(): AiTextClient.Format =
         AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
 
@@ -348,10 +250,12 @@ internal class SettingsController(
 
     private var secondAiModelsFetched = false
     private var secondAiModelsFetching = false
-    private var secondAiModels: List<String> = emptyList()
+    private var secondAiModelsRevision = 0
 
     private fun setupSecondAiModelDropdown() {
         views.etSecondAiModel.setSimpleItems(emptyArray())
+        views.etSecondAiKey.doAfterTextChanged { invalidateSecondAiModels() }
+        views.etSecondAiUrl.doAfterTextChanged { invalidateSecondAiModels() }
         views.etSecondAiModel.setOnClickListener {
             if (!secondAiModelsFetched && !secondAiModelsFetching) {
                 fetchSecondAiModels(lazy = true)
@@ -363,37 +267,18 @@ internal class SettingsController(
 
     private fun fetchSecondAiModels(lazy: Boolean) {
         if (secondAiModelsFetching) return
-        val friendAccess = FriendGatewayStore.isActive(context)
-        val apiKey = if (friendAccess) {
-            FriendGatewayStore.token(context)
-        } else {
-            SettingsStore.secondAiApiKey(context)
-        }
-        if (!friendAccess && apiKey.isBlank()) {
+        // 使用刚输入的配置，避免首次填写 Key 后还要离开页面才能刷新。
+        persistSecondAiInputs()
+        val apiKey = SettingsStore.secondAiApiKey(context)
+        if (apiKey.isBlank()) {
             renderSecondAiModelsHint(true, "未填写 API Key，无法拉取模型列表，请手动输入")
             return
         }
-        val baseUrl = if (friendAccess) {
-            FriendGatewayStore.GATEWAY_BASE_URL + "/gateway"
-        } else {
-            SettingsStore.secondAiBaseUrl(context)
-        }
-        val format = if (friendAccess) AiTextClient.Format.GEMINI else secondAiFormat()
-        val credentialMode = if (friendAccess) {
-            ApiCredentialMode.BEARER_TOKEN
-        } else {
-            ApiCredentialMode.QUERY_API_KEY
-        }
-        val deviceId = if (friendAccess) FriendGatewayStore.deviceId(context) else ""
-        val requestSignatureProvider:
-            ((String, String, ByteArray, String) -> Map<String, String>)? = if (friendAccess) {
-            { method, path, body, token ->
-                FriendDeviceIdentity.signRequest(context, method, path, body, token).asMap()
-            }
-        } else {
-            null
-        }
+        val baseUrl = SettingsStore.secondAiBaseUrl(context)
+        val format = secondAiFormat()
+        val revision = secondAiModelsRevision
         secondAiModelsFetching = true
+        views.btnRefreshSecondAiModels.isEnabled = false
         if (lazy) renderSecondAiModelsHint(false, "正在拉取模型列表…")
         Thread({
             val result = runCatching {
@@ -401,17 +286,15 @@ internal class SettingsController(
                     baseUrl = baseUrl,
                     apiKey = apiKey,
                     format = format,
-                    credentialMode = credentialMode,
-                    deviceId = deviceId,
-                    requestSignatureProvider = requestSignatureProvider,
                 )
             }
-            secondAiModelsFetching = false
             postToUi {
+                secondAiModelsFetching = false
                 if (!isHostActive()) return@postToUi
-                secondAiModelsFetched = true
+                views.btnRefreshSecondAiModels.isEnabled = true
+                if (revision != secondAiModelsRevision) return@postToUi
                 result.onSuccess { models ->
-                    secondAiModels = models
+                    secondAiModelsFetched = true
                     views.etSecondAiModel.setSimpleItems(models.toTypedArray())
                     val empty = models.isEmpty()
                     renderSecondAiModelsHint(
@@ -433,6 +316,13 @@ internal class SettingsController(
         }
     }
 
+    private fun invalidateSecondAiModels() {
+        secondAiModelsRevision++
+        secondAiModelsFetched = false
+        views.etSecondAiModel.setSimpleItems(emptyArray())
+        renderSecondAiModelsHint(false, "配置已修改，请刷新模型列表，也可手动输入")
+    }
+
     private fun toggleSecondAiFormat() {
         val next = when (secondAiFormat()) {
             AiTextClient.Format.GEMINI -> AiTextClient.Format.OPENAI
@@ -440,33 +330,26 @@ internal class SettingsController(
         }
         SettingsStore.saveSecondAiFormat(context, next.key)
         updateSecondAiFormatLabel()
-        // 切换格式后旧列表不再适用，标记需重新拉取；清空下拉避免误选。
-        secondAiModelsFetched = false
-        secondAiModels = emptyList()
-        views.etSecondAiModel.setSimpleItems(emptyArray())
+        invalidateSecondAiModels()
         toast("已切换到 ${next.key} 格式")
     }
 
     private fun setupStyleSliders() {
         views.slFont.value = SettingsStore.fontSizeSp(context).toFloat().coerceIn(12f, 26f)
-        views.slOpacity.value = (SettingsStore.bgOpacityPct(context) / 5 * 5).toFloat().coerceIn(20f, 95f)
+        views.slOpacity.value = SettingsStore.bgOpacityPct(context).toFloat().coerceIn(20f, 95f)
         views.slLines.value = SettingsStore.overlayMaxLines(context).toFloat().coerceIn(1f, 3f)
         updateStyleLabels()
-        val change = Slider.OnChangeListener { _, _, _ -> updateStyleLabels() }
-        val touch = object : Slider.OnSliderTouchListener {
-            override fun onStartTrackingTouch(slider: Slider) = Unit
-            override fun onStopTrackingTouch(slider: Slider) {
-                SettingsStore.saveStyle(
-                    context,
-                    views.slFont.value.toInt(),
-                    views.slOpacity.value.toInt(),
-                    views.slLines.value.toInt(),
-                )
-            }
+        val change = Slider.OnChangeListener { _, _, fromUser ->
+            updateStyleLabels()
+            if (fromUser) SettingsStore.saveStyle(
+                context,
+                views.slFont.value.toInt(),
+                views.slOpacity.value.toInt(),
+                views.slLines.value.toInt(),
+            )
         }
         listOf(views.slFont, views.slOpacity, views.slLines).forEach {
             it.addOnChangeListener(change)
-            it.addOnSliderTouchListener(touch)
         }
     }
 
@@ -474,6 +357,14 @@ internal class SettingsController(
         views.tvFontVal.text = "字号 ${views.slFont.value.toInt()}sp"
         views.tvOpacityVal.text = "背景不透明度 ${views.slOpacity.value.toInt()}%"
         views.tvLinesVal.text = "最多行数 ${views.slLines.value.toInt()}"
+        views.tvSubtitlePreview.apply {
+            textSize = views.slFont.value
+            maxLines = views.slLines.value.toInt()
+            background = GradientDrawable().apply {
+                cornerRadius = 22f * context.resources.displayMetrics.density
+                setColor(Color.argb((views.slOpacity.value * 255 / 100).toInt(), 20, 29, 43))
+            }
+        }
     }
 
     private fun setupParamControls() {
@@ -495,8 +386,6 @@ internal class SettingsController(
             it.addOnSliderTouchListener(touch)
         }
         views.btnResetTranslate.setOnClickListener {
-            TranslationPlanStore.resetDraft(context, TranslationMode.INTERPRETATION)
-            TranslationPlanStore.resetDraft(context, TranslationMode.VIDEO)
             SettingsStore.saveEchoTargetLanguage(context, true)
             SettingsStore.saveRotateSeconds(context, SettingsStore.DEFAULT_ROTATE_SECONDS)
             renderParamValues()
@@ -533,7 +422,7 @@ internal class SettingsController(
         views.tvRotateVal.text = "连接主动轮换 ${views.slRotate.value.toInt()} 秒"
         val secs = views.slIdle.value.toInt() / 1000.0
         val secsText = if (secs % 1.0 == 0.0) secs.toInt().toString() else secs.toString()
-        views.tvIdleVal.text = "静默 $secsText 秒转正"
+        views.tvIdleVal.text = "停顿 $secsText 秒后确认字幕"
         views.tvMaxCharsVal.text = "当前行最长 ${views.slMaxChars.value.toInt()} 字"
     }
 

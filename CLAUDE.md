@@ -10,7 +10,6 @@
 - **视频**：MediaProjection + AudioPlaybackCapture → Gemini Live Translate → App 内字幕与系统悬浮字幕。
 - 定位是低延迟理解辅助，不追求发布级字幕，不做商店分发。
 - 默认运行形态仍是纯本地：用户填自己的 API Key，无需任何后端。
-- **好友邀请网关是可选扩展，不是核心**：为没有 Gemini Key 的朋友提供分享入口。持有者自行部署 `server/friend_gateway`（FastAPI + SQLite），朋友用邀请码 + 设备公钥绑定后由网关代理调用持有者的 Key。不部署网关时 App 功能不受影响。它是唯一的后端，作用域仅限好友分享，不是账号体系。
 
 当前版本：`2.4.1` / versionCode `36`。
 
@@ -25,7 +24,7 @@
 7. 启动翻译前冻结完整 Prompt、语言、场景 ID 与场景名称。权限回调、重连和前台服务只能继续该快照，不能重新读取当前配置。
 8. 场景的“使用”“设为默认”“编辑”是三个独立动作：使用只改当前草稿的场景引用；编辑必须按 ID 原位更新；取消编辑不能污染场景库或当前草稿。
 9. 历史只写 App 私有目录 `history_v2`，不自动写公共 Downloads。
-10. 好友网关是可选凭证模式：`ApiCredentialMode` 区分个人 Key 直连（`QUERY_API_KEY`）与好友网关（`BEARER_TOKEN`）。个人路径必须能在完全不接触网关的情况下工作。当前仅做「邀请码分享」，不要把它扩展成注册、登录、用户资料这类账号体系——那是独立决策，不能顺着邀请码悄悄滑过去。
+10. 仅使用个人 API Key，支持自定义反代地址；不恢复邀请码、设备绑定或账号体系。
 
 ## 代码结构
 
@@ -98,7 +97,7 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 GitHub Actions 工作流：`.github/workflows/android-debug.yml`。
 
-- 涉及 `android/**` 或工作流文件的 `main` push / Pull Request 自动运行 `assembleDebug`。
+- 涉及 `android/**` 或工作流文件的 `main` push / Pull Request 自动运行单元测试、Lint 和 `assembleDebug`。
 - `workflow_dispatch` 可对任意分支手动触发。
 - 远端交付必须确认 Run 的 `headSha` 等于目标提交，并实际核验下载的 APK artifact。
 

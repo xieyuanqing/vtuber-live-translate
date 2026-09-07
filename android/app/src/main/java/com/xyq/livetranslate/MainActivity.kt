@@ -10,8 +10,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
-import com.xyq.livetranslate.ui.FriendGatewayBindingActions
 import com.xyq.livetranslate.ui.HistoryController
 import com.xyq.livetranslate.ui.HistoryViews
 import com.xyq.livetranslate.ui.MainNavigator
@@ -38,7 +36,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sessionContextController: SessionContextController
     private lateinit var sessionCoordinator: SessionCoordinator
     private lateinit var modeHomeControllers: Map<TranslationMode, ModeHomeController>
-    private lateinit var friendBindingViewModel: FriendGatewayBindingViewModel
 
     private val ui = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
@@ -62,7 +59,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         TranslationPlanStore.migrateLegacySavedPlans(this)
         setContentView(R.layout.activity_main)
-        friendBindingViewModel = ViewModelProvider(this)[FriendGatewayBindingViewModel::class.java]
         val root = findViewById<View>(R.id.rootLayout)
         val navigatorViews = MainNavigatorViews.bind(root)
 
@@ -76,7 +72,9 @@ class MainActivity : AppCompatActivity() {
                 if (pageId == R.id.pageSceneLibrary) sceneLibraryController.reload()
             },
             beforeSubPageClosed = { pageId ->
-                if (pageId == R.id.pageSettingsProfileAi) settingsController.persistSecondAiInputs()
+                if (pageId == R.id.pageSettingsProfileAi || pageId == R.id.pageSettingsTranslate) {
+                    settingsController.persistDraftInputs()
+                }
             },
         )
 
@@ -115,13 +113,6 @@ class MainActivity : AppCompatActivity() {
         settingsController = SettingsController(
             context = this,
             views = SettingsViews.bind(root),
-            friendActions = FriendGatewayBindingActions(
-                bind = { code, version, enableOnSuccess ->
-                    friendBindingViewModel.bind(code, version, enableOnSuccess)
-                },
-                clear = friendBindingViewModel::clearBinding,
-                isBinding = friendBindingViewModel::isBinding,
-            ),
             openSubPage = { pageId -> navigator.openSub(pageId) },
             openSceneLibrary = { mode -> openSceneLibrary(mode) },
             onTranslateParamsReset = {
@@ -176,7 +167,6 @@ class MainActivity : AppCompatActivity() {
         settingsController.setup()
         sessionContextController.setup()
         modeHomeControllers.values.forEach(ModeHomeController::setup)
-        friendBindingViewModel.state.observe(this, settingsController::renderFriendBindingState)
 
         renderStatus()
         navigator.setup(savedInstanceState)
@@ -208,7 +198,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        if (::settingsController.isInitialized) settingsController.persistSecondAiInputs()
+        if (::settingsController.isInitialized) settingsController.persistDraftInputs()
         super.onPause()
         ui.removeCallbacks(refresh)
     }
@@ -275,10 +265,6 @@ class MainActivity : AppCompatActivity() {
 
     internal fun refreshHomeScenesForTest(mode: TranslationMode) {
         modeHomeControllers.getValue(mode).refreshHomeScenesForTest()
-    }
-
-    internal fun renderFriendGatewayBindingForTest(bindingInProgress: Boolean) {
-        settingsController.renderFriendGatewayUiForTest(bindingInProgress)
     }
 
     internal fun installPendingSessionForTest(snapshot: PendingSessionSnapshot) {
