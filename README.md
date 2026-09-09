@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.4.1-0058BC)
+![Version](https://img.shields.io/badge/version-2.5.0-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
@@ -15,7 +15,7 @@
 - **视频字幕**：通过 MediaProjection 与 AudioPlaybackCapture 捕获应用内播放音频。
 - **模式隔离**：同传和视频分别维护语言方向、场景与本场临时上下文，互不覆盖。
 - **统一场景库**：场景（名称 + 提示词）是唯一的长期配置，可按模式新建、编辑、删除、使用、设为默认或恢复模板；语言方向独立于场景，随时可调。
-- **AI 内容整理**：可在业务页整理现场背景；YouTube、哔哩哔哩和 Twitch 走专用元数据接口，其他公网播放页面通过 Jina Reader 提取文本后生成本场上下文；支持 Gemini 原生与 OpenAI 兼容接口。
+- **AI 背景分析**：可在业务页整理现场背景；YouTube、哔哩哔哩和 Twitch 走专用元数据接口，其他公网播放页面通过 Jina Reader 提取文本后生成本场上下文；支持 Gemini 原生与 OpenAI 兼容接口。结果先进入预览，确认后才写入输入框，并可一键撤销替换。
 - **实时字幕**：提供 App 内字幕流，以及可拖动、独立暂停、可收进屏幕侧边且保持翻译运行的系统悬浮字幕。
 - **结构化历史**：按会话保存语言、场景、时长、原文和译文，支持搜索、模式筛选、详情查看、Markdown 复制和二次确认删除。
 - **本地安全存储**：API Key 使用 Android Keystore 加密，历史记录保存在 App 私有目录。
@@ -28,7 +28,7 @@
 1. **同传**：麦克风实时翻译、本场背景和场景快捷配置。
 2. **视频**：应用内音频捕获、视频链接分析和悬浮字幕。
 3. **历史**：会话搜索、模式筛选与独立详情页。
-4. **设置**：常用设置（翻译服务、字幕）、场景与辅助（场景库、内容分析 AI）、维护（诊断、关于与更新）。
+4. **设置**：常用设置（翻译服务、字幕）、场景与辅助（场景库、背景分析 AI）、维护（诊断、关于与更新）。
 
 长期配置与临时信息有明确边界：
 
@@ -179,9 +179,9 @@ CI 与本地交付均执行单元测试、Lint 和 APK 构建。
 
 ## 当前状态
 
-当前版本：**v2.4.1（versionCode 36）**。
+当前版本：**v2.5.0（versionCode 37）**。
 
-当前开发分支整理设置页：常用设置、场景与辅助、维护分组；字幕提供样式预览，连接地址和高级参数按需展开。应用仅使用个人 API Key（支持自定义反代地址）；已移除好友邀请网关、绑定和设备签名链路。详细变更和验证记录见 [开发日志](docs/04-dev-log.md)。
+本版集中打磨「配置是否成功、这一步会改变什么、出错了怎么办」：背景分析 AI 有格式选择、地址容错、可搜索模型面板和连通性自检；AI 整理结果先预览再应用；另一模式占用录音、长时间收不到声音、停止会话都会说明原因和后果；场景库的「设为默认」不再顺手改掉本次使用的场景。应用仍然仅使用个人 API Key（支持自定义反代地址）。详细变更和验证记录见 [开发日志](docs/04-dev-log.md)。
 
 ## 已知限制
 

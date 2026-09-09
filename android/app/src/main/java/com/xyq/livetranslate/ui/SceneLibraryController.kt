@@ -173,15 +173,25 @@ internal class SceneLibraryController(
         toast("已使用：${scene.label}")
     }
 
+    /** 「设为默认」只改以后的默认项；本次用哪个场景由「使用」单独决定。 */
     private fun setDefaultScene(scene: ScenePromptPreset) {
-        if (SceneLibraryStore.setDefault(context, mode, scene.id)) {
-            val draft = TranslationPlanStore.loadDraft(context, mode)
-            TranslationPlanStore.saveDraft(context, draft.copy(scenePresetId = scene.id))
-            notifySceneChanged()
-            toast("已设为${mode.label}默认场景")
-        } else {
+        if (!SceneLibraryStore.setDefault(context, mode, scene.id)) {
             toast("场景库数据异常，请先恢复模板")
+            return
         }
+        val inUse = SceneLibraryStore.resolve(
+            context,
+            mode,
+            TranslationPlanStore.loadDraft(context, mode).scenePresetId,
+        )
+        notifySceneChanged()
+        toast(
+            if (inUse.id == scene.id) {
+                "已设为${mode.label}默认场景"
+            } else {
+                "已设为${mode.label}默认场景，本次仍使用「${inUse.label}」"
+            },
+        )
     }
 
     private fun confirmDeleteScene(scene: ScenePromptPreset) {

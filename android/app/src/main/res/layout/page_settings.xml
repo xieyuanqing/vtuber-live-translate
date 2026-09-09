@@ -69,7 +69,7 @@
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="字幕与悬浮窗"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="样式预览、字号、背景透明度"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="样式预览、字号、背景不透明度"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
@@ -121,8 +121,8 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="内容分析 AI"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="可选 · 整理视频资料与本场背景"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="背景分析 AI"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="可选 · 帮翻译补充视频资料与背景"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>

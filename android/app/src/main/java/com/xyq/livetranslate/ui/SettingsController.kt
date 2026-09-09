@@ -10,13 +10,18 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
-import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.xyq.livetranslate.AiTextClient
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.SettingsStore
@@ -49,6 +54,9 @@ internal data class SettingsViews(
     val btnSubtitleAdvanced: Button,
     val subtitleAdvanced: View,
     val tvSubtitlePreview: TextView,
+    val subtitlePreviewStage: View,
+    val subtitlePreviewStageToggle: MaterialButtonToggleGroup,
+    val btnSubtitlePreviewLight: MaterialButton,
     val etApiKeys: EditText,
     val etBaseUrl: EditText,
     val slFont: Slider,
@@ -59,10 +67,14 @@ internal data class SettingsViews(
     val tvLinesVal: TextView,
     val etSecondAiKey: EditText,
     val etSecondAiUrl: EditText,
-    val etSecondAiModel: MaterialAutoCompleteTextView,
+    val etSecondAiModel: EditText,
     val btnRefreshSecondAiModels: Button,
     val tvSecondAiModelsHint: TextView,
-    val btnSecondAiFormat: Button,
+    val secondAiFormatToggle: MaterialButtonToggleGroup,
+    val btnSecondAiFormatGemini: MaterialButton,
+    val btnSecondAiFormatOpenAi: MaterialButton,
+    val btnTestSecondAi: Button,
+    val tvSecondAiTestStatus: TextView,
     val swEchoTarget: MaterialSwitch,
     val slRotate: Slider,
     val slIdle: Slider,
@@ -104,6 +116,9 @@ internal data class SettingsViews(
                 btnSubtitleAdvanced = root.findViewById(R.id.btnSubtitleAdvanced),
                 subtitleAdvanced = root.findViewById(R.id.subtitleAdvanced),
                 tvSubtitlePreview = root.findViewById(R.id.tvSubtitlePreview),
+                subtitlePreviewStage = root.findViewById(R.id.subtitlePreviewStage),
+                subtitlePreviewStageToggle = root.findViewById(R.id.toggleSubtitlePreviewStage),
+                btnSubtitlePreviewLight = root.findViewById(R.id.btnSubtitlePreviewLight),
                 etApiKeys = root.findViewById(R.id.etApiKeys),
                 etBaseUrl = root.findViewById(R.id.etBaseUrl),
                 slFont = root.findViewById(R.id.slFont),
@@ -117,7 +132,11 @@ internal data class SettingsViews(
                 etSecondAiModel = root.findViewById(R.id.etSecondAiModel),
                 btnRefreshSecondAiModels = root.findViewById(R.id.btnRefreshSecondAiModels),
                 tvSecondAiModelsHint = root.findViewById(R.id.tvSecondAiModelsHint),
-                btnSecondAiFormat = root.findViewById(R.id.btnSecondAiFormat),
+                secondAiFormatToggle = root.findViewById(R.id.toggleSecondAiFormat),
+                btnSecondAiFormatGemini = root.findViewById(R.id.btnSecondAiFormatGemini),
+                btnSecondAiFormatOpenAi = root.findViewById(R.id.btnSecondAiFormatOpenAi),
+                btnTestSecondAi = root.findViewById(R.id.btnTestSecondAi),
+                tvSecondAiTestStatus = root.findViewById(R.id.tvSecondAiTestStatus),
                 swEchoTarget = root.findViewById(R.id.swEchoTarget),
                 slRotate = root.findViewById(R.id.slRotate),
                 slIdle = root.findViewById(R.id.slIdle),
@@ -169,9 +188,9 @@ internal class SettingsController(
         views.etSecondAiKey.setText(SettingsStore.secondAiApiKey(context))
         views.etSecondAiUrl.setText(SettingsStore.secondAiBaseUrl(context))
         views.etSecondAiModel.setText(SettingsStore.secondAiModel(context))
-        updateSecondAiFormatLabel()
-        views.btnSecondAiFormat.setOnClickListener { toggleSecondAiFormat() }
-        setupSecondAiModelDropdown()
+        setupSecondAiFormatToggle()
+        setupSecondAiModelPicker()
+        views.btnTestSecondAi.setOnClickListener { testSecondAi() }
 
         setupDisclosure(views.btnConnectionOptions, views.connectionOptions, "自定义服务地址")
         setupDisclosure(views.btnTranslateAdvanced, views.translateAdvanced, "高级翻译参数")
@@ -240,45 +259,87 @@ internal class SettingsController(
     private fun secondAiFormat(): AiTextClient.Format =
         AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
 
-    private fun updateSecondAiFormatLabel() {
-        views.btnSecondAiFormat.text = when (secondAiFormat()) {
-            AiTextClient.Format.GEMINI -> "Gemini 原生"
-            AiTextClient.Format.OPENAI -> "OpenAI 兼容"
-        }
-    }
-
-    private var secondAiModelsFetched = false
+    private var syncingSecondAiFormatUi = false
+    private var cachedSecondAiModels: List<String> = emptyList()
     private var secondAiModelsFetching = false
     private var secondAiModelsRevision = 0
+    private var secondAiTesting = false
 
-    private fun setupSecondAiModelDropdown() {
-        views.etSecondAiModel.setSimpleItems(emptyArray())
-        views.etSecondAiKey.doAfterTextChanged { invalidateSecondAiModels() }
-        views.etSecondAiUrl.doAfterTextChanged { invalidateSecondAiModels() }
-        views.etSecondAiModel.setOnClickListener {
-            if (!secondAiModelsFetched && !secondAiModelsFetching) {
-                fetchSecondAiModels(lazy = true)
+    private fun setupSecondAiFormatToggle() {
+        renderSecondAiFormatToggle()
+        views.secondAiFormatToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked || syncingSecondAiFormatUi) return@addOnButtonCheckedListener
+            val selected = if (checkedId == views.btnSecondAiFormatOpenAi.id) {
+                AiTextClient.Format.OPENAI
+            } else {
+                AiTextClient.Format.GEMINI
             }
-            views.etSecondAiModel.showDropDown()
+            if (selected == secondAiFormat()) return@addOnButtonCheckedListener
+            SettingsStore.saveSecondAiFormat(context, selected.key)
+            invalidateSecondAiModels()
+            warnIfBaseUrlMismatchesFormat(selected)
         }
-        views.btnRefreshSecondAiModels.setOnClickListener { fetchSecondAiModels(lazy = false) }
     }
 
-    private fun fetchSecondAiModels(lazy: Boolean) {
+    private fun renderSecondAiFormatToggle() {
+        val checkedId = when (secondAiFormat()) {
+            AiTextClient.Format.GEMINI -> views.btnSecondAiFormatGemini.id
+            AiTextClient.Format.OPENAI -> views.btnSecondAiFormatOpenAi.id
+        }
+        if (views.secondAiFormatToggle.checkedButtonId == checkedId) return
+        syncingSecondAiFormatUi = true
+        views.secondAiFormatToggle.check(checkedId)
+        syncingSecondAiFormatUi = false
+    }
+
+    /** 切格式最容易留下「选了 OpenAI，地址还是 Google」这种组合，这里直接点破。 */
+    private fun warnIfBaseUrlMismatchesFormat(format: AiTextClient.Format) {
+        val url = views.etSecondAiUrl.text.toString().trim()
+        val looksLikeGoogle = url.contains("googleapis.com", ignoreCase = true)
+        val mismatched = when (format) {
+            AiTextClient.Format.OPENAI -> looksLikeGoogle || url.isBlank()
+            AiTextClient.Format.GEMINI -> url.isNotBlank() && !looksLikeGoogle
+        }
+        if (!mismatched) {
+            toast("已切换到 ${formatLabel(format)}，请重新拉取模型列表")
+            return
+        }
+        renderSecondAiModelsHint(
+            true,
+            "已切换到 ${formatLabel(format)}，但当前服务地址看起来不是这套接口的地址，请确认后再拉取模型",
+        )
+        views.etSecondAiUrl.requestFocus()
+    }
+
+    private fun formatLabel(format: AiTextClient.Format): String = when (format) {
+        AiTextClient.Format.GEMINI -> "Gemini 原生"
+        AiTextClient.Format.OPENAI -> "OpenAI 兼容"
+    }
+
+    private fun setupSecondAiModelPicker() {
+        views.etSecondAiKey.doAfterTextChanged { invalidateSecondAiModels() }
+        views.etSecondAiUrl.doAfterTextChanged { invalidateSecondAiModels() }
+        views.btnRefreshSecondAiModels.setOnClickListener {
+            // 已经拉过就直接开面板；面板里还留着「重新拉取」。
+            if (cachedSecondAiModels.isNotEmpty()) showModelPicker() else fetchSecondAiModels()
+        }
+    }
+
+    private fun fetchSecondAiModels() {
         if (secondAiModelsFetching) return
         // 使用刚输入的配置，避免首次填写 Key 后还要离开页面才能刷新。
         persistSecondAiInputs()
         val apiKey = SettingsStore.secondAiApiKey(context)
         if (apiKey.isBlank()) {
-            renderSecondAiModelsHint(true, "未填写 API Key，无法拉取模型列表，请手动输入")
+            requireSecondAiKey()
             return
         }
         val baseUrl = SettingsStore.secondAiBaseUrl(context)
         val format = secondAiFormat()
         val revision = secondAiModelsRevision
         secondAiModelsFetching = true
-        views.btnRefreshSecondAiModels.isEnabled = false
-        if (lazy) renderSecondAiModelsHint(false, "正在拉取模型列表…")
+        setSecondAiButtonsBusy(views.btnRefreshSecondAiModels, "正在获取模型列表…")
+        renderSecondAiModelsHint(false, "正在从 ${formatLabel(format)} 服务获取可用模型…")
         Thread({
             val result = runCatching {
                 AiTextClient.listModels(
@@ -290,21 +351,137 @@ internal class SettingsController(
             postToUi {
                 secondAiModelsFetching = false
                 if (!isHostActive()) return@postToUi
-                views.btnRefreshSecondAiModels.isEnabled = true
+                clearSecondAiButtonsBusy(views.btnRefreshSecondAiModels, "拉取模型列表")
                 if (revision != secondAiModelsRevision) return@postToUi
                 result.onSuccess { models ->
-                    secondAiModelsFetched = true
-                    views.etSecondAiModel.setSimpleItems(models.toTypedArray())
-                    val empty = models.isEmpty()
-                    renderSecondAiModelsHint(
-                        empty,
-                        if (empty) "远端未返回模型，请自行输入模型名" else "已加载 ${models.size} 个模型，没有合适的可手动输入",
-                    )
+                    cachedSecondAiModels = models
+                    if (models.isEmpty()) {
+                        renderSecondAiModelsHint(true, "远端没有返回任何模型，请手动输入模型 ID")
+                        return@onSuccess
+                    }
+                    renderSecondAiModelsHint(false, "已获取 ${models.size} 个模型")
+                    showModelPicker()
                 }.onFailure { error ->
-                    renderSecondAiModelsHint(true, "拉取失败：${error.message ?: "请检查 Key/Base URL"}，可手动输入")
+                    renderSecondAiModelsHint(
+                        true,
+                        "获取失败：${error.message ?: "请检查 API Key 与服务地址"}。也可以手动输入模型 ID",
+                    )
                 }
             }
         }, "ai-models-fetch").start()
+    }
+
+    /** 可搜索的模型选择面板：长模型名在窄下拉里根本看不清。 */
+    private fun showModelPicker() {
+        val content = LayoutInflater.from(context).inflate(R.layout.dialog_model_picker, null, false)
+        val list = content.findViewById<LinearLayout>(R.id.modelPickerList)
+        val empty = content.findViewById<TextView>(R.id.tvModelPickerEmpty)
+        val search = content.findViewById<EditText>(R.id.etModelPickerSearch)
+        val dialog = MaterialAlertDialogBuilder(context)
+            .setTitle("选择分析模型")
+            .setView(content)
+            .setNegativeButton("关闭", null)
+            .setNeutralButton("重新拉取", null)
+            .create()
+
+        fun render(keyword: String) {
+            val matched = cachedSecondAiModels.filter { it.contains(keyword.trim(), ignoreCase = true) }
+            list.removeAllViews()
+            empty.visibility = if (matched.isEmpty()) View.VISIBLE else View.GONE
+            matched.forEach { model ->
+                list.addView(
+                    TextView(context).apply {
+                        text = model
+                        textSize = 14f
+                        minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                        setTextColor(context.getColor(R.color.text_primary))
+                        val padding = resources.getDimensionPixelSize(R.dimen.space_12)
+                        setPadding(padding, padding, padding, padding)
+                        isClickable = true
+                        isFocusable = true
+                        setBackgroundResource(R.drawable.bg_history_context)
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ).apply { topMargin = resources.getDimensionPixelSize(R.dimen.grid_4) }
+                        setOnClickListener {
+                            views.etSecondAiModel.setText(model)
+                            persistSecondAiInputs()
+                            renderSecondAiModelsHint(false, "已选择模型：$model")
+                            dialog.dismiss()
+                        }
+                    },
+                )
+            }
+        }
+
+        search.doAfterTextChanged { render(it?.toString().orEmpty()) }
+        render("")
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                dialog.dismiss()
+                cachedSecondAiModels = emptyList()
+                fetchSecondAiModels()
+            }
+        }
+        dialog.show()
+    }
+
+    /** 测试当前 Key + 地址 + 模型能否真的完成一次分析。 */
+    private fun testSecondAi() {
+        if (secondAiTesting) return
+        persistSecondAiInputs()
+        val apiKey = SettingsStore.secondAiApiKey(context)
+        if (apiKey.isBlank()) {
+            requireSecondAiKey()
+            return
+        }
+        val baseUrl = SettingsStore.secondAiBaseUrl(context)
+        val model = SettingsStore.secondAiModel(context)
+        val format = secondAiFormat()
+        secondAiTesting = true
+        setSecondAiButtonsBusy(views.btnTestSecondAi, "正在测试…")
+        renderSecondAiTestStatus(false, "正在用 $model 跑一次最短请求…")
+        Thread({
+            val result = runCatching {
+                AiTextClient.probe(
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    model = model,
+                    format = format,
+                )
+            }
+            postToUi {
+                secondAiTesting = false
+                if (!isHostActive()) return@postToUi
+                clearSecondAiButtonsBusy(views.btnTestSecondAi, "测试分析服务")
+                result.onSuccess {
+                    renderSecondAiTestStatus(false, "可用：$model 已成功返回结果，分析功能可以使用。")
+                }.onFailure { error ->
+                    renderSecondAiTestStatus(
+                        true,
+                        "不可用：${error.message ?: "请检查 API 格式、Key、服务地址与模型 ID"}",
+                    )
+                }
+            }
+        }, "ai-probe").start()
+    }
+
+    /** 缺 Key 时把用户直接送到该填的那个框，而不是让他自己找。 */
+    private fun requireSecondAiKey() {
+        renderSecondAiModelsHint(true, "请先填写 API Key")
+        views.etSecondAiKey.requestFocus()
+    }
+
+    private fun setSecondAiButtonsBusy(button: Button, busyText: String) {
+        button.isEnabled = false
+        button.text = busyText
+    }
+
+    private fun clearSecondAiButtonsBusy(button: Button, idleText: String) {
+        button.isEnabled = true
+        button.text = idleText
     }
 
     private fun renderSecondAiModelsHint(warn: Boolean, message: String) {
@@ -315,25 +492,27 @@ internal class SettingsController(
         }
     }
 
-    private fun invalidateSecondAiModels() {
-        secondAiModelsRevision++
-        secondAiModelsFetched = false
-        views.etSecondAiModel.setSimpleItems(emptyArray())
-        renderSecondAiModelsHint(false, "配置已修改，请刷新模型列表，也可手动输入")
+    private fun renderSecondAiTestStatus(warn: Boolean, message: String) {
+        views.tvSecondAiTestStatus.apply {
+            text = message
+            visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+            setTextColor(context.getColor(if (warn) R.color.warning else R.color.text_muted))
+        }
     }
 
-    private fun toggleSecondAiFormat() {
-        val next = when (secondAiFormat()) {
-            AiTextClient.Format.GEMINI -> AiTextClient.Format.OPENAI
-            AiTextClient.Format.OPENAI -> AiTextClient.Format.GEMINI
-        }
-        SettingsStore.saveSecondAiFormat(context, next.key)
-        updateSecondAiFormatLabel()
-        invalidateSecondAiModels()
-        toast("已切换到 ${next.key} 格式")
+    private fun invalidateSecondAiModels() {
+        secondAiModelsRevision++
+        cachedSecondAiModels = emptyList()
+        renderSecondAiModelsHint(false, "配置已修改，请重新拉取模型列表，也可以手动输入模型 ID")
+        renderSecondAiTestStatus(false, "")
     }
 
     private fun setupStyleSliders() {
+        // 预览底色只是设置页里的模拟画面，不写入任何设置。
+        views.subtitlePreviewStageToggle.addOnButtonCheckedListener { _, _, _ ->
+            renderPreviewStage()
+        }
+        renderPreviewStage()
         views.slFont.value = SettingsStore.fontSizeSp(context).toFloat().coerceIn(12f, 26f)
         views.slOpacity.value = SettingsStore.bgOpacityPct(context).toFloat().coerceIn(20f, 95f)
         views.slLines.value = SettingsStore.overlayMaxLines(context).toFloat().coerceIn(1f, 3f)
@@ -350,6 +529,13 @@ internal class SettingsController(
         listOf(views.slFont, views.slOpacity, views.slLines).forEach {
             it.addOnChangeListener(change)
         }
+    }
+
+    private fun renderPreviewStage() {
+        val light = views.subtitlePreviewStageToggle.checkedButtonId == views.btnSubtitlePreviewLight.id
+        views.subtitlePreviewStage.setBackgroundColor(
+            context.getColor(if (light) R.color.preview_stage_light else R.color.preview_stage_dark),
+        )
     }
 
     private fun updateStyleLabels() {
@@ -417,7 +603,7 @@ internal class SettingsController(
     }
 
     private fun updateParamLabels() {
-        views.tvRotateVal.text = "连接主动轮换 ${views.slRotate.value.toInt()} 秒"
+        views.tvRotateVal.text = "每 ${views.slRotate.value.toInt()} 秒定期重新连接"
         val secs = views.slIdle.value.toInt() / 1000.0
         val secsText = if (secs % 1.0 == 0.0) secs.toInt().toString() else secs.toString()
         views.tvIdleVal.text = "停顿 $secsText 秒后确认字幕"

@@ -2,6 +2,8 @@ package com.xyq.livetranslate.ui
 
 import android.content.Context
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.TextView
 import com.xyq.livetranslate.AiTextClient
@@ -22,6 +24,7 @@ internal class SessionContextController(
     private val interpretationViews: ModeHomeViews,
     private val videoViews: ModeHomeViews,
     private val persistSecondAiInputs: () -> Unit,
+    private val openAiSettings: (returnTabId: Int) -> Unit,
     private val postToUi: (() -> Unit) -> Unit,
     private val isHostActive: () -> Boolean,
     private val toast: (String) -> Unit,
@@ -30,6 +33,7 @@ internal class SessionContextController(
         const val STATE_INTERPRETATION_CONTEXT = "interpretation_context"
         const val STATE_VIDEO_CONTEXT = "video_context"
         const val STATE_VIDEO_URL = "video_url"
+        const val SUMMARY_SNIPPET_LENGTH = 20
     }
 
     @Volatile
@@ -60,17 +64,26 @@ internal class SessionContextController(
     private val videoClearButton: View? =
         videoViews.idleContent.findViewById(R.id.btnVideoClearSessionContext)
 
+    /** 应用 AI 结果前的原文；只在本次替换后有效，用于「撤销替换」。 */
+    private var interpUndoSnapshot: String? = null
+    private var videoUndoSnapshot: String? = null
+
+    /** 程序化写入输入框时抑制 watcher，避免自己触发「输入已修改」。 */
+    private var suppressInputWatcher = false
+
     init {
         check(interpretationViews.videoSessionUrl == null)
         check(videoViews.videoSessionUrl != null)
     }
 
     fun setup() {
-        interpretationViews.analyzeContextButton.setOnClickListener {
-            analyzeSessionContext(TranslationMode.INTERPRETATION)
-        }
-        videoViews.analyzeContextButton.setOnClickListener {
-            analyzeSessionContext(TranslationMode.VIDEO)
+        TranslationMode.entries.forEach { mode ->
+            val modeViews = views(mode)
+            modeViews.analyzeContextButton.setOnClickListener { analyzeSessionContext(mode) }
+            modeViews.analyzeConfigureButton.setOnClickListener { openAiSettings(returnTabId(mode)) }
+            modeViews.analyzeApplyButton.setOnClickListener { applyAnalysisResult(mode) }
+            modeViews.analyzeDiscardButton.setOnClickListener { discardAnalysisResult(mode) }
+            modeViews.analyzeUndoButton.setOnClickListener { undoAnalysisResult(mode) }
         }
         interpContextToggle?.setOnClickListener {
             interpContextExpanded = !interpContextExpanded
@@ -80,14 +93,9 @@ internal class SessionContextController(
             }
         }
         interpretationViews.sessionContext.addTextChangedListener(
-            object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-                override fun afterTextChanged(s: android.text.Editable?) {
-                    invalidateAnalysisForInputChange(TranslationMode.INTERPRETATION)
-                    if (!interpContextExpanded) renderInterpContextFold()
-                    else updateInterpContextSummaryOnly()
-                }
+            watcher {
+                invalidateAnalysisForInputChange(TranslationMode.INTERPRETATION)
+                renderInterpContextFold()
             },
         )
         renderInterpContextFold()
@@ -98,101 +106,113 @@ internal class SessionContextController(
                 videoViews.sessionContext.requestFocus()
             }
         }
-        val videoWatcher = object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-            override fun afterTextChanged(s: android.text.Editable?) {
-                invalidateAnalysisForInputChange(TranslationMode.VIDEO)
-                if (!videoContextExpanded) renderVideoContextFold()
-                else updateVideoContextSummaryOnly()
-            }
+        val videoWatcher = watcher {
+            invalidateAnalysisForInputChange(TranslationMode.VIDEO)
+            renderVideoAnalyzeButtonLabel()
+            renderVideoContextFold()
         }
         videoViews.sessionContext.addTextChangedListener(videoWatcher)
         videoViews.videoSessionUrl?.addTextChangedListener(videoWatcher)
         interpClearButton?.setOnClickListener {
-            interpretationViews.sessionContext.setText("")
-            showAnalyzeStatus(interpretationViews.analyzeContextStatus, "")
-            renderInterpContextFold()
+            setContextText(TranslationMode.INTERPRETATION, "")
+            resetAnalysisUi(TranslationMode.INTERPRETATION)
             toast("已清除本场背景")
         }
         videoClearButton?.setOnClickListener {
-            videoViews.sessionContext.setText("")
-            videoViews.videoSessionUrl?.setText("")
-            showAnalyzeStatus(videoViews.analyzeContextStatus, "")
-            renderVideoContextFold()
-            toast("已清除本场视频资料")
+            setContextText(TranslationMode.VIDEO, "")
+            setVideoUrlText("")
+            resetAnalysisUi(TranslationMode.VIDEO)
+            toast("已清除视频背景")
         }
+        renderVideoAnalyzeButtonLabel()
         renderVideoContextFold()
     }
 
+    private fun watcher(onChanged: () -> Unit): TextWatcher = object : TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+        override fun afterTextChanged(s: Editable?) {
+            if (suppressInputWatcher) return
+            onChanged()
+        }
+    }
+
     private fun invalidateAnalysisForInputChange(mode: TranslationMode) {
+        // 手动改过输入后，之前那次替换的原文已经对不上，撤销入口必须收回。
+        setUndoSnapshot(mode, null)
+        views(mode).analyzeUndoButton.visibility = View.GONE
         if (latestRequestId(mode).isEmpty()) return
         setLatestRequestId(mode, "")
         val modeViews = views(mode)
         modeViews.analyzeContextButton.isEnabled = true
-        showAnalyzeStatus(modeViews.analyzeContextStatus, "输入已修改，之前的分析已取消")
+        showAnalyzeStatus(mode, "输入已修改，之前的分析已取消")
     }
 
     private fun renderInterpContextFold() {
         val body = interpContextBody ?: return
         body.visibility = if (interpContextExpanded) View.VISIBLE else View.GONE
-        updateInterpContextSummaryOnly()
-        val count = interpretationViews.sessionContext.text?.toString().orEmpty().trim().length
         interpContextHeader?.text = if (interpContextExpanded) {
             "本场背景 · 可选"
         } else {
             "本场背景 · 可选 ›"
         }
-        if (!interpContextExpanded && count > 0) {
-            interpContextSummary?.visibility = View.VISIBLE
-            interpContextSummary?.text = "已填写 · ${count} 字"
-        } else if (!interpContextExpanded) {
-            interpContextSummary?.visibility = View.GONE
-            interpContextSummary?.text = ""
-        } else {
-            interpContextSummary?.visibility = View.GONE
-        }
-    }
-
-    private fun updateInterpContextSummaryOnly() {
-        val count = interpretationViews.sessionContext.text?.toString().orEmpty().trim().length
-        if (!interpContextExpanded && count > 0) {
-            interpContextSummary?.visibility = View.VISIBLE
-            interpContextSummary?.text = "已填写 · ${count} 字"
-        } else if (!interpContextExpanded) {
-            interpContextSummary?.visibility = View.GONE
-            interpContextSummary?.text = ""
-        }
-        interpClearButton?.visibility = if (count > 0) View.VISIBLE else View.GONE
+        val text = interpretationViews.sessionContext.text?.toString().orEmpty().trim()
+        renderSummary(
+            summaryView = interpContextSummary,
+            expanded = interpContextExpanded,
+            summary = if (text.isEmpty()) "" else snippet(text),
+        )
+        interpClearButton?.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun renderVideoContextFold() {
         val body = videoContextBody ?: return
         body.visibility = if (videoContextExpanded) View.VISIBLE else View.GONE
-        updateVideoContextSummaryOnly()
         videoContextHeader?.text = if (videoContextExpanded) {
-            "本场视频 · 可选"
+            "视频背景 · 可选"
         } else {
-            "本场视频 · 可选 ›"
+            "视频背景 · 可选 ›"
+        }
+        val text = videoViews.sessionContext.text?.toString().orEmpty().trim()
+        val url = videoViews.videoSessionUrl?.text?.toString().orEmpty().trim()
+        // 折叠行显示一段能认出来的内容，而不是只报字数。
+        val summary = when {
+            text.isNotEmpty() && url.isNotEmpty() -> snippet(text) + " · 含链接"
+            text.isNotEmpty() -> snippet(text)
+            url.isNotEmpty() -> "已填视频链接"
+            else -> ""
+        }
+        renderSummary(
+            summaryView = videoContextSummary,
+            expanded = videoContextExpanded,
+            summary = summary,
+        )
+        videoClearButton?.visibility =
+            if (text.isEmpty() && url.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun renderSummary(summaryView: TextView?, expanded: Boolean, summary: String) {
+        val visible = !expanded && summary.isNotEmpty()
+        summaryView?.visibility = if (visible) View.VISIBLE else View.GONE
+        summaryView?.text = if (visible) summary else ""
+    }
+
+    private fun snippet(text: String): String {
+        val firstLine = text.lineSequence()
+            .map(String::trim)
+            .firstOrNull(String::isNotEmpty)
+            .orEmpty()
+        return if (firstLine.length <= SUMMARY_SNIPPET_LENGTH) {
+            firstLine
+        } else {
+            firstLine.take(SUMMARY_SNIPPET_LENGTH) + "…"
         }
     }
 
-    private fun updateVideoContextSummaryOnly() {
-        val contextText = videoViews.sessionContext.text?.toString().orEmpty().trim()
-        val url = videoViews.videoSessionUrl?.text?.toString().orEmpty().trim()
-        val parts = buildList {
-            if (url.isNotEmpty()) add("链接")
-            if (contextText.isNotEmpty()) add("${contextText.length} 字")
-        }
-        if (!videoContextExpanded && parts.isNotEmpty()) {
-            videoContextSummary?.visibility = View.VISIBLE
-            videoContextSummary?.text = "已填 · " + parts.joinToString(" · ")
-        } else {
-            videoContextSummary?.visibility = View.GONE
-            videoContextSummary?.text = ""
-        }
-        videoClearButton?.visibility =
-            if (contextText.isNotEmpty() || url.isNotEmpty()) View.VISIBLE else View.GONE
+    /** 有链接就是抓资料，只有文字就是整理；按钮别说自己做不到的事。 */
+    private fun renderVideoAnalyzeButtonLabel() {
+        val hasUrl = videoViews.videoSessionUrl?.text?.toString().orEmpty().isNotBlank()
+        videoViews.analyzeContextButton.text = if (hasUrl) "AI 获取视频背景" else "AI 整理背景"
     }
 
     fun saveState(outState: Bundle) {
@@ -211,14 +231,16 @@ internal class SessionContextController(
     }
 
     fun restoreState(savedState: Bundle?) {
-        interpretationViews.sessionContext.setText(
+        setContextText(
+            TranslationMode.INTERPRETATION,
             savedState?.getString(STATE_INTERPRETATION_CONTEXT).orEmpty(),
         )
-        videoViews.sessionContext.setText(savedState?.getString(STATE_VIDEO_CONTEXT).orEmpty())
-        videoViews.videoSessionUrl?.setText(savedState?.getString(STATE_VIDEO_URL).orEmpty())
+        setContextText(TranslationMode.VIDEO, savedState?.getString(STATE_VIDEO_CONTEXT).orEmpty())
+        setVideoUrlText(savedState?.getString(STATE_VIDEO_URL).orEmpty())
         // 恢复后仍默认折叠，仅刷新摘要。
         interpContextExpanded = false
         videoContextExpanded = false
+        renderVideoAnalyzeButtonLabel()
         renderInterpContextFold()
         renderVideoContextFold()
     }
@@ -232,55 +254,107 @@ internal class SessionContextController(
         manualContext = views(mode).sessionContext.text?.toString().orEmpty().trim(),
     )
 
-    override fun clearAfterSuccessfulStart(mode: TranslationMode) {
-        views(mode).sessionContext.setText("")
-        if (mode == TranslationMode.VIDEO) videoViews.videoSessionUrl?.setText("")
-        when (mode) {
-            TranslationMode.INTERPRETATION -> {
-                interpContextExpanded = false
-                renderInterpContextFold()
-            }
-            TranslationMode.VIDEO -> {
-                videoContextExpanded = false
-                renderVideoContextFold()
-            }
-        }
-    }
-
     private fun views(mode: TranslationMode): ModeHomeViews = when (mode) {
         TranslationMode.INTERPRETATION -> interpretationViews
         TranslationMode.VIDEO -> videoViews
     }
 
-    private fun showAnalyzeStatus(statusView: TextView, message: String) {
-        statusView.text = message
-        statusView.visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+    private fun returnTabId(mode: TranslationMode): Int = when (mode) {
+        TranslationMode.INTERPRETATION -> R.id.nav_interp
+        TranslationMode.VIDEO -> R.id.nav_video
+    }
+
+    private fun setContextText(mode: TranslationMode, text: String) {
+        suppressInputWatcher = true
+        views(mode).sessionContext.setText(text)
+        suppressInputWatcher = false
+    }
+
+    private fun setVideoUrlText(text: String) {
+        suppressInputWatcher = true
+        videoViews.videoSessionUrl?.setText(text)
+        suppressInputWatcher = false
+    }
+
+    private fun showAnalyzeStatus(mode: TranslationMode, message: String, warn: Boolean = false) {
+        views(mode).analyzeContextStatus.apply {
+            text = message
+            visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+            setTextColor(context.getColor(if (warn) R.color.warning else R.color.text_muted))
+        }
+    }
+
+    private fun resetAnalysisUi(mode: TranslationMode) {
+        val modeViews = views(mode)
+        showAnalyzeStatus(mode, "")
+        modeViews.analyzePreview.visibility = View.GONE
+        modeViews.analyzePreviewText.text = ""
+        modeViews.analyzeConfigureButton.visibility = View.GONE
+        modeViews.analyzeUndoButton.visibility = View.GONE
+        setUndoSnapshot(mode, null)
+        if (mode == TranslationMode.INTERPRETATION) renderInterpContextFold() else renderVideoContextFold()
+    }
+
+    /** 结果先摆出来给人看，用户点了才写进输入框。 */
+    private fun showAnalysisPreview(mode: TranslationMode, result: String, note: String) {
+        val modeViews = views(mode)
+        modeViews.analyzePreviewText.text = result
+        modeViews.analyzePreview.visibility = View.VISIBLE
+        modeViews.analyzeUndoButton.visibility = View.GONE
+        setUndoSnapshot(mode, null)
+        showAnalyzeStatus(mode, note.ifBlank { "已整理好，确认后再用于本次翻译" })
+    }
+
+    private fun applyAnalysisResult(mode: TranslationMode) {
+        val modeViews = views(mode)
+        val result = modeViews.analyzePreviewText.text?.toString().orEmpty()
+        if (result.isBlank()) return
+        setUndoSnapshot(mode, modeViews.sessionContext.text?.toString().orEmpty())
+        setContextText(mode, result)
+        modeViews.analyzePreview.visibility = View.GONE
+        modeViews.analyzeUndoButton.visibility = View.VISIBLE
+        showAnalyzeStatus(mode, "已用于本次翻译")
+        if (mode == TranslationMode.INTERPRETATION) renderInterpContextFold() else renderVideoContextFold()
+    }
+
+    private fun discardAnalysisResult(mode: TranslationMode) {
+        val modeViews = views(mode)
+        modeViews.analyzePreview.visibility = View.GONE
+        modeViews.analyzePreviewText.text = ""
+        showAnalyzeStatus(mode, "已放弃这次结果，原来的内容没有变")
+    }
+
+    private fun undoAnalysisResult(mode: TranslationMode) {
+        val snapshot = undoSnapshot(mode) ?: return
+        setContextText(mode, snapshot)
+        setUndoSnapshot(mode, null)
+        views(mode).analyzeUndoButton.visibility = View.GONE
+        showAnalyzeStatus(mode, "已撤销替换，恢复成你原来写的内容")
+        if (mode == TranslationMode.INTERPRETATION) renderInterpContextFold() else renderVideoContextFold()
     }
 
     private fun analyzeSessionContext(mode: TranslationMode) {
         persistSecondAiInputs()
-        val apiKey = SettingsStore.secondAiApiKey(context)
         val modeViews = views(mode)
-        val statusView = modeViews.analyzeContextStatus
         val button = modeViews.analyzeContextButton
+        modeViews.analyzeConfigureButton.visibility = View.GONE
+        val apiKey = SettingsStore.secondAiApiKey(context)
         if (apiKey.isBlank()) {
-            showAnalyzeStatus(statusView, "请先在设置 → 内容分析 AI 中填写 API Key")
+            showAnalyzeStatus(mode, "还没有配置背景分析 AI", warn = true)
+            modeViews.analyzeConfigureButton.visibility = View.VISIBLE
             return
         }
         val material = modeViews.sessionContext.text?.toString().orEmpty().trim()
         val url = modeViews.videoSessionUrl?.text?.toString().orEmpty().trim()
-        if (mode == TranslationMode.INTERPRETATION && material.isBlank()) {
-            showAnalyzeStatus(statusView, "请先填写本场背景或资料")
-            return
-        }
-        if (mode == TranslationMode.VIDEO && url.isBlank() && material.isBlank()) {
-            showAnalyzeStatus(statusView, "请先填写视频链接或本场资料")
-            return
-        }
-        if (mode == TranslationMode.VIDEO && url.isBlank()) {
+        if (material.isBlank() && url.isBlank()) {
             showAnalyzeStatus(
-                statusView,
-                "解析网页需要先填写一个公网视频或播放页面链接",
+                mode,
+                if (mode == TranslationMode.VIDEO) {
+                    "请先填视频链接，或写几句背景"
+                } else {
+                    "请先写几句本场背景"
+                },
+                warn = true,
             )
             return
         }
@@ -292,75 +366,69 @@ internal class SessionContextController(
         val model = SettingsStore.secondAiModel(context)
         val format = AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
         button.isEnabled = false
-        showAnalyzeStatus(statusView, "正在整理，请稍候…")
+        // 两段进度：先抓网页资料，再整理背景，失败时能看出卡在哪一步。
+        showAnalyzeStatus(mode, if (url.isNotBlank()) "正在获取视频资料…" else "正在整理背景…")
 
-        runCatching {
-            Thread({
-                runCatching {
-                    val videoInfo = if (mode == TranslationMode.VIDEO) {
-                        VideoMetadataClient.fetch(url)
-                    } else {
-                        null
-                    }
-                    check(isHostActive() && requestId == latestRequestId(mode)) { "分析已取消" }
-                    val source = TranslationLanguageCatalog.source(plan.sourceLanguageCode)
-                    val target = TranslationLanguageCatalog.target(plan.targetLanguageCode)
-                    ContentContextAnalyzer.analyze(
-                        request = ContentAnalysisRequest(
-                            mode = mode,
-                            sourceLanguageLabel = source.label,
-                            targetLanguageLabel = target.label,
-                            material = material,
-                            video = videoInfo,
-                        ),
-                        baseUrl = baseUrl,
-                        apiKey = apiKey,
-                        model = model,
-                        format = format,
-                    )
-                }.onSuccess { result ->
-                    postToUi success@{
-                        if (!isHostActive() || requestId != latestRequestId(mode)) return@success
-                        val inputChanged = when (mode) {
-                            TranslationMode.INTERPRETATION ->
-                                modeViews.sessionContext.text?.toString().orEmpty().trim() != material
-                            TranslationMode.VIDEO ->
-                                modeViews.sessionContext.text?.toString().orEmpty().trim() != material ||
-                                    modeViews.videoSessionUrl?.text?.toString().orEmpty().trim() != url
-                        }
-                        if (inputChanged) {
-                            setLatestRequestId(mode, "")
-                            showAnalyzeStatus(statusView, "输入已修改，之前的分析结果已忽略")
-                            button.isEnabled = true
-                            return@success
-                        }
-                        setLatestRequestId(mode, "")
-                        if (result.sessionContext.isBlank()) {
-                            showAnalyzeStatus(
-                                statusView,
-                                result.note.take(200).ifBlank {
-                                    "AI 没有返回可用背景，请补充资料后重试"
-                                },
-                            )
-                        } else {
-                            modeViews.sessionContext.setText(result.sessionContext)
-                            showAnalyzeStatus(statusView, result.note.ifBlank { "本场资料已整理" })
-                        }
-                        button.isEnabled = true
-                    }
-                }.onFailure { error ->
-                    postToUi failure@{
-                        if (!isHostActive() || requestId != latestRequestId(mode)) return@failure
-                        setLatestRequestId(mode, "")
-                        showAnalyzeStatus(statusView, "整理失败：${error.message ?: "未知错误"}")
-                        button.isEnabled = true
+        Thread({
+            runCatching {
+                val videoInfo = if (mode == TranslationMode.VIDEO && url.isNotBlank()) {
+                    VideoMetadataClient.fetch(url)
+                } else {
+                    null
+                }
+                check(isHostActive() && requestId == latestRequestId(mode)) { "分析已取消" }
+                postToUi {
+                    if (isHostActive() && requestId == latestRequestId(mode)) {
+                        showAnalyzeStatus(mode, "正在整理背景…")
                     }
                 }
-            }, "session-context-${mode.storageKey}").apply { start() }
-        }.onFailure { error ->
-            button.isEnabled = true
-            toast("无法启动内容整理：${error.message ?: "未知错误"}")
-        }
+                val source = TranslationLanguageCatalog.source(plan.sourceLanguageCode)
+                val target = TranslationLanguageCatalog.target(plan.targetLanguageCode)
+                ContentContextAnalyzer.analyze(
+                    request = ContentAnalysisRequest(
+                        mode = mode,
+                        sourceLanguageLabel = source.label,
+                        targetLanguageLabel = target.label,
+                        material = material,
+                        video = videoInfo,
+                    ),
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    model = model,
+                    format = format,
+                )
+            }.onSuccess { result ->
+                postToUi success@{
+                    if (!isHostActive() || requestId != latestRequestId(mode)) return@success
+                    val inputChanged = modeViews.sessionContext.text?.toString().orEmpty().trim() != material ||
+                        modeViews.videoSessionUrl?.text?.toString().orEmpty().trim() != url
+                    if (inputChanged) {
+                        setLatestRequestId(mode, "")
+                        showAnalyzeStatus(mode, "输入已修改，之前的分析结果已忽略")
+                        button.isEnabled = true
+                        return@success
+                    }
+                    setLatestRequestId(mode, "")
+                    if (result.sessionContext.isBlank()) {
+                        showAnalyzeStatus(
+                            mode,
+                            result.note.take(200).ifBlank { "AI 没有返回可用背景，请补充资料后重试" },
+                            warn = true,
+                        )
+                    } else {
+                        showAnalysisPreview(mode, result.sessionContext, result.note)
+                    }
+                    button.isEnabled = true
+                }
+            }.onFailure { error ->
+                postToUi failure@{
+                    if (!isHostActive() || requestId != latestRequestId(mode)) return@failure
+                    setLatestRequestId(mode, "")
+                    showAnalyzeStatus(mode, "整理失败：${error.message ?: "未知错误"}", warn = true)
+                    button.isEnabled = true
+                }
+            }
+        }, "session-context-${mode.storageKey}").start()
     }
 
     private fun latestRequestId(mode: TranslationMode): String = when (mode) {
@@ -372,6 +440,18 @@ internal class SessionContextController(
         when (mode) {
             TranslationMode.INTERPRETATION -> latestInterpAnalysisRequestId = requestId
             TranslationMode.VIDEO -> latestVideoAnalysisRequestId = requestId
+        }
+    }
+
+    private fun undoSnapshot(mode: TranslationMode): String? = when (mode) {
+        TranslationMode.INTERPRETATION -> interpUndoSnapshot
+        TranslationMode.VIDEO -> videoUndoSnapshot
+    }
+
+    private fun setUndoSnapshot(mode: TranslationMode, value: String?) {
+        when (mode) {
+            TranslationMode.INTERPRETATION -> interpUndoSnapshot = value
+            TranslationMode.VIDEO -> videoUndoSnapshot = value
         }
     }
 }

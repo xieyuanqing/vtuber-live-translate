@@ -24,4 +24,8 @@
     <color name="success">#34C759</color>
     <color name="warning">#C45F00</color>
     <color name="warning_container">#FFF0E1</color>
+
+    <!-- 字幕样式预览的模拟画面底色：只用于设置页预览，不参与悬浮窗真实取色。 -->
+    <color name="preview_stage_dark">#101418</color>
+    <color name="preview_stage_light">#E8E6E1</color>
 </resources>
