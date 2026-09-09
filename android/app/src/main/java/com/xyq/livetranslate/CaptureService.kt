@@ -47,7 +47,6 @@ class CaptureService : Service() {
         const val EXTRA_RESULT_DATA = "resultData"
         /** [StatusBus.MODE_VIDEO] 或 [StatusBus.MODE_MIC] */
         const val EXTRA_MODE = "mode"
-        const val EXTRA_CREDENTIAL_MODE = "credentialMode"
         const val EXTRA_SESSION_PROMPT = "sessionPrompt"
         const val EXTRA_SOURCE_LANGUAGE = "sourceLanguage"
         const val EXTRA_TARGET_LANGUAGE = "targetLanguage"
@@ -116,17 +115,13 @@ class CaptureService : Service() {
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
         val sessionSceneLabel = intent.getStringExtra(EXTRA_SCENE_LABEL)?.trim()?.takeIf { it.isNotEmpty() }
-        val requestedCredentialMode = intent.getStringExtra(EXTRA_CREDENTIAL_MODE)
-            ?.takeIf {
-                it == FriendGatewayStore.MODE_PERSONAL || it == FriendGatewayStore.MODE_FRIEND
-            }
         val languageCodesValid = sourceLanguage != null && targetLanguage != null &&
             TranslationLanguageCatalog.sources.any { it.code == sourceLanguage } &&
             TranslationLanguageCatalog.targets.any { it.code == targetLanguage }
         if (
             mode == null || translationMode == null || sessionPrompt == null || sourceLanguage == null ||
             targetLanguage == null || scenePresetId == null || sessionSceneLabel == null ||
-            requestedCredentialMode == null || !languageCodesValid
+            !languageCodesValid
         ) {
             StatusBus.connState = "error:会话快照无效"
             Log.e(TAG, "reject start without valid complete session snapshot")
@@ -139,47 +134,13 @@ class CaptureService : Service() {
             targetLanguageCode = targetLanguage,
             scenePresetId = scenePresetId,
         ).normalized()
-        val friendModeRequested = requestedCredentialMode == FriendGatewayStore.MODE_FRIEND
-        val friendAccess = friendModeRequested && FriendGatewayStore.isActive(this)
-        if (friendModeRequested && !friendAccess) {
-            StatusBus.connState = "error:好友测试凭据已失效，请重新绑定"
-            Log.e(TAG, "reject friend-mode start without active binding")
-            stopSelf()
-            return
-        }
-        val apiKeysSnapshot = if (friendAccess) {
-            listOf(FriendGatewayStore.token(this)).filter(String::isNotBlank)
-        } else {
-            SettingsStore.apiKeyList(this).toList()
-        }
+        val apiKeysSnapshot = SettingsStore.apiKeyList(this).toList()
         if (apiKeysSnapshot.isEmpty()) {
-            StatusBus.connState = if (friendAccess) {
-                "error:好友测试凭据已失效"
-            } else {
-                "error:未配置 API Key"
-            }
+            StatusBus.connState = "error:未配置 API Key"
             stopSelf()
             return
         }
-        val baseUrlSnapshot = if (friendAccess) {
-            FriendGatewayStore.GATEWAY_WS_BASE_URL
-        } else {
-            SettingsStore.baseUrl(this)
-        }
-        val credentialModeSnapshot = if (friendAccess) {
-            ApiCredentialMode.BEARER_TOKEN
-        } else {
-            ApiCredentialMode.QUERY_API_KEY
-        }
-        val deviceIdSnapshot = if (friendAccess) FriendGatewayStore.deviceId(this) else ""
-        val requestSignatureProviderSnapshot:
-            ((String, String, ByteArray, String) -> Map<String, String>)? = if (friendAccess) {
-                { method, path, body, token ->
-                    FriendDeviceIdentity.signRequest(this, method, path, body, token).asMap()
-                }
-            } else {
-                null
-            }
+        val baseUrlSnapshot = SettingsStore.baseUrl(this)
         val echoSnapshot = SettingsStore.echoTargetLanguage(this)
         val rotateMsSnapshot = SettingsStore.rotateSeconds(this) * 1000L
         val idleMsSnapshot = SettingsStore.stabIdleMs(this).toLong()
@@ -275,11 +236,7 @@ class CaptureService : Service() {
         val c = GeminiLiveClient(
             keyProvider = {
                 apiKeysSnapshot.random().also { key ->
-                    StatusBus.currentKeyLabel = if (friendAccess) {
-                        "好友测试通道"
-                    } else {
-                        "key#${apiKeysSnapshot.indexOf(key) + 1}/${apiKeysSnapshot.size}"
-                    }
+                    StatusBus.currentKeyLabel = "key#${apiKeysSnapshot.indexOf(key) + 1}/${apiKeysSnapshot.size}"
                 }
             },
             baseUrl = baseUrlSnapshot,
@@ -287,9 +244,6 @@ class CaptureService : Service() {
             targetLang = sessionPlan.targetLanguageCode,
             echoTargetLanguage = echoSnapshot,
             rotateAfterMs = rotateMsSnapshot,
-            credentialMode = credentialModeSnapshot,
-            deviceId = deviceIdSnapshot,
-            requestSignatureProvider = requestSignatureProviderSnapshot,
             listener = object : GeminiLiveClient.Listener {
                 override fun onState(state: String) {
                     StatusBus.connState = state
@@ -314,12 +268,6 @@ class CaptureService : Service() {
                     mainHandler.post { stabilizer?.onFragment(text) }
                 }
 
-                override fun onTerminalError(reason: String) {
-                    mainHandler.post {
-                        StatusBus.connState = "error:$reason"
-                        stopEverything()
-                    }
-                }
             }
         )
         client = c

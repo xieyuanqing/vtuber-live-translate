@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/pageSettingsProfileAi"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
     android:visibility="gone">
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -14,7 +14,6 @@
         android:paddingHorizontal="@dimen/page_margin"
         android:paddingTop="@dimen/space_16"
         android:paddingBottom="@dimen/page_bottom_padding">
-
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -22,14 +21,12 @@
             app:cardCornerRadius="@dimen/card_radius"
             app:cardElevation="0dp"
             app:strokeWidth="0dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="@dimen/space_16">
-
                 <TextView
                     android:layout_width="40dp"
                     android:layout_height="40dp"
@@ -37,51 +34,55 @@
                     android:gravity="center"
                     android:text="AI"
                     android:textColor="@color/brand"
-                    android:textStyle="bold" />
-
+                    android:textStyle="bold"/>
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_12"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="独立内容分析通道"
+                        android:text="内容分析（可选）"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"/>
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="只用于业务页的资料解析，与实时翻译连接相互独立"
+                        android:text="用于整理视频资料和本场背景。不配置也能使用实时翻译。"
                         android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"/>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
         <TextView
             style="@style/LuminousSectionLabel"
             android:layout_marginTop="@dimen/space_24"
-            android:text="连接配置" />
-
+            android:text="连接配置"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="@dimen/space_16">
-
+                <TextView
+                    style="@style/FieldLabel"
+                    android:layout_marginTop="@dimen/space_16"
+                    android:text="API 格式"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSecondAiFormat"
+                    style="@style/LuminousSecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:text="Gemini 原生"/>
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Field"
                     android:hint="API Key"
@@ -93,9 +94,8 @@
                         android:layout_height="wrap_content"
                         android:importantForAutofill="no"
                         android:inputType="textPassword"
-                        android:maxLines="1" />
+                        android:maxLines="1"/>
                 </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
@@ -106,9 +106,8 @@
                         android:layout_height="wrap_content"
                         android:importantForAutofill="no"
                         android:inputType="textUri"
-                        android:maxLines="2" />
+                        android:maxLines="2"/>
                 </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
@@ -122,17 +121,15 @@
                         android:layout_height="wrap_content"
                         android:importantForAutofill="no"
                         android:inputType="text"
-                        android:maxLines="1" />
+                        android:maxLines="1"/>
                 </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRefreshSecondAiModels"
                     style="@style/LuminousSecondaryButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:text="刷新模型列表" />
-
+                    android:text="刷新模型列表"/>
                 <TextView
                     android:id="@+id/tvSecondAiModelsHint"
                     android:layout_width="match_parent"
@@ -140,23 +137,9 @@
                     android:layout_marginTop="@dimen/space_8"
                     android:textColor="@color/text_muted"
                     android:textSize="12sp"
-                    android:visibility="gone" />
-
-                <TextView
-                    style="@style/FieldLabel"
-                    android:layout_marginTop="@dimen/space_16"
-                    android:text="API 格式" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSecondAiFormat"
-                    style="@style/LuminousSecondaryButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="Gemini 原生" />
+                    android:visibility="gone"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -164,6 +147,6 @@
             android:gravity="center"
             android:text="凭据仅保存在本机应用数据中"
             android:textColor="@color/text_muted"
-            android:textSize="12sp" />
+            android:textSize="12sp"/>
     </LinearLayout>
 </ScrollView>
