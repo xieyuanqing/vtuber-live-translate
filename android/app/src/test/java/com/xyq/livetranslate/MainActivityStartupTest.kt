@@ -495,23 +495,31 @@ class MainActivityStartupTest {
     @Test
     fun settingDefaultSceneKeepsTheSceneUsedThisTime() = withActivity { activity ->
         val mode = TranslationMode.INTERPRETATION
-        val inUseId = TranslationPlanStore.loadDraft(activity, mode).scenePresetId
-        val other = SceneLibraryStore.list(activity, mode).first { it.id != inUseId }
+        val scenes = SceneLibraryStore.list(activity, mode)
+        val defaultId = SceneLibraryStore.default(activity, mode).id
+        // 没手动选过时草稿本就跟随默认项，那种情况下一起变是对的；
+        // 这里先显式「使用」一个场景，再把另一个设为默认，验证本次选择不被顺手改掉。
+        val inUse = scenes.first { it.id != defaultId }
+        val newDefault = scenes.first { it.id != defaultId && it.id != inUse.id }
+        TranslationPlanStore.saveDraft(
+            activity,
+            TranslationPlanStore.loadDraft(activity, mode).copy(scenePresetId = inUse.id),
+        )
         activity.openSceneLibrary(mode, R.id.nav_interp)
 
         val list = activity.findViewById<android.widget.LinearLayout>(R.id.sceneLibraryList)
         val card = (0 until list.childCount)
             .map(list::getChildAt)
             .first {
-                it.findViewById<android.widget.TextView>(R.id.tvSceneName).text.toString() == other.label
+                it.findViewById<android.widget.TextView>(R.id.tvSceneName).text.toString() == newDefault.label
             }
         card.findViewById<View>(R.id.btnSceneMore).performClick()
         // 菜单项 2 = 设为默认，见 SceneLibraryController.buildSceneCard。
         val popup = requireNotNull(ShadowPopupMenu.getLatestPopupMenu()) { "没有弹出场景菜单" }
         assertTrue(popup.menu.performIdentifierAction(2, 0))
 
-        assertEquals(other.id, SceneLibraryStore.default(activity, mode).id)
-        assertEquals(inUseId, TranslationPlanStore.loadDraft(activity, mode).scenePresetId)
+        assertEquals(newDefault.id, SceneLibraryStore.default(activity, mode).id)
+        assertEquals(inUse.id, TranslationPlanStore.loadDraft(activity, mode).scenePresetId)
     }
 
     @Test

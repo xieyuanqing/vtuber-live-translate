@@ -45,7 +45,9 @@
 
 **版本**：2.4.1 / 36 → **2.5.0 / 37**（`build.gradle.kts`、README、CLAUDE.md 已同步）。`update.json` 仍指向 2.4.1，发布 Release 时再更新。
 
-**验证**：本会话容器的出站代理拦截 `dl.google.com`（403），Android Gradle Plugin 无法下载，`./gradlew` 在本地跑不起来，因此单元测试、Lint 和 `assembleDebug` 全部由 GitHub Actions `android-debug.yml` 在本分支验证，结果见下方补记。本地已完成 `git diff --check` 与全仓库 XML 结构校验。
+**验证**：本会话容器的出站代理拦截 `dl.google.com`（403），Android Gradle Plugin 无法下载，`./gradlew` 在本地跑不起来，因此单元测试、Lint 和 `assembleDebug` 全部由 GitHub Actions `android-debug.yml` 在本分支手动触发验证。本地已完成 `git diff --check` 与全仓库 XML 结构校验。
+
+第一次 CI（`43d1558`）编译与 Lint 通过，95 个测试里 1 个失败：新加的 `settingDefaultSceneKeepsTheSceneUsedThisTime`。原因是测试前提写错了——`TranslationPlanStore.loadDraft` 在从未保存过草稿时回退到 `SceneLibraryStore.default()`，所以「没手动选过场景」时改默认顺带改本次使用本来就是对的行为。改成先显式保存一个使用中的场景、再把另一个设为默认，验证的才是真正的回归点。
 
 新增/调整的测试：`AiTextClientListModelsTest` 补 `normalizeBaseUrl` 与「粘贴 /v1 不重复拼接」；`MainActivityStartupTest` 补占用横幅文案、空闲态不显示横幅、「设为默认」不改本次场景，并把新控件加入启动绑定清单；`SubtitleOverlayWindowTest` 的收起按钮类型改为 `ImageView`。
 
