@@ -49,6 +49,8 @@
 
 第一次 CI（`43d1558`）编译与 Lint 通过，95 个测试里 1 个失败：新加的 `settingDefaultSceneKeepsTheSceneUsedThisTime`。原因是测试前提写错了——`TranslationPlanStore.loadDraft` 在从未保存过草稿时回退到 `SceneLibraryStore.default()`，所以「没手动选过场景」时改默认顺带改本次使用本来就是对的行为。改成先显式保存一个使用中的场景、再把另一个设为默认，验证的才是真正的回归点。
 
+第二次 CI（`3b6c581`，即本次分支 HEAD）全绿：Run [34419131727](https://github.com/xieyuanqing/vtuber-live-translate/actions/runs/34419131727) 的 `headSha` = `3b6c5819c7fa386111b61d3d61c7ad346590b72f`，与目标提交一致；`:app:testDebugUnitTest`、`:app:lintDebug`、`:app:assembleDebug` 全部 success，产出 `LiveTranslate-debug-apk` artifact（5,220,991 字节，未过期）。真机安装与逐页手感仍需自行验证，本次只做到 CI 级别。
+
 新增/调整的测试：`AiTextClientListModelsTest` 补 `normalizeBaseUrl` 与「粘贴 /v1 不重复拼接」；`MainActivityStartupTest` 补占用横幅文案、空闲态不显示横幅、「设为默认」不改本次场景，并把新控件加入启动绑定清单；`SubtitleOverlayWindowTest` 的收起按钮类型改为 `ImageView`。
 
 ---
