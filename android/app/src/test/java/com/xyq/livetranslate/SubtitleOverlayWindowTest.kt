@@ -5,6 +5,7 @@ import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import kotlin.math.roundToInt
@@ -50,7 +51,7 @@ class SubtitleOverlayWindowTest {
         StatusBus.paused = false
         try {
             assertTrue(overlay.show())
-            val collapseButton = overlay.field<TextView>("collapseButton")
+            val collapseButton = overlay.field<ImageView>("collapseButton")
             val panel = overlay.field<View>("panel")
             val handle = overlay.field<TextView>("collapsedHandle")
             val params = overlay.field<WindowManager.LayoutParams>("lp")

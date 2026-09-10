@@ -65,7 +65,54 @@ object AiTextClient {
     }
 
     /**
-     * 拉取当前配置下可用的文本模型列表，供设置页下拉选择。
+     * 用当前配置跑一次最小请求，确认 Key、地址、模型三者能真正跑通。
+     * 走的是和资料整理完全相同的请求路径，所以能通过就代表分析功能可用。
+     *
+     * 调用方必须自行放到后台线程执行（同步阻塞）。成功返回一句可展示的短文本，
+     * 失败抛 [Exception]，异常信息直接给用户看。
+     */
+    fun probe(
+        baseUrl: String,
+        apiKey: String,
+        model: String,
+        format: Format,
+    ): String {
+        val response = generate(
+            systemPrompt = "你是连通性自检端点。只返回 JSON：{\"echo\":\"pong\"}",
+            userPrompt = "ping",
+            baseUrl = baseUrl,
+            apiKey = apiKey,
+            model = model,
+            format = format,
+        )
+        return response.optString("echo").trim().take(40).ifEmpty { "pong" }
+    }
+
+    /**
+     * 统一处理用户粘贴的服务地址。
+     *
+     * 反代地址常常已经带上了 `/v1`、`/v1beta` 甚至 `/v1/models`，
+     * 直接拼接会得到 `…/v1/v1/chat/completions` 这种打不通的路径。
+     * 这里把末尾的版本段和斜杠去掉，让能自动处理的格式问题由 App 承担。
+     */
+    internal fun normalizeBaseUrl(baseUrl: String): String {
+        var url = baseUrl.trim().trimEnd('/')
+        val versionTails = listOf("/v1beta/models", "/v1/models", "/v1beta", "/v1")
+        var trimmed = true
+        while (trimmed) {
+            trimmed = false
+            for (tail in versionTails) {
+                if (url.endsWith(tail, ignoreCase = true)) {
+                    url = url.dropLast(tail.length).trimEnd('/')
+                    trimmed = true
+                }
+            }
+        }
+        return url
+    }
+
+    /**
+     * 拉取当前配置下可用的文本模型列表，供设置页选择。
      *
      * - Gemini 原生格式：请求 [baseUrl]/v1beta/models，过滤掉不支持 generateContent 的项。
      * - OpenAI 兼容格式：请求 [baseUrl]/v1/models，返回 data[].id。
@@ -103,11 +150,8 @@ object AiTextClient {
         format: Format,
         apiKey: String,
     ): String = when (format) {
-        Format.GEMINI -> {
-            val base = baseUrl.trimEnd('/')
-            base + "/v1beta/models?key=$apiKey"
-        }
-        Format.OPENAI -> baseUrl.trimEnd('/') + "/v1/models"
+        Format.GEMINI -> normalizeBaseUrl(baseUrl) + "/v1beta/models?key=$apiKey"
+        Format.OPENAI -> normalizeBaseUrl(baseUrl) + "/v1/models"
     }
 
     private fun parseModels(body: String, format: Format): List<String> {
@@ -142,7 +186,7 @@ object AiTextClient {
         model: String,
     ): JSONObject {
         val modelId = model.removePrefix("models/")
-        val url = baseUrl.trimEnd('/') + "/v1beta/models/${modelId}:generateContent?key=$apiKey"
+        val url = normalizeBaseUrl(baseUrl) + "/v1beta/models/${modelId}:generateContent?key=$apiKey"
 
         val parts = org.json.JSONArray()
         parts.put(JSONObject().put("text", userPrompt))
@@ -184,7 +228,7 @@ object AiTextClient {
             val body = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) {
                 Log.w(TAG, "Gemini API error ${resp.code}: ${body.take(300)}")
-                error("AI API 返回错误 ${resp.code}，请检查 Key 和模型名是否正确")
+                error("AI 服务返回错误 ${resp.code}，请检查 API Key 和模型 ID 是否正确")
             }
             return parseGeminiResponse(body)
         }
@@ -214,7 +258,7 @@ object AiTextClient {
         apiKey: String,
         model: String,
     ): JSONObject {
-        val url = baseUrl.trimEnd('/') + "/v1/chat/completions"
+        val url = normalizeBaseUrl(baseUrl) + "/v1/chat/completions"
 
         val messages = org.json.JSONArray()
         if (systemPrompt.isNotBlank()) {
@@ -250,7 +294,7 @@ object AiTextClient {
             val body = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) {
                 Log.w(TAG, "OpenAI API error ${resp.code}: ${body.take(300)}")
-                error("AI API 返回错误 ${resp.code}，请检查 Key 和 URL 是否正确")
+                error("AI 服务返回错误 ${resp.code}，请检查 API Key 和服务地址是否正确")
             }
             return parseOpenAIResponse(body)
         }

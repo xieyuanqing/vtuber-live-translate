@@ -43,7 +43,6 @@ internal data class PendingSessionSnapshot(
 
 internal interface SessionContextAccess {
     fun current(mode: TranslationMode): SessionPromptContext
-    fun clearAfterSuccessfulStart(mode: TranslationMode)
 }
 
 /** ActivityResultLauncher 与系统动作的窄 Activity 边界。 */

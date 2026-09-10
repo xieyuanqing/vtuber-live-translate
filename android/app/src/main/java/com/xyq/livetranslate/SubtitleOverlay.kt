@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import kotlin.math.roundToInt
@@ -28,9 +29,9 @@ class SubtitleOverlay(private val context: Context) {
     private var panel: LinearLayout? = null
     private var collapsedHandle: TextView? = null
     private var statusLabel: TextView? = null
-    private var pauseButton: TextView? = null
-    private var openButton: TextView? = null
-    private var collapseButton: TextView? = null
+    private var pauseButton: ImageView? = null
+    private var openButton: ImageView? = null
+    private var collapseButton: ImageView? = null
     private var tvConfirmed: TextView? = null
     private var tvCurrent: TextView? = null
     private var dot: View? = null
@@ -79,23 +80,30 @@ class SubtitleOverlay(private val context: Context) {
             stateText,
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
         )
-        val pause = controlButton("Ⅱ", "暂停或继续翻译").apply {
+        val pause = controlButton(R.drawable.ic_overlay_pause_24, "暂停翻译").apply {
             setOnClickListener { togglePause() }
         }
-        val open = controlButton("⤢", "打开主应用").apply {
+        val open = controlButton(R.drawable.ic_overlay_open_24, "打开主应用").apply {
             setOnClickListener { openMainApp() }
         }
-        val collapse = controlButton("⇥", "收起到屏幕侧边").apply {
+        val collapse = controlButton(
+            R.drawable.ic_overlay_collapse_24,
+            "收起字幕到屏幕侧边，翻译继续进行",
+        ).apply {
             setOnClickListener { toggleCollapsed() }
         }
-        headerRow.addView(pause, LinearLayout.LayoutParams(dp(36), dp(36)))
+        headerRow.addView(pause, LinearLayout.LayoutParams(dp(CONTROL_SIZE_DP), dp(CONTROL_SIZE_DP)))
         headerRow.addView(
             open,
-            LinearLayout.LayoutParams(dp(36), dp(36)).apply { leftMargin = dp(4) },
+            LinearLayout.LayoutParams(dp(CONTROL_SIZE_DP), dp(CONTROL_SIZE_DP)).apply {
+                leftMargin = dp(6)
+            },
         )
         headerRow.addView(
             collapse,
-            LinearLayout.LayoutParams(dp(36), dp(36)).apply { leftMargin = dp(4) },
+            LinearLayout.LayoutParams(dp(CONTROL_SIZE_DP), dp(CONTROL_SIZE_DP)).apply {
+                leftMargin = dp(6)
+            },
         )
         container.addView(
             headerRow,
@@ -238,7 +246,10 @@ class SubtitleOverlay(private val context: Context) {
     fun maybeReapplyStyle() {
         if (appliedStyle != StatusBus.styleVersion.get()) applyStyleNow()
         val isPaused = StatusBus.paused
-        pauseButton?.text = if (isPaused) "▶" else "Ⅱ"
+        pauseButton?.setImageResource(
+            if (isPaused) R.drawable.ic_overlay_play_24 else R.drawable.ic_overlay_pause_24,
+        )
+        pauseButton?.contentDescription = if (isPaused) "继续翻译" else "暂停翻译"
         statusLabel?.text = if (isPaused) "流译 · 已暂停" else "流译 · 实时"
     }
 
@@ -342,11 +353,7 @@ class SubtitleOverlay(private val context: Context) {
             statusLabel?.visibility = View.VISIBLE
             pauseButton?.visibility = View.VISIBLE
             openButton?.visibility = View.VISIBLE
-            collapseButton?.apply {
-                text = "⇥"
-                setTextColor(Color.WHITE)
-                contentDescription = "收起到屏幕侧边"
-            }
+            collapseButton?.visibility = View.VISIBLE
             tvConfirmed?.apply {
                 setTextColor(Color.parseColor("#B8C5D6"))
                 setPadding(0, dp(8), 0, 0)
@@ -436,12 +443,12 @@ class SubtitleOverlay(private val context: Context) {
         }
     }
 
-    private fun controlButton(label: String, description: String) = TextView(context).apply {
-        text = label
+    private fun controlButton(iconRes: Int, description: String) = ImageView(context).apply {
+        setImageResource(iconRes)
         contentDescription = description
-        gravity = Gravity.CENTER
-        textSize = 15f
-        setTextColor(Color.WHITE)
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        val inset = dp(10)
+        setPadding(inset, inset, inset, inset)
         background = roundedRect(
             fill = Color.argb(36, 255, 255, 255),
             stroke = Color.argb(42, 255, 255, 255),
@@ -497,6 +504,9 @@ class SubtitleOverlay(private val context: Context) {
     private companion object {
         const val COLLAPSED_WIDTH_DP = 44
         const val COLLAPSED_HEIGHT_DP = 60
+
+        /** 头部三个控制按钮的触摸区；36dp 在悬浮窗上太容易点偏。 */
+        const val CONTROL_SIZE_DP = 44
     }
 }
 

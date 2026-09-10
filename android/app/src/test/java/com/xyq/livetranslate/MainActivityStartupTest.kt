@@ -23,6 +23,7 @@ import org.robolectric.Shadows
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowPopupMenu
 import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
@@ -79,6 +80,16 @@ class MainActivityStartupTest {
             R.id.etHistorySearch,
             R.id.viewInterpRunningStatusDot,
             R.id.viewVideoRunningStatusDot,
+            // 占用说明、AI 结果预览、连通性自检与预览底色都必须能绑定。
+            R.id.rowInterpBusy,
+            R.id.rowVideoBusy,
+            R.id.interpAnalyzePreview,
+            R.id.videoAnalyzePreview,
+            R.id.btnInterpScrollLatest,
+            R.id.btnVideoScrollLatest,
+            R.id.toggleSecondAiFormat,
+            R.id.btnTestSecondAi,
+            R.id.subtitlePreviewStage,
         ).forEach { id ->
             require(activity.findViewById<View>(id) != null) { "缺少视图 id=$id" }
         }
@@ -201,6 +212,7 @@ class MainActivityStartupTest {
         val root = inflated.findViewById<View>(R.id.rootLayout)
         val toggles = mutableListOf<String>()
         val sceneEntries = mutableListOf<Pair<TranslationMode, Int>>()
+        val openedTabs = mutableListOf<Int>()
         var overlayEntries = 0
         val interp = ModeHomeController(
             context = activity,
@@ -209,6 +221,7 @@ class MainActivityStartupTest {
             toggleSession = toggles::add,
             openSceneLibrary = { mode, tab -> sceneEntries += mode to tab },
             openOverlaySettings = { overlayEntries++ },
+            openMainTab = { tabId -> openedTabs += tabId },
         )
         val video = ModeHomeController(
             context = activity,
@@ -217,6 +230,7 @@ class MainActivityStartupTest {
             toggleSession = toggles::add,
             openSceneLibrary = { mode, tab -> sceneEntries += mode to tab },
             openOverlaySettings = { overlayEntries++ },
+            openMainTab = { tabId -> openedTabs += tabId },
         )
         interp.setup()
         video.setup()
@@ -232,11 +246,16 @@ class MainActivityStartupTest {
         ).forEach { root.findViewById<View>(it).performClick() }
         root.findViewById<View>(R.id.rowOverlayPermission).performClick()
         root.findViewById<View>(R.id.btnOverlayPermissionSettings).performClick()
+        // 被另一模式占用时的跳转，和运行页的「查看本次记录」都要真接到导航上。
+        root.findViewById<View>(R.id.btnInterpBusyGoOther).performClick()
+        root.findViewById<View>(R.id.btnVideoBusyGoOther).performClick()
+        root.findViewById<View>(R.id.btnInterpOpenHistory).performClick()
 
         assertEquals(
             listOf(StatusBus.MODE_MIC, StatusBus.MODE_VIDEO),
             toggles,
         )
+        assertEquals(listOf(R.id.nav_video, R.id.nav_interp, R.id.nav_history), openedTabs)
         // 暂停按钮存在并可点击（不校验 Service 副作用）。
         root.findViewById<View>(R.id.btnInterpPause).performClick()
         root.findViewById<View>(R.id.btnVideoPause).performClick()
@@ -444,6 +463,63 @@ class MainActivityStartupTest {
             assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.videoRunningContent).visibility)
             assertFalse(activity.findViewById<View>(R.id.btnInterpToggle).isEnabled)
         }
+    }
+
+    @Test
+    fun blockedModeExplainsWhyStartIsDisabled() {
+        StatusBus.serviceRunning = true
+        StatusBus.captureMode = StatusBus.MODE_MIC
+        StatusBus.startSession(TranslationPlan.default(TranslationMode.INTERPRETATION), 1_000L)
+        withActivity { activity ->
+            renderStatus(activity)
+
+            val banner = activity.findViewById<View>(R.id.rowVideoBusy)
+            assertEquals(View.VISIBLE, banner.visibility)
+            assertEquals(
+                "麦克风同传正在进行，停止后才能开始视频翻译",
+                activity.findViewById<android.widget.TextView>(R.id.tvVideoBusyStatus).text,
+            )
+            // 自己这一侧空闲时不该出现占用横幅。
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.rowInterpBusy).visibility)
+        }
+    }
+
+    @Test
+    fun idleModesHideBusyBanners() = withActivity { activity ->
+        renderStatus(activity)
+
+        assertEquals(View.GONE, activity.findViewById<View>(R.id.rowInterpBusy).visibility)
+        assertEquals(View.GONE, activity.findViewById<View>(R.id.rowVideoBusy).visibility)
+    }
+
+    @Test
+    fun settingDefaultSceneKeepsTheSceneUsedThisTime() = withActivity { activity ->
+        val mode = TranslationMode.INTERPRETATION
+        val scenes = SceneLibraryStore.list(activity, mode)
+        val defaultId = SceneLibraryStore.default(activity, mode).id
+        // 没手动选过时草稿本就跟随默认项，那种情况下一起变是对的；
+        // 这里先显式「使用」一个场景，再把另一个设为默认，验证本次选择不被顺手改掉。
+        val inUse = scenes.first { it.id != defaultId }
+        val newDefault = scenes.first { it.id != defaultId && it.id != inUse.id }
+        TranslationPlanStore.saveDraft(
+            activity,
+            TranslationPlanStore.loadDraft(activity, mode).copy(scenePresetId = inUse.id),
+        )
+        activity.openSceneLibrary(mode, R.id.nav_interp)
+
+        val list = activity.findViewById<android.widget.LinearLayout>(R.id.sceneLibraryList)
+        val card = (0 until list.childCount)
+            .map(list::getChildAt)
+            .first {
+                it.findViewById<android.widget.TextView>(R.id.tvSceneName).text.toString() == newDefault.label
+            }
+        card.findViewById<View>(R.id.btnSceneMore).performClick()
+        // 菜单项 2 = 设为默认，见 SceneLibraryController.buildSceneCard。
+        val popup = requireNotNull(ShadowPopupMenu.getLatestPopupMenu()) { "没有弹出场景菜单" }
+        assertTrue(popup.menu.performIdentifierAction(2, 0))
+
+        assertEquals(newDefault.id, SceneLibraryStore.default(activity, mode).id)
+        assertEquals(inUse.id, TranslationPlanStore.loadDraft(activity, mode).scenePresetId)
     }
 
     @Test

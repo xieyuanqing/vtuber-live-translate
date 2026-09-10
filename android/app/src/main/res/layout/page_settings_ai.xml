@@ -44,7 +44,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="内容分析（可选）"
+                        android:text="背景分析 AI（可选）"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"/>
@@ -52,7 +52,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="用于整理视频资料和本场背景。不配置也能使用实时翻译。"
+                        android:text="用于整理视频资料和补充背景。不配置也能使用实时翻译。"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp"/>
                 </LinearLayout>
@@ -74,17 +74,35 @@
                 android:padding="@dimen/space_16">
                 <TextView
                     style="@style/FieldLabel"
-                    android:layout_marginTop="@dimen/space_16"
+                    android:layout_marginTop="0dp"
                     android:text="API 格式"/>
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSecondAiFormat"
-                    style="@style/LuminousSecondaryButton"
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleSecondAiFormat"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:text="Gemini 原生"/>
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSecondAiFormatGemini"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target"
+                        android:layout_weight="1"
+                        android:text="Gemini 原生"
+                        android:textAllCaps="false"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSecondAiFormatOpenAi"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target"
+                        android:layout_weight="1"
+                        android:text="OpenAI 兼容"
+                        android:textAllCaps="false"/>
+                </com.google.android.material.button.MaterialButtonToggleGroup>
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Field"
+                    android:layout_marginTop="@dimen/space_12"
                     android:hint="API Key"
                     app:endIconMode="password_toggle"
                     app:helperText="可与翻译服务使用相同 Key">
@@ -99,7 +117,8 @@
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="Base URL">
+                    android:hint="服务地址（Base URL）"
+                    app:helperText="填到域名即可，末尾多写的 /v1 会自动忽略">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSecondAiUrl"
                         android:layout_width="match_parent"
@@ -109,13 +128,11 @@
                         android:maxLines="2"/>
                 </com.google.android.material.textfield.TextInputLayout>
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="模型名"
-                    app:helperText="点开下拉可拉取远端模型，也可手动输入">
-                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:hint="分析模型"
+                    app:helperText="可直接手动输入模型 ID">
+                    <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSecondAiModel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -127,11 +144,48 @@
                     android:id="@+id/btnRefreshSecondAiModels"
                     style="@style/LuminousSecondaryButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/touch_target"
                     android:layout_marginTop="@dimen/space_8"
-                    android:text="刷新模型列表"/>
+                    android:text="拉取模型列表"/>
                 <TextView
                     android:id="@+id/tvSecondAiModelsHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp"
+                    android:visibility="gone"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <TextView
+            style="@style/LuminousSectionLabel"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="连通性检查"/>
+        <com.google.android.material.card.MaterialCardView
+            style="@style/LuminousCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="拉到模型列表不等于选中的模型能用。这里会用当前配置真跑一次最短请求。"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTestSecondAi"
+                    style="@style/LuminousSecondaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:text="测试分析服务"/>
+                <TextView
+                    android:id="@+id/tvSecondAiTestStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"

@@ -30,6 +30,10 @@
 
                 <TextView style="@style/PageTitle" android:text="视频" />
 
+                <TextView
+                    style="@style/PageDesc"
+                    android:text="翻译其他应用正在播放的声音。视频链接可选，用于补充翻译背景。" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -98,6 +102,47 @@
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <!-- 另一个模式正在占用录音时的说明横幅；空闲时控制器整行 GONE。 -->
+                <LinearLayout
+                    android:id="@+id/rowVideoBusy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_16"
+                    android:background="@drawable/bg_warning_banner"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/space_16"
+                    android:paddingVertical="@dimen/space_12"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="@dimen/status_dot_size"
+                        android:layout_height="@dimen/status_dot_size"
+                        android:background="@drawable/bg_warning_dot" />
+
+                    <TextView
+                        android:id="@+id/tvVideoBusyStatus"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:layout_weight="1"
+                        android:text="麦克风同传正在进行"
+                        android:textColor="@color/warning"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnVideoBusyGoOther"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="@dimen/space_8"
+                        android:text="返回同传"
+                        android:textColor="@color/warning"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <!-- 缺权限时警告横幅；已授权时控制器整行 GONE。 -->
@@ -210,7 +255,7 @@
                     </HorizontalScrollView>
                 </LinearLayout>
 
-                <!-- 本场视频：默认折叠 -->
+                <!-- 视频背景：默认折叠 -->
                 <com.google.android.material.card.MaterialCardView
                     style="@style/LuminousCard"
                     android:layout_width="match_parent"
@@ -226,39 +271,51 @@
                         <LinearLayout
                             android:id="@+id/rowVideoSessionContextToggle"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
                             android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
-                            <TextView
-                                android:id="@+id/tvVideoSessionContextHeader"
+                            <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="本场视频 · 可选 ›"
-                                android:textColor="@color/text_primary"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                android:orientation="vertical">
 
-                            <TextView
-                                android:id="@+id/tvVideoSessionContextSummary"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/text_muted"
-                                android:textSize="12sp"
-                                android:visibility="gone" />
+                                <TextView
+                                    android:id="@+id/tvVideoSessionContextHeader"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="视频背景 · 可选 ›"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvVideoSessionContextSummary"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/grid_4"
+                                    android:ellipsize="end"
+                                    android:maxLines="2"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"
+                                    android:visibility="gone" />
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/btnVideoClearSessionContext"
-                                android:layout_width="48dp"
+                                android:layout_width="wrap_content"
                                 android:layout_height="48dp"
                                 android:gravity="center"
-                                android:text="×"
-                                android:textColor="@color/text_muted"
-                                android:textSize="20sp"
+                                android:paddingHorizontal="@dimen/space_8"
+                                android:text="清除"
+                                android:textColor="@color/brand"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
                                 android:visibility="gone" />
                         </LinearLayout>
 
@@ -272,7 +329,8 @@
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Field"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:hint="YouTube / 哔哩哔哩 / Twitch 或其他公网播放页面">
+                                android:hint="视频链接"
+                                app:helperText="YouTube / 哔哩哔哩 / Twitch 或其他公网播放页面">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etVideoSessionUrl"
@@ -285,7 +343,8 @@
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Field"
                                 android:layout_marginTop="@dimen/space_12"
-                                android:hint="本场背景与资料">
+                                android:hint="补充背景与翻译要求"
+                                app:helperText="例如人物称呼、专有名词、想要的语气">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etVideoSessionContext"
@@ -302,18 +361,110 @@
                                 style="@style/LuminousSecondaryButton"
                                 android:layout_width="match_parent"
                                 android:layout_height="48dp"
-                                android:layout_marginTop="@dimen/space_8"
-                                android:text="AI 解析本场视频" />
+                                android:layout_marginTop="@dimen/space_12"
+                                android:text="AI 获取视频背景" />
 
                             <TextView
-                                android:id="@+id/tvVideoAnalyzeStatus"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:text=""
+                                android:text="根据标题、简介等公开资料整理背景，辅助翻译。结果会先给你看，确认后才会用。"
                                 android:textColor="@color/text_muted"
-                                android:textSize="12sp"
-                                android:visibility="gone" />
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvVideoAnalyzeStatus"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text=""
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"
+                                    android:visibility="gone" />
+
+                                <TextView
+                                    android:id="@+id/btnVideoAnalyzeConfigure"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="48dp"
+                                    android:gravity="center"
+                                    android:paddingHorizontal="@dimen/space_8"
+                                    android:text="去配置 ›"
+                                    android:textColor="@color/brand"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    android:visibility="gone" />
+
+                                <TextView
+                                    android:id="@+id/btnVideoUndoAnalysis"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="48dp"
+                                    android:gravity="center"
+                                    android:paddingHorizontal="@dimen/space_8"
+                                    android:text="撤销替换"
+                                    android:textColor="@color/brand"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    android:visibility="gone" />
+                            </LinearLayout>
+
+                            <!-- AI 结果先落在这里，不直接覆盖用户手写的资料。 -->
+                            <LinearLayout
+                                android:id="@+id/videoAnalyzePreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:background="@drawable/bg_history_context"
+                                android:orientation="vertical"
+                                android:padding="@dimen/space_12"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="AI 整理的背景（还没有用上）"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvVideoAnalyzePreview"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_8"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_12"
+                                    android:orientation="horizontal">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnVideoApplyAnalysis"
+                                        style="@style/LuminousSecondaryButton"
+                                        android:layout_width="0dp"
+                                        android:layout_height="48dp"
+                                        android:layout_marginEnd="@dimen/space_8"
+                                        android:layout_weight="1"
+                                        android:text="用于本次翻译" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnVideoDiscardAnalysis"
+                                        style="@style/Widget.Material3.Button.TextButton"
+                                        android:layout_width="0dp"
+                                        android:layout_height="48dp"
+                                        android:layout_weight="1"
+                                        android:text="放弃" />
+                                </LinearLayout>
+                            </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -328,7 +479,7 @@
             android:layout_marginHorizontal="@dimen/page_margin"
             android:layout_marginTop="@dimen/space_8"
             android:layout_marginBottom="@dimen/space_16"
-            android:text="开始视频字幕"
+            android:text="开始翻译"
             app:icon="@drawable/ic_nav_video_24"
             app:iconGravity="textStart"
             app:iconPadding="@dimen/space_8"
@@ -437,13 +588,28 @@
                         android:text="自动 → 中文 · 通用视频"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
+
+                    <!-- 长时间收不到声音时的排查提示；正常静音不会触发。 -->
+                    <TextView
+                        android:id="@+id/tvVideoSilenceTip"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:textColor="@color/warning"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-        <androidx.core.widget.NestedScrollView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="1">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/videoSubtitleScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:fillViewport="true"
             android:overScrollMode="never">
 
@@ -509,23 +675,56 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
                                 android:minHeight="32dp"
-                                android:text="等待原文输入…"
+                                android:text="等待识别到语音…"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="15sp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/tvTranscriptPath"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_16"
-                        android:text="自动保存到应用内历史"
-                        android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="字幕自动保存"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/btnVideoOpenHistory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/space_8"
+                            android:text="查看本次记录 ›"
+                            android:textColor="@color/brand"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </androidx.core.widget.NestedScrollView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVideoScrollLatest"
+                style="@style/LuminousSecondaryButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="@dimen/space_8"
+                android:text="回到最新"
+                android:visibility="gone"
+                app:icon="@drawable/ic_arrow_down_24"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/grid_4"
+                app:iconTint="@color/brand" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

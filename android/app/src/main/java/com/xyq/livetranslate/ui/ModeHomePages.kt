@@ -8,6 +8,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.ViewCompat
+import androidx.core.widget.NestedScrollView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -28,14 +29,19 @@ internal data class ModeHomeViews(
     val idleContent: View,
     val runningContent: View,
     val homeScenes: ChipGroup,
-    val idleStatus: TextView?,
-    val idleSubStatus: TextView?,
+    val busyRow: View,
+    val busyStatus: TextView,
+    val busyGoOtherButton: View,
     val runningStatus: TextView,
     val runningStatusDot: View,
     val runningSubStatus: TextView?,
     val elapsed: TextView,
     val runningMeta: TextView,
+    val silenceTip: TextView,
     val confirmedList: LinearLayout,
+    val subtitleScroll: NestedScrollView,
+    val scrollLatestButton: MaterialButton,
+    val openHistoryButton: View,
     val audioLevel: TextView,
     val audioProgress: ProgressBar,
     val startButton: View,
@@ -44,7 +50,6 @@ internal data class ModeHomeViews(
     val targetLanguageLabel: TextView,
     val currentTranslation: TextView,
     val sourceTail: TextView,
-    val transcriptPath: TextView,
     val sourceLanguage: MaterialAutoCompleteTextView,
     val targetLanguage: MaterialAutoCompleteTextView,
     val languageSwapButton: TextView,
@@ -55,6 +60,12 @@ internal data class ModeHomeViews(
     val sessionContext: TextInputEditText,
     val analyzeContextButton: MaterialButton,
     val analyzeContextStatus: TextView,
+    val analyzeConfigureButton: View,
+    val analyzeUndoButton: View,
+    val analyzePreview: View,
+    val analyzePreviewText: TextView,
+    val analyzeApplyButton: MaterialButton,
+    val analyzeDiscardButton: MaterialButton,
     val overlayPermissionRow: View?,
     val overlayPermissionDot: View?,
     val overlayPermissionStatus: TextView?,
@@ -67,14 +78,19 @@ internal data class ModeHomeViews(
                 idleContent = root.findViewById(R.id.interpIdleContent),
                 runningContent = root.findViewById(R.id.interpRunningContent),
                 homeScenes = root.findViewById(R.id.chipGroupInterpHomeScenes),
-                idleStatus = root.findViewById(R.id.tvInterpStatus),
-                idleSubStatus = root.findViewById(R.id.tvInterpSubStatus),
+                busyRow = root.findViewById(R.id.rowInterpBusy),
+                busyStatus = root.findViewById(R.id.tvInterpBusyStatus),
+                busyGoOtherButton = root.findViewById(R.id.btnInterpBusyGoOther),
                 runningStatus = root.findViewById(R.id.tvInterpRunningStatus),
                 runningStatusDot = root.findViewById(R.id.viewInterpRunningStatusDot),
                 runningSubStatus = null,
                 elapsed = root.findViewById(R.id.tvInterpElapsed),
                 runningMeta = root.findViewById(R.id.tvInterpRunningMeta),
+                silenceTip = root.findViewById(R.id.tvInterpSilenceTip),
                 confirmedList = root.findViewById(R.id.interpConfirmedList),
+                subtitleScroll = root.findViewById(R.id.interpSubtitleScroll),
+                scrollLatestButton = root.findViewById(R.id.btnInterpScrollLatest),
+                openHistoryButton = root.findViewById(R.id.btnInterpOpenHistory),
                 audioLevel = root.findViewById(R.id.tvInterpAudioLevel),
                 audioProgress = root.findViewById(R.id.pbInterpAudio),
                 startButton = root.findViewById(R.id.btnInterpToggle),
@@ -83,7 +99,6 @@ internal data class ModeHomeViews(
                 targetLanguageLabel = root.findViewById(R.id.tvInterpTargetLanguageLabel),
                 currentTranslation = root.findViewById(R.id.tvInterpZh),
                 sourceTail = root.findViewById(R.id.tvInterpJa),
-                transcriptPath = root.findViewById(R.id.tvInterpTranscriptPath),
                 sourceLanguage = root.findViewById(R.id.acInterpSourceLang),
                 targetLanguage = root.findViewById(R.id.acInterpTargetLang),
                 languageSwapButton = root.findViewById(R.id.btnInterpSwapLang),
@@ -94,6 +109,12 @@ internal data class ModeHomeViews(
                 sessionContext = root.findViewById(R.id.etInterpSessionContext),
                 analyzeContextButton = root.findViewById(R.id.btnInterpAnalyzeContext),
                 analyzeContextStatus = root.findViewById(R.id.tvInterpAnalyzeStatus),
+                analyzeConfigureButton = root.findViewById(R.id.btnInterpAnalyzeConfigure),
+                analyzeUndoButton = root.findViewById(R.id.btnInterpUndoAnalysis),
+                analyzePreview = root.findViewById(R.id.interpAnalyzePreview),
+                analyzePreviewText = root.findViewById(R.id.tvInterpAnalyzePreview),
+                analyzeApplyButton = root.findViewById(R.id.btnInterpApplyAnalysis),
+                analyzeDiscardButton = root.findViewById(R.id.btnInterpDiscardAnalysis),
                 overlayPermissionRow = null,
                 overlayPermissionDot = null,
                 overlayPermissionStatus = null,
@@ -104,14 +125,19 @@ internal data class ModeHomeViews(
                 idleContent = root.findViewById(R.id.videoIdleContent),
                 runningContent = root.findViewById(R.id.videoRunningContent),
                 homeScenes = root.findViewById(R.id.chipGroupVideoHomeScenes),
-                idleStatus = null,
-                idleSubStatus = null,
+                busyRow = root.findViewById(R.id.rowVideoBusy),
+                busyStatus = root.findViewById(R.id.tvVideoBusyStatus),
+                busyGoOtherButton = root.findViewById(R.id.btnVideoBusyGoOther),
                 runningStatus = root.findViewById(R.id.tvHeroStatus),
                 runningStatusDot = root.findViewById(R.id.viewVideoRunningStatusDot),
                 runningSubStatus = root.findViewById(R.id.tvHeroSubStatus),
                 elapsed = root.findViewById(R.id.tvVideoElapsed),
                 runningMeta = root.findViewById(R.id.tvVideoRunningMeta),
+                silenceTip = root.findViewById(R.id.tvVideoSilenceTip),
                 confirmedList = root.findViewById(R.id.videoConfirmedList),
+                subtitleScroll = root.findViewById(R.id.videoSubtitleScroll),
+                scrollLatestButton = root.findViewById(R.id.btnVideoScrollLatest),
+                openHistoryButton = root.findViewById(R.id.btnVideoOpenHistory),
                 audioLevel = root.findViewById(R.id.tvAudioLevel),
                 audioProgress = root.findViewById(R.id.pbAudio),
                 startButton = root.findViewById(R.id.btnToggle),
@@ -120,7 +146,6 @@ internal data class ModeHomeViews(
                 targetLanguageLabel = root.findViewById(R.id.tvVideoTargetLanguageLabel),
                 currentTranslation = root.findViewById(R.id.tvLiveZh),
                 sourceTail = root.findViewById(R.id.tvLiveJa),
-                transcriptPath = root.findViewById(R.id.tvTranscriptPath),
                 sourceLanguage = root.findViewById(R.id.acVideoSourceLang),
                 targetLanguage = root.findViewById(R.id.acVideoTargetLang),
                 languageSwapButton = root.findViewById(R.id.btnVideoSwapLang),
@@ -131,6 +156,12 @@ internal data class ModeHomeViews(
                 sessionContext = root.findViewById(R.id.etVideoSessionContext),
                 analyzeContextButton = root.findViewById(R.id.btnVideoAnalyzeContext),
                 analyzeContextStatus = root.findViewById(R.id.tvVideoAnalyzeStatus),
+                analyzeConfigureButton = root.findViewById(R.id.btnVideoAnalyzeConfigure),
+                analyzeUndoButton = root.findViewById(R.id.btnVideoUndoAnalysis),
+                analyzePreview = root.findViewById(R.id.videoAnalyzePreview),
+                analyzePreviewText = root.findViewById(R.id.tvVideoAnalyzePreview),
+                analyzeApplyButton = root.findViewById(R.id.btnVideoApplyAnalysis),
+                analyzeDiscardButton = root.findViewById(R.id.btnVideoDiscardAnalysis),
                 overlayPermissionRow = root.findViewById(R.id.rowOverlayPermission),
                 overlayPermissionDot = root.findViewById(R.id.viewOverlayPermissionDot),
                 overlayPermissionStatus = root.findViewById(R.id.tvOverlayPermissionStatus),
@@ -149,13 +180,24 @@ internal class ModeHomeController(
     private val toggleSession: (captureMode: String) -> Unit,
     private val openSceneLibrary: (mode: TranslationMode, returnTabId: Int) -> Unit,
     private val openOverlaySettings: () -> Unit,
+    private val openMainTab: (tabId: Int) -> Unit,
 ) {
+    private companion object {
+        /** 静音多久才算「可能没接到声音」；正常停顿不该触发排查提示。 */
+        const val SILENCE_TIP_DELAY_MS = 12_000L
+    }
+
     private val captureMode = UiRuntimeStatus.captureMode(mode)
     private val returnTabId = when (mode) {
         TranslationMode.INTERPRETATION -> R.id.nav_interp
         TranslationMode.VIDEO -> R.id.nav_video
     }
+    private val otherTabId = when (mode) {
+        TranslationMode.INTERPRETATION -> R.id.nav_video
+        TranslationMode.VIDEO -> R.id.nav_interp
+    }
     private var renderedConfirmedTranslations: List<String>? = null
+    private var silenceSinceMs = 0L
 
     fun setup() {
         setupLanguageControls()
@@ -171,14 +213,39 @@ internal class ModeHomeController(
         views.languageSwapButton.setOnClickListener { swapLanguages() }
         views.overlayPermissionRow?.setOnClickListener { openOverlaySettings() }
         views.overlayPermissionSettings?.setOnClickListener { openOverlaySettings() }
+        views.busyGoOtherButton.setOnClickListener { openMainTab(otherTabId) }
+        views.openHistoryButton.setOnClickListener { openMainTab(R.id.nav_history) }
+        setupSubtitleScroll()
         refreshConfiguration()
+    }
+
+    /** 上滑回看时不再强行拉回底部，改为给一个明确的「回到最新」入口。 */
+    private fun setupSubtitleScroll() {
+        views.subtitleScroll.setOnScrollChangeListener(
+            NestedScrollView.OnScrollChangeListener { _, _, _, _, _ -> renderScrollLatestButton() },
+        )
+        views.scrollLatestButton.setOnClickListener {
+            views.subtitleScroll.post {
+                views.subtitleScroll.fullScroll(View.FOCUS_DOWN)
+                renderScrollLatestButton()
+            }
+        }
+    }
+
+    private fun renderScrollLatestButton() {
+        views.scrollLatestButton.visibility = if (isNearBottom()) View.GONE else View.VISIBLE
     }
 
     private fun confirmStop() {
         val label = if (mode == TranslationMode.INTERPRETATION) "同传" else "视频字幕"
+        val message = if (mode == TranslationMode.INTERPRETATION) {
+            "字幕会保存在历史中；再次开始需要重新连接翻译服务。"
+        } else {
+            "字幕会保存在历史中；再次开始需要重新授权音频捕获。"
+        }
         MaterialAlertDialogBuilder(context)
             .setTitle("停止$label？")
-            .setMessage("停止后需要重新开始会话。")
+            .setMessage(message)
             .setNegativeButton("取消", null)
             .setPositiveButton("停止") { _, _ -> toggleSession(captureMode) }
             .show()
@@ -286,23 +353,27 @@ internal class ModeHomeController(
 
     fun render(status: UiRuntimeStatus) {
         val active = status.serviceRunning && status.captureMode == captureMode
+        val blockedByOther = status.serviceRunning && !active
         views.idleContent.visibility = if (active) View.GONE else View.VISIBLE
         views.runningContent.visibility = if (active) View.VISIBLE else View.GONE
         views.sourceLanguage.isEnabled = !status.serviceRunning
         views.targetLanguage.isEnabled = !status.serviceRunning
         views.startButton.isEnabled = !status.serviceRunning
 
-        if (mode == TranslationMode.INTERPRETATION) {
-            views.idleStatus?.text = if (status.serviceRunning && !active) "视频运行中" else "待开始"
-            views.idleSubStatus?.text = if (status.serviceRunning && !active) {
-                "当前正在运行视频字幕，请先停止后再开同传"
+        // 开始按钮被禁用时必须说清原因，并给出去看正在运行的那一边的入口。
+        views.busyRow.visibility = if (blockedByOther) View.VISIBLE else View.GONE
+        if (blockedByOther) {
+            views.busyStatus.text = if (mode == TranslationMode.INTERPRETATION) {
+                "视频翻译正在进行，停止后才能开始同传"
             } else {
-                "麦克风实时同传"
+                "麦克风同传正在进行，停止后才能开始视频翻译"
             }
-        } else {
-            renderOverlayPermission(status.overlayAllowed)
         }
-        if (!active) return
+        if (mode == TranslationMode.VIDEO) renderOverlayPermission(status.overlayAllowed)
+        if (!active) {
+            silenceSinceMs = 0L
+            return
+        }
 
         val plan = TranslationPlanStore.loadDraft(context, mode)
         val sourceCode = status.sourceLanguageCode.ifBlank { plan.sourceLanguageCode }
@@ -327,6 +398,7 @@ internal class ModeHomeController(
                 val hint = listeningHint(status)
                 if (hint != null) append(" · ").append(hint)
             }
+            views.runningMeta.text = "$direction · $scene"
         } else {
             // 同传运行态副状态：静音/聆听提示（C7）。
             views.runningMeta.text = buildString {
@@ -335,22 +407,15 @@ internal class ModeHomeController(
                 if (hint != null) append(" · ").append(hint)
             }
         }
+        renderSilenceTip(status)
         views.elapsed.text = formatRunningElapsed(status.startedAtMs, status.sampledAtMs)
-        if (mode == TranslationMode.VIDEO) {
-            views.runningMeta.text = "$direction · $scene"
-        }
         views.audioLevel.text = "${status.audioLevelPct}%"
         views.audioProgress.progress = status.audioLevelPct
         renderConfirmedTranslations(status.confirmedTranslations)
         views.currentTranslation.text = status.currentTranslation.trim()
             .ifBlank { status.confirmedTranslations.lastOrNull().orEmpty() }
             .ifBlank { "等待译文…" }
-        views.sourceTail.text = status.sourceTail.trim().ifBlank { "等待原文输入…" }
-        views.transcriptPath.text = if (status.transcriptPath.isNotEmpty()) {
-            "本场记录：${status.transcriptPath}"
-        } else {
-            "自动保存到应用内历史"
-        }
+        views.sourceTail.text = status.sourceTail.trim().ifBlank { "等待识别到语音…" }
     }
 
     private fun renderOverlayPermission(allowed: Boolean) {
@@ -365,11 +430,12 @@ internal class ModeHomeController(
         // 展示 StatusBus 提供的全部确认行（当前上限 80），不再截成 6 条。
         val visible = translations.map(String::trim).filter(String::isNotEmpty)
         if (visible == renderedConfirmedTranslations) return
-        val scrollParent = findConfirmedScrollParent()
-        val shouldFollow = renderedConfirmedTranslations == null || isNearBottom(scrollParent)
+        val shouldFollow = renderedConfirmedTranslations == null || isNearBottom()
         if (visible.isEmpty()) {
             views.confirmedList.removeAllViews()
-            views.confirmedList.addView(createConfirmedTranslationCard("等待语音…", 14f, 1f, R.color.text_muted))
+            views.confirmedList.addView(
+                createConfirmedTranslationCard("等待语音…", 14f, R.color.text_muted),
+            )
             renderedConfirmedTranslations = emptyList()
             return
         }
@@ -389,56 +455,28 @@ internal class ModeHomeController(
             }
         }
         renderedConfirmedTranslations = visible.toList()
-        visible.indices.forEach { index ->
-            val ageBoost = (index + 1).toFloat() / visible.size
-            views.confirmedList.getChildAt(index)?.alpha = 0.48f + ageBoost * 0.34f
-        }
 
-        // 用户原本就在底部时才继续跟随；上滑回看后不强制拉回。
-        if (shouldFollow) {
-            views.confirmedList.post {
-                when (scrollParent) {
-                    is android.widget.ScrollView -> scrollParent.fullScroll(View.FOCUS_DOWN)
-                    is androidx.core.widget.NestedScrollView -> scrollParent.fullScroll(View.FOCUS_DOWN)
-                }
-            }
+        // 用户原本就在底部时才继续跟随；上滑回看后由「回到最新」按钮接管。
+        views.confirmedList.post {
+            if (shouldFollow) views.subtitleScroll.fullScroll(View.FOCUS_DOWN)
+            renderScrollLatestButton()
         }
     }
 
     private fun appendConfirmedTranslation(line: String) {
+        // 已确认的历史行保持清楚可读，只靠字号和颜色和当前行拉开层级，不再按新旧渐隐。
         views.confirmedList.addView(
             createConfirmedTranslationCard(
                 text = line,
                 textSize = 16f,
-                alpha = 1f,
                 colorRes = R.color.text_secondary,
             ),
         )
     }
 
-    private fun findConfirmedScrollParent(): View? {
-        var parent = views.confirmedList.parent
-        while (parent is View) {
-            if (parent is android.widget.ScrollView || parent is androidx.core.widget.NestedScrollView) {
-                return parent
-            }
-            parent = parent.parent
-        }
-        return null
-    }
-
-    private fun isNearBottom(scrollParent: View?): Boolean {
-        val distance = when (scrollParent) {
-            is android.widget.ScrollView -> {
-                val child = scrollParent.getChildAt(0) ?: return true
-                child.height - (scrollParent.scrollY + scrollParent.height)
-            }
-            is androidx.core.widget.NestedScrollView -> {
-                val child = scrollParent.getChildAt(0) ?: return true
-                child.height - (scrollParent.scrollY + scrollParent.height)
-            }
-            else -> return true
-        }
+    private fun isNearBottom(): Boolean {
+        val child = views.subtitleScroll.getChildAt(0) ?: return true
+        val distance = child.height - (views.subtitleScroll.scrollY + views.subtitleScroll.height)
         return distance <= context.resources.getDimensionPixelSize(R.dimen.touch_target)
     }
 
@@ -451,15 +489,33 @@ internal class ModeHomeController(
         return null
     }
 
+    /** 「静音中」只说了现象；真的一直没声音时要给出可以照做的排查步骤。 */
+    private fun renderSilenceTip(status: UiRuntimeStatus) {
+        if (status.paused || status.audioLevelPct > 2) {
+            silenceSinceMs = 0L
+            views.silenceTip.visibility = View.GONE
+            return
+        }
+        if (silenceSinceMs == 0L) silenceSinceMs = status.sampledAtMs
+        if (status.sampledAtMs - silenceSinceMs < SILENCE_TIP_DELAY_MS) {
+            views.silenceTip.visibility = View.GONE
+            return
+        }
+        views.silenceTip.text = if (mode == TranslationMode.INTERPRETATION) {
+            "一直没有检测到声音。请确认麦克风没有被其他应用占用，并靠近声源。"
+        } else {
+            "一直没有检测到声音。请确认视频正在播放；若仍无声音，该应用可能不支持音频捕获。"
+        }
+        views.silenceTip.visibility = View.VISIBLE
+    }
+
     private fun createConfirmedTranslationCard(
         text: String,
         textSize: Float,
-        alpha: Float,
         colorRes: Int,
     ): TextView = TextView(context).apply {
         this.text = text
         this.textSize = textSize
-        this.alpha = alpha
         setTextColor(context.getColor(colorRes))
         val padding = resources.getDimensionPixelSize(R.dimen.grid_4)
         setPadding(0, padding, 0, padding)

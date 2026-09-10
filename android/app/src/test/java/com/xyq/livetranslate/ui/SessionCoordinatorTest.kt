@@ -61,7 +61,6 @@ class SessionCoordinatorTest {
         coordinator.onAudioPermissionResult()
 
         assertCaptureIntentMatches(frozen, host.startedForegroundServices.single())
-        assertTrue(contexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(coordinator.pendingSnapshotForTest())
     }
 
@@ -87,7 +86,6 @@ class SessionCoordinatorTest {
         restored.onAudioPermissionResult()
 
         assertCaptureIntentMatches(frozen, restoredHost.startedForegroundServices.single())
-        assertTrue(restoredContexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(restored.pendingSnapshotForTest())
     }
 
@@ -110,7 +108,6 @@ class SessionCoordinatorTest {
         coordinator.onProjectionResult(Activity.RESULT_CANCELED, null)
 
         assertTrue(host.startedForegroundServices.isEmpty())
-        assertTrue(contexts.clearedModes.isEmpty())
         assertEquals(
             frozen.copy(stage = PendingSessionStage.READY),
             coordinator.pendingSnapshotForTest(),
@@ -149,7 +146,6 @@ class SessionCoordinatorTest {
         assertCaptureIntentMatches(frozen, started, includeProjection = true)
         assertEquals(Activity.RESULT_OK, started.getIntExtra(CaptureService.EXTRA_RESULT_CODE, -1))
         assertNotNull(started.getParcelableExtra<Intent>(CaptureService.EXTRA_RESULT_DATA))
-        assertTrue(restoredContexts.clearedModes.isEmpty()) // C2: 启动后保留本场上下文
         assertNull(restored.pendingSnapshotForTest())
     }
 
@@ -256,14 +252,10 @@ class SessionCoordinatorTest {
 
     private class FakeSessionContextAccess(initial: String) : SessionContextAccess {
         var value: String = initial
-        val clearedModes = mutableListOf<TranslationMode>()
 
         override fun current(mode: TranslationMode): SessionPromptContext =
             SessionPromptContext(manualContext = value)
 
-        override fun clearAfterSuccessfulStart(mode: TranslationMode) {
-            clearedModes += mode
-        }
     }
 
     private class FakeSessionHost : SessionHost {

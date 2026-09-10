@@ -97,7 +97,7 @@ internal class MainNavigator(
             R.id.pageHistoryDetail to "历史详情",
             R.id.pageSettingsTranslate to "翻译服务",
             R.id.pageSettingsSubtitle to "字幕与悬浮窗",
-            R.id.pageSettingsProfileAi to "内容分析 AI",
+            R.id.pageSettingsProfileAi to "背景分析 AI",
             R.id.pageSettingsDiagnostics to "诊断",
             R.id.pageSettingsAbout to "关于",
             R.id.pageSceneLibrary to "场景库",

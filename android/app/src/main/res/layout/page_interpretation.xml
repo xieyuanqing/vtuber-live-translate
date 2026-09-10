@@ -95,6 +95,47 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
+            <!-- 另一个模式正在占用录音时的说明横幅；空闲时控制器整行 GONE。 -->
+            <LinearLayout
+                android:id="@+id/rowInterpBusy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:background="@drawable/bg_warning_banner"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/space_16"
+                android:paddingVertical="@dimen/space_12"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="@dimen/status_dot_size"
+                    android:layout_height="@dimen/status_dot_size"
+                    android:background="@drawable/bg_warning_dot" />
+
+                <TextView
+                    android:id="@+id/tvInterpBusyStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:text="视频翻译正在进行"
+                    android:textColor="@color/warning"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnInterpBusyGoOther"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="@dimen/space_8"
+                    android:text="返回视频"
+                    android:textColor="@color/warning"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -238,39 +279,51 @@
                     <LinearLayout
                         android:id="@+id/rowInterpSessionContextToggle"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvInterpSessionContextHeader"
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="本场背景 · 可选 ›"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
+                            android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/tvInterpSessionContextSummary"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/text_muted"
-                            android:textSize="12sp"
-                            android:visibility="gone" />
+                            <TextView
+                                android:id="@+id/tvInterpSessionContextHeader"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="本场背景 · 可选 ›"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvInterpSessionContextSummary"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/grid_4"
+                                android:ellipsize="end"
+                                android:maxLines="2"
+                                android:textColor="@color/text_muted"
+                                android:textSize="12sp"
+                                android:visibility="gone" />
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/btnInterpClearSessionContext"
-                            android:layout_width="48dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="48dp"
                             android:gravity="center"
-                            android:text="×"
-                            android:textColor="@color/text_muted"
-                            android:textSize="20sp"
+                            android:paddingHorizontal="@dimen/space_8"
+                            android:text="清除"
+                            android:textColor="@color/brand"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
                             android:visibility="gone" />
                     </LinearLayout>
 
@@ -284,7 +337,7 @@
                         <com.google.android.material.textfield.TextInputLayout
                             style="@style/Field"
                             android:layout_marginTop="@dimen/space_8"
-                            android:hint="本场背景与资料"
+                            android:hint="补充背景与翻译要求"
                             app:helperText="例如现场主题、说话人、专名提示">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -302,18 +355,110 @@
                             style="@style/LuminousSecondaryButton"
                             android:layout_width="match_parent"
                             android:layout_height="48dp"
-                            android:layout_marginTop="@dimen/space_8"
-                            android:text="AI 整理本场资料" />
+                            android:layout_marginTop="@dimen/space_12"
+                            android:text="AI 整理背景" />
 
                         <TextView
-                            android:id="@+id/tvInterpAnalyzeStatus"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/space_8"
-                            android:text=""
+                            android:text="把你写的资料整理成更好用的背景。结果会先给你看，确认后才会用。"
                             android:textColor="@color/text_muted"
-                            android:textSize="12sp"
-                            android:visibility="gone" />
+                            android:textSize="12sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvInterpAnalyzeStatus"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text=""
+                                android:textColor="@color/text_muted"
+                                android:textSize="12sp"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/btnInterpAnalyzeConfigure"
+                                android:layout_width="wrap_content"
+                                android:layout_height="48dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="@dimen/space_8"
+                                android:text="去配置 ›"
+                                android:textColor="@color/brand"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/btnInterpUndoAnalysis"
+                                android:layout_width="wrap_content"
+                                android:layout_height="48dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="@dimen/space_8"
+                                android:text="撤销替换"
+                                android:textColor="@color/brand"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <!-- AI 结果先落在这里，不直接覆盖用户手写的资料。 -->
+                        <LinearLayout
+                            android:id="@+id/interpAnalyzePreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:background="@drawable/bg_history_context"
+                            android:orientation="vertical"
+                            android:padding="@dimen/space_12"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="AI 整理的背景（还没有用上）"
+                                android:textColor="@color/text_muted"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvInterpAnalyzePreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_8"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_12"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnInterpApplyAnalysis"
+                                    style="@style/LuminousSecondaryButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="48dp"
+                                    android:layout_marginEnd="@dimen/space_8"
+                                    android:layout_weight="1"
+                                    android:text="用于本次翻译" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnInterpDiscardAnalysis"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="48dp"
+                                    android:layout_weight="1"
+                                    android:text="放弃" />
+                            </LinearLayout>
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -414,13 +559,28 @@
                         android:text="自动 → 中文 · 通用"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
+
+                    <!-- 长时间收不到声音时的排查提示；正常静音不会触发。 -->
+                    <TextView
+                        android:id="@+id/tvInterpSilenceTip"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:textColor="@color/warning"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-        <androidx.core.widget.NestedScrollView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="1">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/interpSubtitleScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:fillViewport="true"
             android:overScrollMode="never">
 
@@ -486,23 +646,56 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
                                 android:minHeight="32dp"
-                                android:text="等待原文输入…"
+                                android:text="等待识别到语音…"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="15sp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/tvInterpTranscriptPath"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_16"
-                        android:text="自动保存到应用内历史"
-                        android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="字幕自动保存"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/btnInterpOpenHistory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/space_8"
+                            android:text="查看本次记录 ›"
+                            android:textColor="@color/brand"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </androidx.core.widget.NestedScrollView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInterpScrollLatest"
+                style="@style/LuminousSecondaryButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="@dimen/space_8"
+                android:text="回到最新"
+                android:visibility="gone"
+                app:icon="@drawable/ic_arrow_down_24"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/grid_4"
+                app:iconTint="@color/brand" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

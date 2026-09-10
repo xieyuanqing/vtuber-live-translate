@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity() {
             interpretationViews = interpViews,
             videoViews = videoViews,
             persistSecondAiInputs = settingsController::persistSecondAiInputs,
+            openAiSettings = ::openAiSettings,
             postToUi = { action -> runOnUiThread { action() } },
             isHostActive = { !isFinishing && !isDestroyed },
             toast = ::toast,
@@ -146,6 +147,7 @@ class MainActivity : AppCompatActivity() {
             toggleSession = sessionCoordinator::onModeToggle,
             openSceneLibrary = ::openSceneLibrary,
             openOverlaySettings = ::openOverlaySettings,
+            openMainTab = { tabId -> navigator.showMain(tabId) },
         )
         homeControllers[TranslationMode.VIDEO] = ModeHomeController(
             context = this,
@@ -154,6 +156,7 @@ class MainActivity : AppCompatActivity() {
             toggleSession = sessionCoordinator::onModeToggle,
             openSceneLibrary = ::openSceneLibrary,
             openOverlaySettings = ::openOverlaySettings,
+            openMainTab = { tabId -> navigator.showMain(tabId) },
         )
         modeHomeControllers = homeControllers.toMap()
         sessionCoordinator.bindSessionContextAccess(sessionContextController)
@@ -233,6 +236,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
         override fun toast(message: String) = this@MainActivity.toast(message)
+    }
+
+    /** 主页缺配置时的直达入口；返回键回到发起的那个主页面，输入不会丢。 */
+    private fun openAiSettings(returnTabId: Int) {
+        navigator.openSub(R.id.pageSettingsProfileAi, returnTabId)
     }
 
     private fun openOverlaySettings() {
