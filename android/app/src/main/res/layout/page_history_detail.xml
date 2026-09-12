@@ -28,32 +28,35 @@
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="2"
-                android:text="历史详情" />
+                android:text="@string/history_detail_title" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnShareHistory"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
                 android:layout_marginStart="@dimen/grid_4"
-                android:text="分享"
+                android:text="@string/history_detail_btn_share"
                 android:textColor="@color/brand" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCopyHistory"
                 style="@style/LuminousSecondaryButton"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
                 android:layout_marginStart="@dimen/grid_4"
-                android:text="复制" />
+                android:text="@string/history_detail_btn_copy" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDeleteHistory"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
                 android:layout_marginStart="@dimen/grid_4"
-                android:text="删除"
+                android:text="@string/history_detail_btn_delete"
                 android:textColor="@color/error" />
         </LinearLayout>
 
@@ -70,7 +73,7 @@
                 android:orientation="vertical"
                 android:padding="@dimen/space_16">
 
-                <TextView style="@style/CardTitle" android:text="会话信息" />
+                <TextView style="@style/CardTitle" android:text="@string/history_detail_section_session" />
 
                 <TextView
                     android:id="@+id/tvHistoryDetailMeta"
@@ -96,7 +99,7 @@
         <TextView
             style="@style/LuminousSectionLabel"
             android:layout_marginTop="@dimen/space_24"
-            android:text="字幕记录" />
+            android:text="@string/history_detail_section_subtitles" />
 
         <TextView
             android:id="@+id/tvHistoryDetailEmpty"
@@ -105,7 +108,7 @@
             android:layout_marginTop="@dimen/space_16"
             android:gravity="center"
             android:padding="@dimen/space_24"
-            android:text="这份记录没有字幕分段"
+            android:text="@string/history_detail_empty_segments"
             android:textColor="@color/text_muted"
             android:textSize="14sp"
             android:visibility="gone" />

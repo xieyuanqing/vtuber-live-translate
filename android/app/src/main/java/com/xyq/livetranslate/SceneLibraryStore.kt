@@ -52,7 +52,7 @@ object SceneLibraryStore {
         val storedItems = readItemsForMutation(context, mode) ?: return null
         val item = ScenePromptPreset(
             id = UUID.randomUUID().toString(),
-            label = label.trim().ifEmpty { "新场景" },
+            label = label.trim().ifEmpty { context.getString(R.string.rt_scene_new_default_name) },
             instruction = instruction.trim(),
         )
         val defaultId = storedDefaultId(context, mode, storedItems)
@@ -68,7 +68,7 @@ object SceneLibraryStore {
     ): Boolean {
         val normalized = item.copy(
             id = item.id.trim(),
-            label = item.label.trim(),
+            labelText = item.label.trim(),
             instruction = item.instruction.trim(),
         )
         if (normalized.id.isEmpty() || normalized.label.isEmpty() || normalized.instruction.isEmpty()) {

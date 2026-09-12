@@ -28,6 +28,7 @@ internal data class UiRuntimeStatus(
     val sourceTail: String,
     val lastSubtitleAtMs: Long,
     val activeStatusText: String,
+    val activeStatusRes: Int,
     val activeStatusColorRes: Int,
     val sampledAtMs: Long,
 ) {
@@ -67,6 +68,13 @@ internal data class UiRuntimeStatus(
                 conn == "rotating" -> "正在切换连接"
                 else -> "准备连接"
             }
+            val activeStatusRes = when {
+                paused -> R.string.rt_status_paused
+                conn == "ready" -> R.string.rt_status_translating
+                conn.startsWith("error") -> R.string.rt_status_error
+                conn == "rotating" -> R.string.rt_status_rotating
+                else -> R.string.rt_status_preparing
+            }
             val activeStatusColorRes = when {
                 paused -> R.color.warning
                 conn == "ready" -> R.color.success
@@ -95,6 +103,7 @@ internal data class UiRuntimeStatus(
                 sourceTail = session.sourceTail,
                 lastSubtitleAtMs = session.lastSubtitleAtMs,
                 activeStatusText = activeStatusText,
+                activeStatusRes = activeStatusRes,
                 activeStatusColorRes = activeStatusColorRes,
                 sampledAtMs = sampledAtMs,
             )

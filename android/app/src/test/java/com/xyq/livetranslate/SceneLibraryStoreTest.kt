@@ -3,6 +3,7 @@ package com.xyq.livetranslate
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -14,13 +15,25 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+// 场景模板名现在取自资源，显式固定为中文 locale，断言的才是中文模板名。
 @Config(sdk = [33], application = android.app.Application::class)
 class SceneLibraryStoreTest {
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
 
+    @Before
+    fun useChineseUi() {
+        // 场景模板名取自资源。中文模板在默认 values/ 下，因此显式把 App 界面语言
+        // 设为简体中文，断言的才是中文模板名（走的正是生产代码的语言切换路径）。
+        AppLocale.setApplicationContextForTest(context)
+        AppLocale.save(context, AppLocale.TAG_ZH_HANS)
+        AppLocale.apply(AppLocale.TAG_ZH_HANS)
+    }
+
     @After
     fun clearStores() {
+        AppLocale.save(context, AppLocale.TAG_SYSTEM)
+        AppLocale.apply(AppLocale.TAG_SYSTEM)
         context.getSharedPreferences("scene_library_v1", Context.MODE_PRIVATE)
             .edit()
             .clear()
@@ -51,9 +64,9 @@ class SceneLibraryStoreTest {
         storage.edit().putString(key, "not-json").commit()
 
         val fallback = SceneLibraryStore.list(context, mode)
-        assertEquals(DefaultSceneCatalog.defaults(mode), fallback)
+        assertSameScenes(DefaultSceneCatalog.defaults(mode), fallback)
         assertNull(SceneLibraryStore.create(context, mode, "新场景", "不能覆盖损坏数据"))
-        assertFalse(SceneLibraryStore.update(context, mode, fallback.first().copy(label = "修改")))
+        assertFalse(SceneLibraryStore.update(context, mode, fallback.first().copy(labelText = "修改")))
         assertFalse(SceneLibraryStore.delete(context, mode, fallback.first().id))
         assertFalse(SceneLibraryStore.setDefault(context, mode, fallback.last().id))
         assertEquals("not-json", storage.getString(key, null))
@@ -73,14 +86,14 @@ class SceneLibraryStoreTest {
         assertEquals(raw, storage.getString(key, null))
 
         SceneLibraryStore.reset(context, mode)
-        assertEquals(DefaultSceneCatalog.defaults(mode), SceneLibraryStore.list(context, mode))
+        assertSameScenes(DefaultSceneCatalog.defaults(mode), SceneLibraryStore.list(context, mode))
     }
 
     @Test
     fun defaultTemplateCanBeEditedAndResolvedByPlans() {
         val original = SceneLibraryStore.resolve(context, TranslationMode.INTERPRETATION, "meeting")
         val changed = original.copy(
-            label = "内部会议",
+            labelText = "内部会议",
             instruction = "只关注决策、数字和待办事项。",
         )
 
@@ -114,14 +127,14 @@ class SceneLibraryStoreTest {
         SceneLibraryStore.update(
             context,
             mode,
-            original.copy(label = "已修改", instruction = "已修改的提示词"),
+            original.copy(labelText = "已修改", instruction = "已修改的提示词"),
         )
         SceneLibraryStore.create(context, mode, "临时场景", "临时提示词")
 
         SceneLibraryStore.reset(context, mode)
 
         val restored = SceneLibraryStore.list(context, mode)
-        assertEquals(DefaultSceneCatalog.defaults(mode), restored)
+        assertSameScenes(DefaultSceneCatalog.defaults(mode), restored)
         assertEquals("直播", SceneLibraryStore.resolve(context, mode, "livestream").label)
     }
 
@@ -139,4 +152,16 @@ class SceneLibraryStoreTest {
         all.drop(1).forEach { assertTrue(SceneLibraryStore.delete(context, mode, it.id)) }
         assertFalse(SceneLibraryStore.delete(context, mode, SceneLibraryStore.list(context, mode).single().id))
     }
+
+    /** 只比较业务字段：内部的 labelRes / promptLabelText 不属于断言目标。 */
+    private fun assertSameScenes(
+        expected: List<ScenePromptPreset>,
+        actual: List<ScenePromptPreset>,
+    ) {
+        assertEquals(
+            expected.map { Triple(it.id, it.label, it.instruction) },
+            actual.map { Triple(it.id, it.label, it.instruction) },
+        )
+    }
+
 }

@@ -2,6 +2,74 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-12 · 阶段2：中英双语界面（v2.6.0 / 38）
+
+界面语言可在「设置 → 界面语言」切换：跟随系统 / 简体中文 / English。
+
+**语言切换机制**
+
+- 新增 `AppLocale` 与 `LiveTranslateApp`，走 AndroidX 标准方案 `AppCompatDelegate.setApplicationLocales`。
+  API 33+ 由系统接管（`res/xml/locales_config.xml`），API 29–32 由 AppCompat 的
+  `AppLocalesMetadataHolderService` + `autoStoreLocales` 持久化。没有自己 new Configuration 硬改。
+- `AppStrings` 为无 Context 的场合提供按当前界面语言取资源的能力，只做资源查找，不做中文原文→英文的字典映射。
+- `android:label` 改为 `@string/app_name`，启动器名称也跟随界面语言。
+
+**文案提取**
+
+- 布局与菜单共 173 处内联硬编码全部提取，`values/` 与 `values-en/` 各 433 条，占位符一致、无缺漏。
+- Kotlin 侧提取 256 处用户可见文案（Toast、状态、错误、通知、悬浮窗无障碍描述、空状态等）到 `strings_runtime.xml`。
+- 静态校验脚本核对：Missing English 0、Extra English 0、Placeholder mismatch 0、Inline XML user labels 0。
+
+**关键边界：界面语言不得改变翻译行为**
+
+这是本次最容易做错、也最值得记的一条。`PromptBuilder` 里的场景名、语言名、模式名同时被两个地方使用：
+界面展示、以及写进 systemInstruction 发给模型。如果统一改成跟随界面语言的资源，
+用户把界面切成英文，发给模型的 prompt 也会从「【场景：会议】」变成「【场景：Meeting】」，
+等于悄悄改掉了翻译行为。
+
+因此拆成两套取值：
+
+- `promptLabel`（`TranslationLanguage` / `TranslationMode` / `ScenePromptPreset`）：固定中文，写进 systemInstruction。
+- `label`：跟随界面语言，只用于界面展示。
+
+`PromptBuilder.build()` 一律使用 `promptLabel`。语言 `code`、场景 `id`、`storageKey` 全部不变。
+`ScenePromptPreset` 的用户自定义名走 `labelText`（用户数据，写库后固化），内置模板走 `labelRes`
+（仅影响首次初始化与恢复模板），所以切换界面语言不会覆盖用户改过的场景名。
+
+新增 `PromptLocaleIndependenceTest` 锁死三条：中英文下 systemInstruction 完全一致、
+语言 code 与 promptLabel 不随界面语言变、用户改过的场景名不被语言切换覆盖。
+这个测试在编写当时确实抓出了真实缺陷（场景名漏用 `promptLabel`，prompt 被改成英文），不是事后补的摆设。
+
+**踩到的坑**
+
+- Robolectric 的 `qualifiers = "zh-rCN"` 对本项目无效：中文在默认 `values/`，英文在 `values-en/`，
+  限定 `zh-rCN` 并不会让它回落到默认资源。改为在测试里显式调用 `AppLocale.apply(TAG_ZH_HANS)`，
+  走的正是生产代码的切换路径，更贴近真实行为。
+- `ScenePromptPreset` 加字段后，直接 `assertEquals` 比较整个 data class 会因内部字段失配。
+  改为只比较 id / label / instruction 三个业务字段。
+
+**验证**
+
+- 本地工具链 `/root/.local/share/android-build`（Temurin JDK 17 + Android SDK 35）。
+  构建统一走受限封装：`systemd-run` 设 `CPUQuota=200%`、`AllowedCPUs=0,1`、`MemoryMax=4G`，
+  外加 `taskset` 绑核与 `nice -n 15`，实测构建期间系统仍有约 50% CPU 空闲，不影响其他服务。
+- `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug` → **BUILD SUCCESSFUL**，
+  **130 个单元测试全部通过**（0 失败 / 0 错误），产出 APK versionCode 38 / versionName 2.6.0。
+- Android 35 模拟器实机验证：
+  - 中文界面：同传 / 自动检测 → 中文 / 通用、会议、课堂等场景名正常；
+  - 英文界面（清数据全新初始化）：Live / Auto detect → Chinese / General、Meeting、Classroom，
+    设置页与各子页全英文，语言选择弹窗为 Follow system / Simplified Chinese / English；
+  - Zen 英文警告如实表述「restricted to the OpenCode client and is not verified for this app」，
+    未声称已验证可用，隐私提示同步保留。
+
+**未验证项**
+
+- 真实 Google Gemini API Key 联调与音频 Live 翻译（仍待用户提供个人 Key）。
+- OpenCode Zen 第三方推理可用性（上游限制未变）。
+- 未做窄屏英文长文案的逐页人工走查，仅覆盖了主要页面。
+
+---
+
 ## 2026-09-12 · 阶段1：免费服务接入引导、Live 测试与背景分析多服务框架（v2.5.0 / 37）
 
 根据 `/tmp/vtuber-stage1-task.md`、`/tmp/vtuber-stage1-review-feedback.md` 及 `docs/09-free-services-verification.md` 落实第一阶段全部要求，定好完整多服务框架，版本维持 2.5.0（versionCode 37），留待阶段2统一提取 i18n 升级 2.6.0。

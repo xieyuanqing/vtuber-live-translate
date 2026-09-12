@@ -39,7 +39,7 @@
                     android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="场景名称" />
+                    android:text="@string/scene_item_name_placeholder" />
 
                 <!-- 复用旧 chip ID，改为紧凑标记。 -->
                 <TextView
@@ -47,7 +47,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_8"
-                    android:text="✓"
+                    android:text="@string/symbol_check"
                     android:textColor="@color/brand"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -58,7 +58,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/grid_4"
-                    android:text="★"
+                    android:text="@string/symbol_star"
                     android:textColor="@color/warning"
                     android:textSize="14sp"
                     android:visibility="gone" />
@@ -71,7 +71,7 @@
                 android:layout_marginTop="@dimen/grid_4"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="场景提示词"
+                android:text="@string/scene_item_instruction_placeholder"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -81,7 +81,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="更多操作"
+            android:contentDescription="@string/scene_btn_more_description"
             android:padding="12dp"
             android:src="@drawable/ic_more_vert_24"
             app:tint="@color/text_muted" />

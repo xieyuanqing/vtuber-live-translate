@@ -52,12 +52,13 @@ object OpenCodeZenCatalog {
     /**
      * 对 OpenCode Zen 的特定限制错误进行准确本地化说明。
      */
-    fun localizeZenError(errorMessage: String?): String {
+    fun localizeZenError(errorMessage: String?, context: android.content.Context? = null): String {
         val msg = errorMessage.orEmpty()
         if (msg.contains("OpenCode's free tier can only be used in OpenCode", ignoreCase = true) ||
             msg.contains("MissingSessionID", ignoreCase = true)
         ) {
-            return "当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务"
+            return context?.getString(R.string.rt_zen_client_restricted)
+                ?: "当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务"
         }
         return msg
     }

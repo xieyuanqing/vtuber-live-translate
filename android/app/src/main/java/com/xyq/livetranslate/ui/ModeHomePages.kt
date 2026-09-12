@@ -237,28 +237,32 @@ internal class ModeHomeController(
     }
 
     private fun confirmStop() {
-        val label = if (mode == TranslationMode.INTERPRETATION) "同传" else "视频字幕"
-        val message = if (mode == TranslationMode.INTERPRETATION) {
-            "字幕会保存在历史中；再次开始需要重新连接翻译服务。"
+        val label = if (mode == TranslationMode.INTERPRETATION) {
+            context.getString(R.string.rt_mode_interpretation)
         } else {
-            "字幕会保存在历史中；再次开始需要重新授权音频捕获。"
+            context.getString(R.string.rt_mode_video)
+        }
+        val message = if (mode == TranslationMode.INTERPRETATION) {
+            context.getString(R.string.rt_dialog_stop_interp_message)
+        } else {
+            context.getString(R.string.rt_dialog_stop_video_message)
         }
         MaterialAlertDialogBuilder(context)
-            .setTitle("停止$label？")
+            .setTitle(context.getString(R.string.rt_dialog_stop_mode_title, label))
             .setMessage(message)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("停止") { _, _ -> toggleSession(captureMode) }
+            .setNegativeButton(context.getString(R.string.rt_action_cancel), null)
+            .setPositiveButton(context.getString(R.string.rt_action_stop)) { _, _ -> toggleSession(captureMode) }
             .show()
     }
 
     private fun swapLanguages() {
         if (StatusBus.serviceRunning) {
-            Toast.makeText(context, "运行中无法切换语言", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.rt_toast_cannot_swap_language_running), Toast.LENGTH_SHORT).show()
             return
         }
         val plan = TranslationPlanStore.loadDraft(context, mode)
         if (plan.sourceLanguageCode.equals("auto", ignoreCase = true)) {
-            Toast.makeText(context, "源语言为自动检测时无法交换", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.rt_toast_cannot_swap_auto_source), Toast.LENGTH_SHORT).show()
             return
         }
         val sourceAsTarget = TranslationLanguageCatalog.targets.any {
@@ -268,7 +272,7 @@ internal class ModeHomeController(
             it.code.equals(plan.targetLanguageCode, ignoreCase = true)
         }
         if (!sourceAsTarget || !targetAsSource) {
-            Toast.makeText(context, "当前语言方向不支持交换", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.rt_toast_direction_not_reversible), Toast.LENGTH_SHORT).show()
             return
         }
         TranslationPlanStore.saveDraft(
@@ -338,7 +342,7 @@ internal class ModeHomeController(
         views.sourceLanguage.setText(TranslationLanguageCatalog.source(plan.sourceLanguageCode).label, false)
         val targetLabel = TranslationLanguageCatalog.target(plan.targetLanguageCode).label
         views.targetLanguage.setText(targetLabel, false)
-        views.targetLanguageLabel.text = "目标译文 · $targetLabel"
+        views.targetLanguageLabel.text = context.getString(R.string.rt_label_target_language, targetLabel)
         updatePlanSummary()
     }
 
@@ -364,9 +368,9 @@ internal class ModeHomeController(
         views.busyRow.visibility = if (blockedByOther) View.VISIBLE else View.GONE
         if (blockedByOther) {
             views.busyStatus.text = if (mode == TranslationMode.INTERPRETATION) {
-                "视频翻译正在进行，停止后才能开始同传"
+                context.getString(R.string.rt_busy_video_running)
             } else {
-                "麦克风同传正在进行，停止后才能开始视频翻译"
+                context.getString(R.string.rt_busy_mic_running)
             }
         }
         if (mode == TranslationMode.VIDEO) renderOverlayPermission(status.overlayAllowed)
@@ -384,16 +388,20 @@ internal class ModeHomeController(
         val scene = status.sceneLabel.ifBlank {
             SceneLibraryStore.resolve(context, mode, sceneId).label
         }
-        views.runningStatus.text = status.activeStatusText
+        views.runningStatus.setText(status.activeStatusRes)
         ViewCompat.setBackgroundTintList(
             views.runningStatusDot,
             context.getColorStateList(status.activeStatusColorRes),
         )
-        views.pauseButton.text = if (status.paused) "继续" else "暂停"
+        views.pauseButton.text = if (status.paused) {
+            context.getString(R.string.rt_action_resume)
+        } else {
+            context.getString(R.string.rt_action_pause)
+        }
         if (mode == TranslationMode.VIDEO) {
             views.runningSubStatus?.text = buildString {
-                append("其他应用音频 · ")
-                append(if (status.overlayAllowed) "悬浮字幕已开启" else "悬浮字幕未授权")
+                append(context.getString(R.string.rt_substatus_other_app_audio_prefix))
+                append(if (status.overlayAllowed) context.getString(R.string.rt_substatus_overlay_enabled) else context.getString(R.string.rt_substatus_overlay_unauthorized))
                 if (status.currentKeyLabel.isNotEmpty()) append(" · ").append(status.currentKeyLabel)
                 val hint = listeningHint(status)
                 if (hint != null) append(" · ").append(hint)
@@ -414,15 +422,15 @@ internal class ModeHomeController(
         renderConfirmedTranslations(status.confirmedTranslations)
         views.currentTranslation.text = status.currentTranslation.trim()
             .ifBlank { status.confirmedTranslations.lastOrNull().orEmpty() }
-            .ifBlank { "等待译文…" }
-        views.sourceTail.text = status.sourceTail.trim().ifBlank { "等待识别到语音…" }
+            .ifBlank { context.getString(R.string.rt_waiting_translation) }
+        views.sourceTail.text = status.sourceTail.trim().ifBlank { context.getString(R.string.rt_waiting_voice_detected) }
     }
 
     private fun renderOverlayPermission(allowed: Boolean) {
         // 已授权时整行隐藏，缺权限时显示警告横幅。
         views.overlayPermissionRow?.visibility = if (allowed) View.GONE else View.VISIBLE
         if (allowed) return
-        views.overlayPermissionStatus?.text = "悬浮字幕未授权"
+        views.overlayPermissionStatus?.text = context.getString(R.string.rt_overlay_unauthorized)
         views.overlayPermissionSettings?.visibility = View.VISIBLE
     }
 
@@ -434,7 +442,7 @@ internal class ModeHomeController(
         if (visible.isEmpty()) {
             views.confirmedList.removeAllViews()
             views.confirmedList.addView(
-                createConfirmedTranslationCard("等待语音…", 14f, R.color.text_muted),
+                createConfirmedTranslationCard(context.getString(R.string.rt_waiting_voice), 14f, R.color.text_muted),
             )
             renderedConfirmedTranslations = emptyList()
             return
@@ -483,9 +491,9 @@ internal class ModeHomeController(
     private fun listeningHint(status: UiRuntimeStatus): String? {
         if (status.paused) return null
         if (status.connState != "ready") return null
-        if (status.audioLevelPct <= 2) return "静音中"
+        if (status.audioLevelPct <= 2) return context.getString(R.string.rt_listening_silent)
         val lastChange = status.lastSubtitleAtMs.takeIf { it > 0L } ?: status.startedAtMs
-        if (lastChange > 0L && status.sampledAtMs - lastChange >= 8_000L) return "聆听中…"
+        if (lastChange > 0L && status.sampledAtMs - lastChange >= 8_000L) return context.getString(R.string.rt_listening_active)
         return null
     }
 
@@ -502,9 +510,9 @@ internal class ModeHomeController(
             return
         }
         views.silenceTip.text = if (mode == TranslationMode.INTERPRETATION) {
-            "一直没有检测到声音。请确认麦克风没有被其他应用占用，并靠近声源。"
+            context.getString(R.string.rt_silence_tip_mic)
         } else {
-            "一直没有检测到声音。请确认视频正在播放；若仍无声音，该应用可能不支持音频捕获。"
+            context.getString(R.string.rt_silence_tip_video)
         }
         views.silenceTip.visibility = View.VISIBLE
     }

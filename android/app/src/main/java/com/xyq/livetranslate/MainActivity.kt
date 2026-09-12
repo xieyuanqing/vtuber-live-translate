@@ -7,9 +7,11 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.xyq.livetranslate.ui.HistoryController
 import com.xyq.livetranslate.ui.HistoryViews
 import com.xyq.livetranslate.ui.MainNavigator
@@ -170,6 +172,7 @@ class MainActivity : AppCompatActivity() {
 
         renderStatus()
         navigator.setup(savedInstanceState)
+        bindLanguageSettings(root)
         // 启动自动检查更新（可在关于页关闭）。
         updateController.autoCheckOnLaunch()
     }
@@ -193,6 +196,7 @@ class MainActivity : AppCompatActivity() {
         if (::modeHomeControllers.isInitialized) {
             modeHomeControllers.values.forEach(ModeHomeController::refreshConfiguration)
         }
+        findViewById<View?>(R.id.rootLayout)?.let(::bindLanguageSettings)
         ui.removeCallbacks(refresh)
         ui.post(refresh)
     }
@@ -280,6 +284,49 @@ class MainActivity : AppCompatActivity() {
 
     internal fun prepareSessionSettingsForTest(captureMode: String): Boolean =
         sessionCoordinator.prepareSessionSettingsForTest(captureMode)
+
+    internal fun showLanguageSelectionDialog() {
+        val currentTag = AppLocale.current(this)
+        val tags = arrayOf(AppLocale.TAG_SYSTEM, AppLocale.TAG_ZH_HANS, AppLocale.TAG_EN)
+        val items = arrayOf(
+            getString(R.string.locale_option_system),
+            getString(R.string.locale_option_zh_hans),
+            getString(R.string.locale_option_en),
+        )
+        val checkedItem = when (currentTag) {
+            AppLocale.TAG_ZH_HANS -> 1
+            AppLocale.TAG_EN -> 2
+            else -> 0
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.locale_dialog_title)
+            .setSingleChoiceItems(items, checkedItem) { dialog, which ->
+                val selectedTag = tags.getOrElse(which) { AppLocale.TAG_SYSTEM }
+                dialog.dismiss()
+                if (selectedTag != currentTag) {
+                    AppLocale.saveAndApply(this, selectedTag)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun bindLanguageSettings(root: View) {
+        val rowLanguage = root.findViewById<View?>(R.id.rowSetLanguage)
+        val tvValue = root.findViewById<TextView?>(R.id.tvSettingsLanguageValue)
+        if (tvValue != null) {
+            val label = when (AppLocale.current(this)) {
+                AppLocale.TAG_ZH_HANS -> getString(R.string.locale_option_zh_hans)
+                AppLocale.TAG_EN -> getString(R.string.locale_option_en)
+                else -> getString(R.string.locale_option_system)
+            }
+            tvValue.text = label
+        }
+        rowLanguage?.setOnClickListener {
+            showLanguageSelectionDialog()
+        }
+    }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 }

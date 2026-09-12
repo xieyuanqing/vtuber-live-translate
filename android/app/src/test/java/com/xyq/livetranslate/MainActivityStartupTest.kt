@@ -184,7 +184,7 @@ class MainActivityStartupTest {
         historyList.getChildAt(1).performClick()
         activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
 
-        assertEquals("正在进行的会话不能删除，请先停止翻译", ShadowToast.getTextOfLatestToast())
+        assertEquals(activity.getString(R.string.rt_toast_cannot_delete_active_session), ShadowToast.getTextOfLatestToast())
         assertEquals(1, HistoryStore.list(activity).size)
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
     }
@@ -476,7 +476,7 @@ class MainActivityStartupTest {
             val banner = activity.findViewById<View>(R.id.rowVideoBusy)
             assertEquals(View.VISIBLE, banner.visibility)
             assertEquals(
-                "麦克风同传正在进行，停止后才能开始视频翻译",
+                activity.getString(R.string.rt_busy_mic_running),
                 activity.findViewById<android.widget.TextView>(R.id.tvVideoBusyStatus).text,
             )
             // 自己这一侧空闲时不该出现占用横幅。
