@@ -2,6 +2,70 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-12 · 阶段1：免费服务接入引导、Live 测试与背景分析多服务框架（v2.5.0 / 37）
+
+根据 `/tmp/vtuber-stage1-task.md`、`/tmp/vtuber-stage1-review-feedback.md` 及 `docs/09-free-services-verification.md` 落实第一阶段全部要求，定好完整多服务框架，版本维持 2.5.0（versionCode 37），留待阶段2统一提取 i18n 升级 2.6.0。
+
+**翻译服务引导与连接自检**
+
+- 翻译 API Key 下增加「免费申请 API Key」（跳转 `https://aistudio.google.com/apikey`）与「查看申请教程」（App 内简明教程对话框，包含 Google AI Studio 流程、官方文档 `https://ai.google.dev/gemini-api/docs/api-key` 与价格页 `https://ai.google.dev/gemini-api/docs/pricing` 入口）。
+- 明确配额提示：「提供免费额度，实际额度以 Google 为准」，不作无限制承诺。
+- 增加「粘贴 Key」按钮（读取剪贴板并即时反馈与保存）与「测试翻译连接」自检。
+- 自检复用生产 `GeminiLiveClient` 的 `MODEL`（`gemini-3.5-live-translate-preview`）、`WS_PATH`、`buildWebSocketUrl` 及 `buildSetupJson`；使用独立 OkHttpClient 建立 WebSocket 握手，严格确认收到有效的 `setupComplete` 对象后报告「Live 模型连接通过（未测试音频翻译）」。
+- 异常、超时（10秒）与服务端关闭时本地化脱敏错误信息（不向用户暴露包含 Key 的原始报错）；`finally` 块彻底关闭连接与 `dispatcher`/`connectionPool`，不泄漏线程，不污染运行中的翻译会话，不需要麦克风权限。编辑 Key 或服务地址即时作废旧测试状态。
+
+**背景分析 AI 多服务框架（Gemini / OpenCode Zen 免费 / 自定义）**
+
+- 服务隔离与无损迁移：`SettingsStore` 拆分为 Gemini、OpenCode Zen、Custom 三套独立配置。读取旧配置时严格按 `java.net.URI` 校验 host 是否为 `generativelanguage.googleapis.com`；非官方 host 或 `openai` 格式自动迁移为 `custom`，无损保留原有 Base URL、模型与 Keystore 加密 Key，绝不注入假 `gpt-4o-mini` 默认值，自定义字段留空时绝不偷偷回退至 Gemini 官方域名。
+- 多 Key 解析：新增 `SettingsStore.extractFirstApiKey`，在英文逗号分隔的多 Key 中提取首个有效 Key，复制到分析 AI 时明示「已复制首个 Gemini Key（多 Key 仅取第一个）」，避免将逗号串当成单一 Key 发送。
+- Gemini 辅助入口：提供「使用翻译服务的 Gemini Key」、「免费申请 API Key」、「查看申请教程」、「粘贴 Key」。
+- OpenCode Zen 免费候选与真实限制明确化：
+  - 依据实测证据（`docs/09-free-services-verification.md`），POST `https://opencode.ai/zen/v1/chat/completions` 使用 `public` 密钥返回 HTTP 400 `MissingSessionID: OpenCode's free tier can only be used in OpenCode`，免费接口目前限制仅 OpenCode 官方客户端使用，第三方 App 未验证可用。
+  - 本 App 绝不伪造 `x-opencode-session` 绕过限制，不将 `big-pickle` 设为已验证可用默认，Zen 入口明确展示黄色警告：「当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务」，保留候选供复测，提供「切换服务」对话框，绝不自动切换付费服务。
+  - 凭据隔离：Zen 内部固定 `public`，UI 不显示 Key 输入框，绝不向 Zen 发送 Gemini Key。
+  - 白名单与交集过滤：`OpenCodeZenCatalog` 定义官方确认的免费白名单（`big-pickle`），`filterAvailableFreeModels` 严格与远端取交集。交集为空时返回空列表并提示「远端未返回任何官方免费白名单模型，当前不可用」，绝不 fallback 伪造模型。Zen 模式下模型输入框锁定，禁止手动填入未确认的付费模型。
+  - 隐私条款：依据官方条款展示警告「免费模型可能使用提交内容改进模型，请勿发送敏感资料」，并提供「查看官方文档与隐私条款」按钮（跳转 `https://opencode.ai/docs/zen/`）。
+- 自定义服务：支持自由选择「Gemini 原生」或「OpenAI 兼容」格式，独立保存 Base URL、模型 ID 与 API Key。格式与服务地址不匹配时显式预警。
+
+**测试与验证**
+
+- 新增 `GeminiLiveProbeTest`：
+  - 测试 `buildWebSocketUrl` 对 API Key 的 query 参数安全编码与多 Key 提取。
+  - 测试 `buildSetupJson` 的数据结构、模型、`AUDIO` 模态及翻译配置。
+  - MockWebServer 模拟 WebSocket：测试 `setupComplete` 成功、setup 错误拒绝、服务端关闭（code=1008）及超时失败，确认错误提示脱敏且不泄露 Key。
+- 新增 `SecondAiServiceTest`：
+  - 精确 host 校验：通过官方域名，拒绝 `evilgoogleapis.com`、子域名欺骗及第三方反代。
+  - 迁移与凭据隔离：验证官方与自定义配置无损迁移，自定义留空不回退，Zen 返回固定 `public` 与白名单模型。
+  - Zen 白名单与负例测试：验证模型交集过滤，负例测试确认远端下线时返回空列表，验证 `MissingSessionID` 错误本地化。
+  - AiTextClient 自检契约与脱敏：严格验证 `sessionContext`/`note` 字段有效性，拒绝空 JSON 假阳性，验证密钥替换（`key=***`, `Bearer ***`, `AIza***`）。
+- `MainActivityStartupTest`：验证阶段 1 新增控件绑定及 Second AI 服务切换时的 UI 联动与状态持久化。
+- 自动化构建执行：`bash /tmp/vtuber-gradle.sh :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`。
+
+**主助手复核修复：上游错误被吞导致文案误导**
+
+- 在模拟器上实点「测试分析服务」（Zen）时发现真实缺陷：请求确实发出并返回 400，但界面提示的是「请检查 API Key 和服务地址是否正确」。Zen 走内置 `public`、根本不需要用户填 Key，这个提示会把人引向错误方向。
+- 根因：`AiTextClient` 的 OpenAI / Gemini 失败分支只把响应体写进 `Log.w`，抛给调用方的是固定文案，`OpenCodeZenCatalog.localizeZenError` 拿不到 `MissingSessionID` 自然匹配不上。
+- 修复：新增 `extractUpstreamError()`，只取结构化的 `error.type` / `error.status` 与 `error.message`（截断 160 字并继续过 `sanitizeError`），不回抛整个响应体；两个失败分支改为带上游诊断信息抛出，取不到时才回落通用文案。
+- 回归：`zenAccessRestrictionSurfacesAccurateMessageNotKeyAdvice` 断言错误链路保留 `MissingSessionID`、不再出现 Key 建议且能落到 Zen 限制专用文案；`upstreamErrorExtractionDropsBodyButKeepsDiagnosis` 断言只保留诊断字段、丢弃 `details` 且非 JSON 响应返回空串。
+
+**真实验证结果**
+
+- 本地工具链：`/root/.local/share/android-build`（Temurin JDK 17.0.20.1 + Android SDK 35，校验和已核对）。
+- `bash /tmp/vtuber-gradle.sh :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` → **BUILD SUCCESSFUL**，**120 个单元测试全部通过**（0 失败 / 0 错误），Lint 无阻断错误，产出 `app-debug.apk`（13,499,923 字节）。
+- Android 35 模拟器（x86_64，KVM）实机验证：安装 APK 并逐页操作，确认
+  - 设置 → 翻译服务 真实显示「免费申请 API Key」「查看申请教程」「粘贴 Key」「测试翻译连接」及免费额度说明；
+  - 空 Key 点测试 → 「请先填写 Gemini API Key」，不产生假成功；
+  - 教程弹窗含分步说明与「前往申请」「官方与定价」入口；
+  - 背景分析 AI 三服务选择器（Gemini / OpenCode Zen 免费 / 自定义）可切换，Zen 页展示限制警告、隐私提示、凭据隔离说明与「切换服务」；
+  - 修复后再次实点 Zen 自检 → 「不可用：当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务」。
+
+**未验证项**
+
+- 真实 Google Gemini API Key 联调与真实音频 Live 翻译（测试环境中无用户提供的个人 Key）。
+- OpenCode Zen 真实第三方推理可用性（受限于上游应用层客户端限制，当前保持未验证可用警告与自检复测能力）。
+
+---
+
 ## 2026-09-09 · v2.5.0 让「配置成功没有 / 这一步会改变什么 / 出错怎么办」说清楚
 
 按外部 UI 评审逐条落实，主线是把隐式状态显式化，不新增产品边界。

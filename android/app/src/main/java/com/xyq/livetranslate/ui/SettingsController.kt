@@ -22,7 +22,10 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
+import com.google.android.material.textfield.TextInputLayout
 import com.xyq.livetranslate.AiTextClient
+import com.xyq.livetranslate.GeminiLiveClient
+import com.xyq.livetranslate.OpenCodeZenCatalog
 import com.xyq.livetranslate.R
 import com.xyq.livetranslate.SettingsStore
 import com.xyq.livetranslate.TranslationMode
@@ -47,6 +50,12 @@ internal data class SettingsViews(
     val rowSetProfileAi: View,
     val rowSetDiagnostics: View,
     val rowSetAbout: View,
+    val btnApplyApiKey: Button,
+    val btnViewApiKeyTutorial: Button,
+    val tvFreeQuotaHint: TextView,
+    val btnPasteApiKey: Button,
+    val btnTestTranslateConnection: Button,
+    val tvTranslateTestStatus: TextView,
     val btnConnectionOptions: Button,
     val connectionOptions: View,
     val btnTranslateAdvanced: Button,
@@ -65,6 +74,22 @@ internal data class SettingsViews(
     val tvFontVal: TextView,
     val tvOpacityVal: TextView,
     val tvLinesVal: TextView,
+    val toggleSecondAiService: MaterialButtonToggleGroup,
+    val btnSecondAiServiceGemini: MaterialButton,
+    val btnSecondAiServiceZen: MaterialButton,
+    val btnSecondAiServiceCustom: MaterialButton,
+    val containerGeminiActions: View,
+    val btnUseTranslateKeyForSecondAi: Button,
+    val btnSecondAiApplyKey: Button,
+    val btnSecondAiTutorial: Button,
+    val btnPasteSecondAiKey: Button,
+    val containerZenInfo: View,
+    val btnZenDocLink: Button,
+    val btnSecondAiSwitchService: Button,
+    val containerCustomFormat: View,
+    val tilSecondAiKey: View,
+    val tilSecondAiUrl: View,
+    val tilSecondAiModel: TextInputLayout,
     val etSecondAiKey: EditText,
     val etSecondAiUrl: EditText,
     val etSecondAiModel: EditText,
@@ -109,6 +134,12 @@ internal data class SettingsViews(
                 rowSetProfileAi = root.findViewById(R.id.rowSetProfileAi),
                 rowSetDiagnostics = root.findViewById(R.id.rowSetDiagnostics),
                 rowSetAbout = root.findViewById(R.id.rowSetAbout),
+                btnApplyApiKey = root.findViewById(R.id.btnApplyApiKey),
+                btnViewApiKeyTutorial = root.findViewById(R.id.btnViewApiKeyTutorial),
+                tvFreeQuotaHint = root.findViewById(R.id.tvFreeQuotaHint),
+                btnPasteApiKey = root.findViewById(R.id.btnPasteApiKey),
+                btnTestTranslateConnection = root.findViewById(R.id.btnTestTranslateConnection),
+                tvTranslateTestStatus = root.findViewById(R.id.tvTranslateTestStatus),
                 btnConnectionOptions = root.findViewById(R.id.btnConnectionOptions),
                 connectionOptions = root.findViewById(R.id.connectionOptions),
                 btnTranslateAdvanced = root.findViewById(R.id.btnTranslateAdvanced),
@@ -127,6 +158,22 @@ internal data class SettingsViews(
                 tvFontVal = root.findViewById(R.id.tvFontVal),
                 tvOpacityVal = root.findViewById(R.id.tvOpacityVal),
                 tvLinesVal = root.findViewById(R.id.tvLinesVal),
+                toggleSecondAiService = root.findViewById(R.id.toggleSecondAiService),
+                btnSecondAiServiceGemini = root.findViewById(R.id.btnSecondAiServiceGemini),
+                btnSecondAiServiceZen = root.findViewById(R.id.btnSecondAiServiceZen),
+                btnSecondAiServiceCustom = root.findViewById(R.id.btnSecondAiServiceCustom),
+                containerGeminiActions = root.findViewById(R.id.containerGeminiActions),
+                btnUseTranslateKeyForSecondAi = root.findViewById(R.id.btnUseTranslateKeyForSecondAi),
+                btnSecondAiApplyKey = root.findViewById(R.id.btnSecondAiApplyKey),
+                btnSecondAiTutorial = root.findViewById(R.id.btnSecondAiTutorial),
+                btnPasteSecondAiKey = root.findViewById(R.id.btnPasteSecondAiKey),
+                containerZenInfo = root.findViewById(R.id.containerZenInfo),
+                btnZenDocLink = root.findViewById(R.id.btnZenDocLink),
+                btnSecondAiSwitchService = root.findViewById(R.id.btnSecondAiSwitchService),
+                containerCustomFormat = root.findViewById(R.id.containerCustomFormat),
+                tilSecondAiKey = root.findViewById(R.id.tilSecondAiKey),
+                tilSecondAiUrl = root.findViewById(R.id.tilSecondAiUrl),
+                tilSecondAiModel = root.findViewById(R.id.tilSecondAiModel),
                 etSecondAiKey = root.findViewById(R.id.etSecondAiKey),
                 etSecondAiUrl = root.findViewById(R.id.etSecondAiUrl),
                 etSecondAiModel = root.findViewById(R.id.etSecondAiModel),
@@ -183,13 +230,26 @@ internal class SettingsController(
         views.rowSetDiagnostics.setOnClickListener { openSubPage(R.id.pageSettingsDiagnostics) }
         views.rowSetAbout.setOnClickListener { openSubPage(R.id.pageSettingsAbout) }
 
+        // 翻译服务
         views.etApiKeys.setText(SettingsStore.apiKeysRaw(context))
         views.etBaseUrl.setText(SettingsStore.baseUrl(context))
-        views.etSecondAiKey.setText(SettingsStore.secondAiApiKey(context))
-        views.etSecondAiUrl.setText(SettingsStore.secondAiBaseUrl(context))
-        views.etSecondAiModel.setText(SettingsStore.secondAiModel(context))
+        views.btnApplyApiKey.setOnClickListener { openExternalUrl("https://aistudio.google.com/apikey") }
+        views.btnViewApiKeyTutorial.setOnClickListener { showApiKeyTutorialDialog() }
+        views.btnPasteApiKey.setOnClickListener { pasteTranslateApiKey() }
+        views.btnTestTranslateConnection.setOnClickListener { testTranslateConnection() }
+        views.etApiKeys.doAfterTextChanged { invalidateTranslateTestStatus() }
+        views.etBaseUrl.doAfterTextChanged { invalidateTranslateTestStatus() }
+
+        // 第二 AI（背景分析）
+        setupSecondAiServiceToggle()
         setupSecondAiFormatToggle()
         setupSecondAiModelPicker()
+        views.btnUseTranslateKeyForSecondAi.setOnClickListener { useTranslateKeyForSecondAi() }
+        views.btnSecondAiApplyKey.setOnClickListener { openExternalUrl("https://aistudio.google.com/apikey") }
+        views.btnSecondAiTutorial.setOnClickListener { showApiKeyTutorialDialog() }
+        views.btnPasteSecondAiKey.setOnClickListener { pasteSecondAiKey() }
+        views.btnZenDocLink.setOnClickListener { openExternalUrl(OpenCodeZenCatalog.DOCS_URL) }
+        views.btnSecondAiSwitchService.setOnClickListener { showSwitchServiceDialog() }
         views.btnTestSecondAi.setOnClickListener { testSecondAi() }
 
         setupDisclosure(views.btnConnectionOptions, views.connectionOptions, "自定义服务地址")
@@ -215,22 +275,49 @@ internal class SettingsController(
     }
 
     fun persistSecondAiInputs() {
-        SettingsStore.saveSecondAiApiKey(context, views.etSecondAiKey.text.toString())
-        SettingsStore.saveSecondAiBaseUrl(
-            context,
-            views.etSecondAiUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
-        )
-        SettingsStore.saveSecondAiModel(
-            context,
-            views.etSecondAiModel.text.toString().trim().ifEmpty { SettingsStore.secondAiModel(context) },
-        )
+        when (SettingsStore.secondAiService(context)) {
+            SettingsStore.SERVICE_GEMINI -> {
+                SettingsStore.saveSecondAiGeminiApiKey(context, views.etSecondAiKey.text?.toString().orEmpty())
+                SettingsStore.saveSecondAiGeminiBaseUrl(
+                    context,
+                    views.etSecondAiUrl.text?.toString().orEmpty().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
+                )
+                SettingsStore.saveSecondAiGeminiModel(
+                    context,
+                    views.etSecondAiModel.text?.toString().orEmpty().trim().ifEmpty { SettingsStore.DEFAULT_GEMINI_MODEL },
+                )
+            }
+            SettingsStore.SERVICE_OPENCODE_ZEN -> {
+                SettingsStore.saveSecondAiZenModel(
+                    context,
+                    views.etSecondAiModel.text?.toString().orEmpty().trim().ifEmpty { OpenCodeZenCatalog.CANDIDATE_MODEL },
+                )
+            }
+            SettingsStore.SERVICE_CUSTOM -> {
+                SettingsStore.saveSecondAiCustomApiKey(context, views.etSecondAiKey.text?.toString().orEmpty())
+                SettingsStore.saveSecondAiCustomBaseUrl(
+                    context,
+                    views.etSecondAiUrl.text?.toString().orEmpty().trim(),
+                )
+                SettingsStore.saveSecondAiCustomModel(
+                    context,
+                    views.etSecondAiModel.text?.toString().orEmpty().trim(),
+                )
+                val format = if (views.secondAiFormatToggle.checkedButtonId == views.btnSecondAiFormatOpenAi.id) {
+                    "openai"
+                } else {
+                    "gemini"
+                }
+                SettingsStore.saveSecondAiCustomFormat(context, format)
+            }
+        }
     }
 
     fun persistDraftInputs() {
-        SettingsStore.saveApiKeys(context, views.etApiKeys.text.toString())
+        SettingsStore.saveApiKeys(context, views.etApiKeys.text?.toString().orEmpty())
         SettingsStore.saveBaseUrl(
             context,
-            views.etBaseUrl.text.toString().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
+            views.etBaseUrl.text?.toString().orEmpty().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL },
         )
         persistSecondAiInputs()
     }
@@ -256,14 +343,260 @@ internal class SettingsController(
         views.tvCredentialStatus?.text = state.currentKeyLabel.ifBlank { "未选择凭据" }
     }
 
+    // ================= 翻译连接与教程 =================
+
+    private fun openExternalUrl(url: String) {
+        runCatching {
+            launchIntent(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }.onFailure {
+            toast("没有可用的浏览器")
+        }
+    }
+
+    private fun showApiKeyTutorialDialog() {
+        val message = "1. 登录 Google 账号并访问 Google AI Studio\n" +
+            "2. 创建或选择已有 Google Cloud 项目\n" +
+            "3. 创建 API 密钥并复制\n" +
+            "4. 返回本应用点击「粘贴 Key」或直接填入\n\n" +
+            "注：提供免费额度，实际额度以 Google 为准。"
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.dialog_tutorial_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.dialog_btn_go_apply) { _, _ ->
+                openExternalUrl("https://aistudio.google.com/apikey")
+            }
+            .setNeutralButton("官方与定价") { _, _ ->
+                showTutorialLinksDialog()
+            }
+            .setNegativeButton(R.string.dialog_btn_close, null)
+            .show()
+    }
+
+    private fun showTutorialLinksDialog() {
+        val items = arrayOf("查看官方说明 (ai.google.dev)", "查看定价说明 (ai.google.dev)")
+        MaterialAlertDialogBuilder(context)
+            .setTitle("官方文档与定价")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> openExternalUrl("https://ai.google.dev/gemini-api/docs/api-key")
+                    1 -> openExternalUrl("https://ai.google.dev/gemini-api/docs/pricing")
+                }
+            }
+            .setNegativeButton(R.string.dialog_btn_close, null)
+            .show()
+    }
+
+    private fun getClipboardText(): String? {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = clipboard?.primaryClip ?: return null
+        if (clip.itemCount <= 0) return null
+        return clip.getItemAt(0)?.text?.toString()?.trim()
+    }
+
+    private fun pasteTranslateApiKey() {
+        val text = getClipboardText()
+        if (text.isNullOrBlank()) {
+            toast("剪贴板中没有文本")
+            return
+        }
+        views.etApiKeys.setText(text)
+        SettingsStore.saveApiKeys(context, text)
+        invalidateTranslateTestStatus()
+        toast("已从剪贴板粘贴 Key")
+    }
+
+    private fun pasteSecondAiKey() {
+        val text = getClipboardText()
+        if (text.isNullOrBlank()) {
+            toast("剪贴板中没有文本")
+            return
+        }
+        views.etSecondAiKey.setText(text)
+        persistSecondAiInputs()
+        invalidateSecondAiModels()
+        toast("已从剪贴板粘贴 Key")
+    }
+
+    private fun useTranslateKeyForSecondAi() {
+        val raw = views.etApiKeys.text?.toString().orEmpty().trim()
+        val firstKey = SettingsStore.extractFirstApiKey(raw)
+        if (firstKey.isEmpty()) {
+            toast("请先在翻译服务中填写 API Key")
+            return
+        }
+        views.etSecondAiKey.setText(firstKey)
+        SettingsStore.saveSecondAiGeminiApiKey(context, firstKey)
+        invalidateSecondAiModels()
+        if (raw.contains(',')) {
+            toast("已复制首个 Gemini Key（多 Key 仅取第一个）")
+        } else {
+            toast("已复制翻译服务的 Gemini Key")
+        }
+    }
+
+    private var translateTesting = false
+
+    private fun testTranslateConnection() {
+        if (translateTesting) return
+        val baseUrl = views.etBaseUrl.text?.toString().orEmpty().trim().ifEmpty { SettingsStore.DEFAULT_BASE_URL }
+        val apiKey = SettingsStore.extractFirstApiKey(views.etApiKeys.text?.toString().orEmpty())
+        if (apiKey.isEmpty()) {
+            renderTranslateTestStatus(true, "请先填写 Gemini API Key")
+            views.etApiKeys.requestFocus()
+            return
+        }
+        translateTesting = true
+        setTranslateTestBusy(true)
+        val testingMsg = context.getString(R.string.live_model_test_testing, GeminiLiveClient.MODEL)
+        renderTranslateTestStatus(false, testingMsg)
+
+        Thread({
+            val result = runCatching {
+                GeminiLiveClient.probeLive(
+                    baseUrl = baseUrl,
+                    apiKey = apiKey,
+                    timeoutMs = 10_000L,
+                )
+            }
+            postToUi {
+                translateTesting = false
+                if (!isHostActive()) return@postToUi
+                setTranslateTestBusy(false)
+                result.onSuccess { msg ->
+                    renderTranslateTestStatus(false, msg)
+                }.onFailure { err ->
+                    val sanitized = AiTextClient.sanitizeError(err.message ?: "连接失败")
+                    renderTranslateTestStatus(true, "测试失败：$sanitized")
+                }
+            }
+        }, "live-probe").start()
+    }
+
+    private fun invalidateTranslateTestStatus() {
+        views.tvTranslateTestStatus.visibility = View.GONE
+        views.tvTranslateTestStatus.text = ""
+    }
+
+    private fun setTranslateTestBusy(busy: Boolean) {
+        views.btnTestTranslateConnection.isEnabled = !busy
+        views.btnTestTranslateConnection.text = if (busy) "正在测试…" else context.getString(R.string.btn_test_translate_connection)
+    }
+
+    private fun renderTranslateTestStatus(warn: Boolean, message: String) {
+        views.tvTranslateTestStatus.apply {
+            text = message
+            visibility = if (message.isBlank()) View.GONE else View.VISIBLE
+            setTextColor(context.getColor(if (warn) R.color.warning else R.color.brand))
+        }
+    }
+
+    // ================= 第二 AI（背景分析）服务切换 =================
+
     private fun secondAiFormat(): AiTextClient.Format =
         AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
 
     private var syncingSecondAiFormatUi = false
+    private var syncingSecondAiServiceUi = false
     private var cachedSecondAiModels: List<String> = emptyList()
     private var secondAiModelsFetching = false
     private var secondAiModelsRevision = 0
     private var secondAiTesting = false
+
+    private fun setupSecondAiServiceToggle() {
+        renderSecondAiServiceUi(SettingsStore.secondAiService(context))
+        views.toggleSecondAiService.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked || syncingSecondAiServiceUi) return@addOnButtonCheckedListener
+            val newService = when (checkedId) {
+                views.btnSecondAiServiceZen.id -> SettingsStore.SERVICE_OPENCODE_ZEN
+                views.btnSecondAiServiceCustom.id -> SettingsStore.SERVICE_CUSTOM
+                else -> SettingsStore.SERVICE_GEMINI
+            }
+            if (newService == SettingsStore.secondAiService(context)) return@addOnButtonCheckedListener
+            persistSecondAiInputs()
+            SettingsStore.saveSecondAiService(context, newService)
+            renderSecondAiServiceUi(newService)
+            invalidateSecondAiModels()
+        }
+    }
+
+    private fun renderSecondAiServiceUi(service: String) {
+        val checkedButtonId = when (service) {
+            SettingsStore.SERVICE_OPENCODE_ZEN -> views.btnSecondAiServiceZen.id
+            SettingsStore.SERVICE_CUSTOM -> views.btnSecondAiServiceCustom.id
+            else -> views.btnSecondAiServiceGemini.id
+        }
+        if (views.toggleSecondAiService.checkedButtonId != checkedButtonId) {
+            syncingSecondAiServiceUi = true
+            views.toggleSecondAiService.check(checkedButtonId)
+            syncingSecondAiServiceUi = false
+        }
+
+        when (service) {
+            SettingsStore.SERVICE_GEMINI -> {
+                views.containerGeminiActions.visibility = View.VISIBLE
+                views.containerZenInfo.visibility = View.GONE
+                views.containerCustomFormat.visibility = View.GONE
+                views.tilSecondAiKey.visibility = View.VISIBLE
+                views.tilSecondAiUrl.visibility = View.VISIBLE
+                views.tilSecondAiModel.visibility = View.VISIBLE
+                views.tilSecondAiModel.helperText = "可直接手动输入模型 ID"
+                views.etSecondAiModel.isEnabled = true
+                views.btnRefreshSecondAiModels.text = "拉取模型列表"
+
+                views.etSecondAiKey.setText(SettingsStore.secondAiGeminiApiKey(context))
+                views.etSecondAiUrl.setText(SettingsStore.secondAiGeminiBaseUrl(context))
+                views.etSecondAiModel.setText(SettingsStore.secondAiGeminiModel(context))
+            }
+            SettingsStore.SERVICE_OPENCODE_ZEN -> {
+                views.containerGeminiActions.visibility = View.GONE
+                views.containerZenInfo.visibility = View.VISIBLE
+                views.containerCustomFormat.visibility = View.GONE
+                views.tilSecondAiKey.visibility = View.GONE
+                views.tilSecondAiUrl.visibility = View.GONE
+                views.tilSecondAiModel.visibility = View.VISIBLE
+                views.tilSecondAiModel.helperText = context.getString(R.string.zen_model_restricted, OpenCodeZenCatalog.CANDIDATE_MODEL)
+                views.etSecondAiModel.isEnabled = false
+                views.btnRefreshSecondAiModels.text = context.getString(R.string.btn_refresh_free_models)
+
+                views.etSecondAiKey.setText(OpenCodeZenCatalog.PUBLIC_KEY)
+                views.etSecondAiUrl.setText(OpenCodeZenCatalog.BASE_URL)
+                views.etSecondAiModel.setText(SettingsStore.secondAiZenModel(context))
+                renderSecondAiTestStatus(true, "未验证可用：当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务")
+            }
+            SettingsStore.SERVICE_CUSTOM -> {
+                views.containerGeminiActions.visibility = View.GONE
+                views.containerZenInfo.visibility = View.GONE
+                views.containerCustomFormat.visibility = View.VISIBLE
+                views.tilSecondAiKey.visibility = View.VISIBLE
+                views.tilSecondAiUrl.visibility = View.VISIBLE
+                views.tilSecondAiModel.visibility = View.VISIBLE
+                views.tilSecondAiModel.helperText = "可直接手动输入模型 ID"
+                views.etSecondAiModel.isEnabled = true
+                views.btnRefreshSecondAiModels.text = "拉取模型列表"
+
+                views.etSecondAiKey.setText(SettingsStore.secondAiCustomApiKey(context))
+                views.etSecondAiUrl.setText(SettingsStore.secondAiCustomBaseUrl(context))
+                views.etSecondAiModel.setText(SettingsStore.secondAiCustomModel(context))
+                renderSecondAiFormatToggle()
+            }
+        }
+    }
+
+    private fun showSwitchServiceDialog() {
+        val items = arrayOf("Gemini（官方，需自备 API Key）", "自定义服务（反代 / 第三方兼容）")
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.btn_switch_service)
+            .setItems(items) { _, which ->
+                val newService = if (which == 0) SettingsStore.SERVICE_GEMINI else SettingsStore.SERVICE_CUSTOM
+                persistSecondAiInputs()
+                SettingsStore.saveSecondAiService(context, newService)
+                renderSecondAiServiceUi(newService)
+                invalidateSecondAiModels()
+            }
+            .setNegativeButton(R.string.dialog_btn_close, null)
+            .show()
+    }
 
     private fun setupSecondAiFormatToggle() {
         renderSecondAiFormatToggle()
@@ -294,7 +627,7 @@ internal class SettingsController(
 
     /** 切格式最容易留下「选了 OpenAI，地址还是 Google」这种组合，这里直接点破。 */
     private fun warnIfBaseUrlMismatchesFormat(format: AiTextClient.Format) {
-        val url = views.etSecondAiUrl.text.toString().trim()
+        val url = views.etSecondAiUrl.text?.toString().orEmpty().trim()
         val looksLikeGoogle = url.contains("googleapis.com", ignoreCase = true)
         val mismatched = when (format) {
             AiTextClient.Format.OPENAI -> looksLikeGoogle || url.isBlank()
@@ -319,6 +652,7 @@ internal class SettingsController(
     private fun setupSecondAiModelPicker() {
         views.etSecondAiKey.doAfterTextChanged { invalidateSecondAiModels() }
         views.etSecondAiUrl.doAfterTextChanged { invalidateSecondAiModels() }
+        views.etSecondAiModel.doAfterTextChanged { renderSecondAiTestStatus(false, "") }
         views.btnRefreshSecondAiModels.setOnClickListener {
             // 已经拉过就直接开面板；面板里还留着「重新拉取」。
             if (cachedSecondAiModels.isNotEmpty()) showModelPicker() else fetchSecondAiModels()
@@ -329,42 +663,76 @@ internal class SettingsController(
         if (secondAiModelsFetching) return
         // 使用刚输入的配置，避免首次填写 Key 后还要离开页面才能刷新。
         persistSecondAiInputs()
+        val service = SettingsStore.secondAiService(context)
         val apiKey = SettingsStore.secondAiApiKey(context)
-        if (apiKey.isBlank()) {
+        val baseUrl = SettingsStore.secondAiBaseUrl(context)
+        val format = secondAiFormat()
+
+        if (service == SettingsStore.SERVICE_GEMINI && apiKey.isBlank()) {
             requireSecondAiKey()
             return
         }
-        val baseUrl = SettingsStore.secondAiBaseUrl(context)
-        val format = secondAiFormat()
+        if (service == SettingsStore.SERVICE_CUSTOM && baseUrl.isBlank()) {
+            renderSecondAiModelsHint(true, "请先填写自定义服务地址")
+            views.etSecondAiUrl.requestFocus()
+            return
+        }
+
         val revision = secondAiModelsRevision
         secondAiModelsFetching = true
+        val btnText = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+            context.getString(R.string.btn_refresh_free_models)
+        } else {
+            "拉取模型列表"
+        }
         setSecondAiButtonsBusy(views.btnRefreshSecondAiModels, "正在获取模型列表…")
-        renderSecondAiModelsHint(false, "正在从 ${formatLabel(format)} 服务获取可用模型…")
+        val hintText = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+            "正在拉取 Zen 免费白名单模型…"
+        } else {
+            "正在从 ${formatLabel(format)} 服务获取可用模型…"
+        }
+        renderSecondAiModelsHint(false, hintText)
+
         Thread({
             val result = runCatching {
-                AiTextClient.listModels(
+                val rawModels = AiTextClient.listModels(
                     baseUrl = baseUrl,
                     apiKey = apiKey,
                     format = format,
                 )
+                if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+                    OpenCodeZenCatalog.filterAvailableFreeModels(rawModels)
+                } else {
+                    rawModels
+                }
             }
             postToUi {
                 secondAiModelsFetching = false
                 if (!isHostActive()) return@postToUi
-                clearSecondAiButtonsBusy(views.btnRefreshSecondAiModels, "拉取模型列表")
+                clearSecondAiButtonsBusy(views.btnRefreshSecondAiModels, btnText)
                 if (revision != secondAiModelsRevision) return@postToUi
                 result.onSuccess { models ->
                     cachedSecondAiModels = models
                     if (models.isEmpty()) {
-                        renderSecondAiModelsHint(true, "远端没有返回任何模型，请手动输入模型 ID")
+                        if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+                            renderSecondAiModelsHint(true, "远端未返回任何官方免费白名单模型，当前不可用")
+                        } else {
+                            renderSecondAiModelsHint(true, "远端没有返回任何模型，请手动输入模型 ID")
+                        }
                         return@onSuccess
                     }
-                    renderSecondAiModelsHint(false, "已获取 ${models.size} 个模型")
+                    renderSecondAiModelsHint(false, "已获取 ${models.size} 个可用模型")
                     showModelPicker()
                 }.onFailure { error ->
+                    val rawMsg = error.message ?: "获取失败"
+                    val localized = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+                        OpenCodeZenCatalog.localizeZenError(rawMsg)
+                    } else {
+                        AiTextClient.sanitizeError(rawMsg)
+                    }
                     renderSecondAiModelsHint(
                         true,
-                        "获取失败：${error.message ?: "请检查 API Key 与服务地址"}。也可以手动输入模型 ID",
+                        "获取失败：$localized",
                     )
                 }
             }
@@ -432,14 +800,30 @@ internal class SettingsController(
     private fun testSecondAi() {
         if (secondAiTesting) return
         persistSecondAiInputs()
+        val service = SettingsStore.secondAiService(context)
         val apiKey = SettingsStore.secondAiApiKey(context)
-        if (apiKey.isBlank()) {
-            requireSecondAiKey()
-            return
-        }
         val baseUrl = SettingsStore.secondAiBaseUrl(context)
         val model = SettingsStore.secondAiModel(context)
         val format = secondAiFormat()
+
+        if (service == SettingsStore.SERVICE_CUSTOM) {
+            if (baseUrl.isBlank()) {
+                renderSecondAiTestStatus(true, "自定义服务请先填写服务地址（Base URL）")
+                views.etSecondAiUrl.requestFocus()
+                return
+            }
+            if (model.isBlank()) {
+                renderSecondAiTestStatus(true, "自定义服务请先填写分析模型")
+                views.etSecondAiModel.requestFocus()
+                return
+            }
+        } else if (service == SettingsStore.SERVICE_GEMINI) {
+            if (apiKey.isBlank()) {
+                requireSecondAiKey()
+                return
+            }
+        }
+
         secondAiTesting = true
         setSecondAiButtonsBusy(views.btnTestSecondAi, "正在测试…")
         renderSecondAiTestStatus(false, "正在用 $model 跑一次最短请求…")
@@ -459,9 +843,15 @@ internal class SettingsController(
                 result.onSuccess {
                     renderSecondAiTestStatus(false, "可用：$model 已成功返回结果，分析功能可以使用。")
                 }.onFailure { error ->
+                    val rawMsg = error.message ?: "请检查配置"
+                    val localized = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
+                        OpenCodeZenCatalog.localizeZenError(rawMsg)
+                    } else {
+                        AiTextClient.sanitizeError(rawMsg)
+                    }
                     renderSecondAiTestStatus(
                         true,
-                        "不可用：${error.message ?: "请检查 API 格式、Key、服务地址与模型 ID"}",
+                        "不可用：$localized",
                     )
                 }
             }
@@ -496,7 +886,7 @@ internal class SettingsController(
         views.tvSecondAiTestStatus.apply {
             text = message
             visibility = if (message.isBlank()) View.GONE else View.VISIBLE
-            setTextColor(context.getColor(if (warn) R.color.warning else R.color.text_muted))
+            setTextColor(context.getColor(if (warn) R.color.warning else R.color.brand))
         }
     }
 

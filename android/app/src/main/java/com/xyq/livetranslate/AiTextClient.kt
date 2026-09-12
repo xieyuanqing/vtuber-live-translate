@@ -45,6 +45,7 @@ object AiTextClient {
         apiKey: String,
         model: String,
         format: Format,
+        enableSearch: Boolean = false,
     ): JSONObject {
         when (format) {
             Format.GEMINI -> return generateGemini(
@@ -53,6 +54,7 @@ object AiTextClient {
                 baseUrl,
                 apiKey,
                 model,
+                enableSearch,
             )
             Format.OPENAI -> return generateOpenAI(
                 systemPrompt,
@@ -68,6 +70,9 @@ object AiTextClient {
      * 用当前配置跑一次最小请求，确认 Key、地址、模型三者能真正跑通。
      * 走的是和资料整理完全相同的请求路径，所以能通过就代表分析功能可用。
      *
+     * 验证 ContentContextAnalyzer 所需的 JSON keys/types（sessionContext, note），
+     * 杜绝 optString(...).ifEmpty { "pong" } 假阳性。
+     *
      * 调用方必须自行放到后台线程执行（同步阻塞）。成功返回一句可展示的短文本，
      * 失败抛 [Exception]，异常信息直接给用户看。
      */
@@ -78,14 +83,54 @@ object AiTextClient {
         format: Format,
     ): String {
         val response = generate(
-            systemPrompt = "你是连通性自检端点。只返回 JSON：{\"echo\":\"pong\"}",
-            userPrompt = "ping",
+            systemPrompt = "你是连通性自检端点。只返回严格JSON，格式如下：{\"sessionContext\":\"自检通过\",\"note\":\"分析服务正常\"}",
+            userPrompt = "请进行连通性自检并返回要求的JSON",
             baseUrl = baseUrl,
             apiKey = apiKey,
             model = model,
             format = format,
+            enableSearch = false,
         )
-        return response.optString("echo").trim().take(40).ifEmpty { "pong" }
+        val sessionContext = if (response.has("sessionContext") && !response.isNull("sessionContext")) {
+            response.optString("sessionContext", "").trim()
+        } else {
+            ""
+        }
+        val note = if (response.has("note") && !response.isNull("note")) {
+            response.optString("note", "").trim()
+        } else {
+            ""
+        }
+
+        if (sessionContext.isEmpty() && note.isEmpty()) {
+            error("AI 返回的 JSON 未包含有效的 sessionContext 或 note 字段")
+        }
+        return note.ifEmpty { sessionContext }.take(50)
+    }
+
+    /**
+     * 从上游错误响应体里取出可判别的错误类型与说明。
+     *
+     * 只保留结构化字段（OpenAI 兼容的 error.type / error.message，Gemini 的 error.status /
+     * error.message），不回抛整个响应体：调用方需要这些字段才能把「服务自身的接入限制」
+     * 和「用户填错 Key」区分开，否则只能显示误导性的通用提示。
+     */
+    internal fun extractUpstreamError(body: String): String {
+        if (body.isBlank()) return ""
+        val error = runCatching { JSONObject(body).optJSONObject("error") }.getOrNull() ?: return ""
+        val type = error.optString("type").ifEmpty { error.optString("status") }
+        val message = error.optString("message")
+        return listOf(type, message).filter { it.isNotEmpty() }.joinToString("：").take(160)
+    }
+
+    /** 对外暴露的错误信息脱敏：不暴露 API Key 与冗余服务端响应体 */
+    fun sanitizeError(message: String?): String {
+        if (message.isNullOrBlank()) return "请求失败"
+        return message
+            .replace(Regex("(?i)key=[^&\\s]+"), "key=***")
+            .replace(Regex("(?i)bearer\\s+[^\\s]+"), "Bearer ***")
+            .replace(Regex("AIza[0-9A-Za-z-_]{35}"), "AIza***")
+            .take(120)
     }
 
     /**
@@ -184,6 +229,7 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
+        enableSearch: Boolean = false,
     ): JSONObject {
         val modelId = model.removePrefix("models/")
         val url = normalizeBaseUrl(baseUrl) + "/v1beta/models/${modelId}:generateContent?key=$apiKey"
@@ -204,11 +250,14 @@ object AiTextClient {
                     .put("responseMimeType", "application/json")
                     .put("temperature", 0.2)
             )
-            // 开启 Google Search grounding，补充用户当前主题或视频的最新公开背景
-            .put(
+
+        if (enableSearch) {
+            // 可选开启 Google Search grounding，默认关闭以保障免费档与结构化 JSON 兼容
+            bodyObj.put(
                 "tools", org.json.JSONArray()
                     .put(JSONObject().put("googleSearch", JSONObject()))
             )
+        }
 
         if (systemPrompt.isNotBlank()) {
             bodyObj.put(
@@ -227,8 +276,15 @@ object AiTextClient {
         http.newCall(req).execute().use { resp ->
             val body = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) {
-                Log.w(TAG, "Gemini API error ${resp.code}: ${body.take(300)}")
-                error("AI 服务返回错误 ${resp.code}，请检查 API Key 和模型 ID 是否正确")
+                Log.w(TAG, "Gemini API error ${resp.code}: ${sanitizeError(body)}")
+                val upstream = extractUpstreamError(body)
+                error(
+                    if (upstream.isEmpty()) {
+                        "AI 服务返回错误 ${resp.code}，请检查 API Key 和模型 ID 是否正确"
+                    } else {
+                        "AI 服务返回错误 ${resp.code}：${sanitizeError(upstream)}"
+                    }
+                )
             }
             return parseGeminiResponse(body)
         }
@@ -293,8 +349,15 @@ object AiTextClient {
         http.newCall(req).execute().use { resp ->
             val body = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) {
-                Log.w(TAG, "OpenAI API error ${resp.code}: ${body.take(300)}")
-                error("AI 服务返回错误 ${resp.code}，请检查 API Key 和服务地址是否正确")
+                Log.w(TAG, "OpenAI API error ${resp.code}: ${sanitizeError(body)}")
+                val upstream = extractUpstreamError(body)
+                error(
+                    if (upstream.isEmpty()) {
+                        "AI 服务返回错误 ${resp.code}，请检查 API Key 和服务地址是否正确"
+                    } else {
+                        "AI 服务返回错误 ${resp.code}：${sanitizeError(upstream)}"
+                    }
+                )
             }
             return parseOpenAIResponse(body)
         }

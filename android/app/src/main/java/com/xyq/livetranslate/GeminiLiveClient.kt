@@ -2,6 +2,7 @@ package com.xyq.livetranslate
 
 import android.util.Base64
 import android.util.Log
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -47,13 +48,191 @@ class GeminiLiveClient(
 
     companion object {
         private const val TAG = "GeminiLive"
-        private const val MODEL = "models/gemini-3.5-live-translate-preview"
-        private const val WS_PATH =
+        const val MODEL = "models/gemini-3.5-live-translate-preview"
+        const val WS_PATH =
             "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
         private const val MAX_QUEUE = 200      // 约 20 秒积压上限，超出丢最旧
         private const val OVERLAP_CHUNKS = 10  // 异常断线重发最近 1 秒
         private const val HANDSHAKE_TIMEOUT_MS = 12_000L // 连上后多久没 setupComplete 就判握手卡死
 
+        /**
+         * 统一构造 Live WebSocket 端点 URL，对 API Key 进行安全 query 编码。
+         */
+        fun buildWebSocketUrl(baseUrl: String, apiKey: String): String {
+            val key = SettingsStore.extractFirstApiKey(apiKey)
+            val trimmed = baseUrl.trim().trimEnd('/')
+            val httpBase = when {
+                trimmed.startsWith("wss://", ignoreCase = true) -> "https://" + trimmed.substring(6)
+                trimmed.startsWith("ws://", ignoreCase = true) -> "http://" + trimmed.substring(5)
+                !trimmed.startsWith("http://", ignoreCase = true) && !trimmed.startsWith("https://", ignoreCase = true) -> "https://$trimmed"
+                else -> trimmed
+            }
+            val parsed = httpBase.toHttpUrlOrNull()
+                ?: okhttp3.HttpUrl.Builder().scheme("https").host("generativelanguage.googleapis.com").build()
+            return parsed.newBuilder()
+                .encodedPath(WS_PATH)
+                .removeAllQueryParameters("key")
+                .addQueryParameter("key", key)
+                .build()
+                .toString()
+        }
+
+        /**
+         * 构造符合 Gemini Live Translate 协议的 setup 消息。
+         * 字段层级严格依赖官方与实测契约，禁止漂移。
+         */
+        fun buildSetupJson(
+            model: String = MODEL,
+            targetLang: String = TranslationPlan.DEFAULT_TARGET_LANGUAGE,
+            echoTargetLanguage: Boolean = true,
+            prompt: String = "",
+        ): String {
+            val setup = JSONObject()
+                .put("model", model)
+                .put(
+                    "generationConfig", JSONObject()
+                        .put("responseModalities", JSONArray().put("AUDIO"))
+                        .put(
+                            "translationConfig", JSONObject()
+                                .put("targetLanguageCode", targetLang)
+                                .put("echoTargetLanguage", echoTargetLanguage)
+                        )
+                )
+                .put("inputAudioTranscription", JSONObject())
+                .put("outputAudioTranscription", JSONObject())
+            if (prompt.isNotBlank()) {
+                setup.put(
+                    "systemInstruction",
+                    JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))
+                )
+            }
+            return JSONObject().put("setup", setup).toString()
+        }
+
+        /**
+         * 校验 Live 模型 WebSocket 握手连通性。
+         * 必须复用真实 LiveClient 的模型/协议/buildSetupJson，确认收到 setupComplete 才返回成功。
+         * 不进行普通 REST 文本请求，不污染运行中会话，不需要麦克风权限。
+         * 调用方必须在后台线程调用（同步等待）。
+         */
+        fun probeLive(
+            baseUrl: String,
+            apiKey: String,
+            timeoutMs: Long = 10_000L,
+            client: OkHttpClient? = null,
+        ): String {
+            val key = SettingsStore.extractFirstApiKey(apiKey)
+            if (key.isEmpty()) {
+                error("未填写 API Key")
+            }
+
+            val http = client ?: OkHttpClient.Builder()
+                .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .build()
+
+            val url = buildWebSocketUrl(baseUrl, key)
+            val request = Request.Builder().url(url).build()
+
+            val latch = java.util.concurrent.CountDownLatch(1)
+            val completedOnce = java.util.concurrent.atomic.AtomicBoolean(false)
+            val wsRef = java.util.concurrent.atomic.AtomicReference<WebSocket?>()
+            var failureMessage: String? = null
+            var success = false
+
+            val listener = object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    val setupJson = buildSetupJson()
+                    webSocket.send(setupJson)
+                }
+
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    val o = try {
+                        JSONObject(text)
+                    } catch (e: Exception) {
+                        return
+                    }
+                    if (o.optJSONObject("setupComplete") != null) {
+                        if (completedOnce.compareAndSet(false, true)) {
+                            success = true
+                            runCatching { webSocket.close(1000, "probe complete") }
+                            latch.countDown()
+                        }
+                        return
+                    }
+                    if (o.has("error")) {
+                        if (completedOnce.compareAndSet(false, true)) {
+                            failureMessage = "Live 连接被服务端拒绝（setup 错误）"
+                            runCatching { webSocket.close(1000, "probe error") }
+                            latch.countDown()
+                        }
+                        return
+                    }
+                }
+
+                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                    onMessage(webSocket, bytes.utf8())
+                }
+
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    if (completedOnce.compareAndSet(false, true)) {
+                        failureMessage = "服务端关闭连接（code=$code）"
+                        runCatching { webSocket.close(1000, null) }
+                        latch.countDown()
+                    }
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    if (completedOnce.compareAndSet(false, true)) {
+                        failureMessage = "连接已关闭（code=$code）"
+                        latch.countDown()
+                    }
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    if (completedOnce.compareAndSet(false, true)) {
+                        failureMessage = "Live 连接失败（网络或服务端异常）"
+                        latch.countDown()
+                    }
+                }
+            }
+
+            try {
+                val createdWs = http.newWebSocket(request, listener)
+                wsRef.set(createdWs)
+
+                val completed = try {
+                    latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+                } catch (e: InterruptedException) {
+                    if (completedOnce.compareAndSet(false, true)) {
+                        failureMessage = "Live 测试被中断"
+                    }
+                    false
+                }
+
+                if (!completed) {
+                    if (completedOnce.compareAndSet(false, true)) {
+                        failureMessage = "Live 连接超时（${timeoutMs / 1000} 秒内未收到 setupComplete）"
+                    }
+                }
+
+                val err = failureMessage
+                if (err != null && !success) {
+                    error(err)
+                }
+                if (!success) {
+                    error("未收到 setupComplete 握手确认")
+                }
+
+                return "Live 模型连接通过（未测试音频翻译）"
+            } finally {
+                runCatching { wsRef.get()?.cancel() }
+                if (client == null) {
+                    http.dispatcher.executorService.shutdown()
+                    http.connectionPool.evictAll()
+                }
+            }
+        }
     }
 
     private val http = OkHttpClient.Builder()
@@ -129,7 +308,7 @@ class GeminiLiveClient(
             listener.onState("error:未配置 API key")
             return
         }
-        val url = baseUrl.trimEnd('/') + WS_PATH + "?key=" + key
+        val url = buildWebSocketUrl(baseUrl, key)
         val request = Request.Builder().url(url).build()
         ws = http.newWebSocket(request, WsListener(gen))
         armWatchdog(gen)
@@ -249,28 +428,13 @@ class GeminiLiveClient(
         // modelTurn 里的翻译语音块直接忽略，不播放
     }
 
-    private fun buildSetupJson(): String {
-        val setup = JSONObject()
-            .put("model", MODEL)
-            .put(
-                "generationConfig", JSONObject()
-                    .put("responseModalities", JSONArray().put("AUDIO"))
-                    .put(
-                        "translationConfig", JSONObject()
-                            .put("targetLanguageCode", targetLang)
-                            .put("echoTargetLanguage", echoTargetLanguage)
-                    )
-            )
-            .put("inputAudioTranscription", JSONObject())
-            .put("outputAudioTranscription", JSONObject())
-        if (prompt.isNotBlank()) {
-            setup.put(
-                "systemInstruction",
-                JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))
-            )
-        }
-        return JSONObject().put("setup", setup).toString()
-    }
+    private fun buildSetupJson(): String =
+        Companion.buildSetupJson(
+            model = MODEL,
+            targetLang = targetLang,
+            echoTargetLanguage = echoTargetLanguage,
+            prompt = prompt,
+        )
 
     private fun senderLoop() {
         while (running.get()) {
