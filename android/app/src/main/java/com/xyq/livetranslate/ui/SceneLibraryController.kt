@@ -78,13 +78,13 @@ internal class SceneLibraryController(
         views.newSceneButton.setOnClickListener { showSceneEditor() }
         views.resetButton.setOnClickListener {
             MaterialAlertDialogBuilder(context)
-                .setTitle("恢复默认场景？")
-                .setMessage("会替换当前模式的全部场景和默认选择；正在使用已删除场景的模式会回退到默认场景。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("恢复") { _, _ ->
+                .setTitle(context.getString(R.string.rt_dialog_reset_scenes_title))
+                .setMessage(context.getString(R.string.rt_dialog_reset_scenes_message))
+                .setNegativeButton(context.getString(R.string.rt_action_cancel), null)
+                .setPositiveButton(context.getString(R.string.rt_action_reset)) { _, _ ->
                     SceneLibraryStore.reset(context, mode)
                     notifySceneChanged()
-                    toast("已恢复${mode.label}默认场景")
+                    toast(context.getString(R.string.rt_toast_scenes_reset, modeLocalized(mode)))
                 }
                 .show()
         }
@@ -136,9 +136,9 @@ internal class SceneLibraryController(
         card.setOnClickListener { useScene(scene) }
         card.findViewById<ImageButton>(R.id.btnSceneMore).setOnClickListener { anchor ->
             PopupMenu(context, anchor).apply {
-                menu.add(0, 1, 0, "编辑")
-                if (!isDefault) menu.add(0, 2, 1, "设为默认")
-                menu.add(0, 3, 2, "删除")
+                menu.add(0, 1, 0, context.getString(R.string.rt_action_edit))
+                if (!isDefault) menu.add(0, 2, 1, context.getString(R.string.rt_action_set_default))
+                menu.add(0, 3, 2, context.getString(R.string.rt_action_delete))
                 setOnMenuItemClickListener { item ->
                     when (item.itemId) {
                         1 -> {
@@ -165,18 +165,18 @@ internal class SceneLibraryController(
     private fun useScene(scene: ScenePromptPreset) {
         val draft = TranslationPlanStore.loadDraft(context, mode)
         if (draft.scenePresetId == scene.id) {
-            toast("当前已使用：${scene.label}")
+            toast(context.getString(R.string.rt_toast_scene_already_in_use, scene.label))
             return
         }
         TranslationPlanStore.saveDraft(context, draft.copy(scenePresetId = scene.id))
         notifySceneChanged()
-        toast("已使用：${scene.label}")
+        toast(context.getString(R.string.rt_toast_scene_switched, scene.label))
     }
 
     /** 「设为默认」只改以后的默认项；本次用哪个场景由「使用」单独决定。 */
     private fun setDefaultScene(scene: ScenePromptPreset) {
         if (!SceneLibraryStore.setDefault(context, mode, scene.id)) {
-            toast("场景库数据异常，请先恢复模板")
+            toast(context.getString(R.string.rt_scene_data_corrupt_hint))
             return
         }
         val inUse = SceneLibraryStore.resolve(
@@ -187,27 +187,27 @@ internal class SceneLibraryController(
         notifySceneChanged()
         toast(
             if (inUse.id == scene.id) {
-                "已设为${mode.label}默认场景"
+                context.getString(R.string.rt_toast_set_default_scene, modeLocalized(mode))
             } else {
-                "已设为${mode.label}默认场景，本次仍使用「${inUse.label}」"
+                context.getString(R.string.rt_toast_set_default_scene_kept_current, modeLocalized(mode), inUse.label)
             },
         )
     }
 
     private fun confirmDeleteScene(scene: ScenePromptPreset) {
         MaterialAlertDialogBuilder(context)
-            .setTitle("删除“${scene.label}”？")
-            .setMessage("正在使用该场景的模式下次启动会回退到当前默认场景。")
-            .setNegativeButton("取消", null)
-            .setPositiveButton("删除") { _, _ ->
+            .setTitle(context.getString(R.string.rt_dialog_delete_scene_title, scene.label))
+            .setMessage(context.getString(R.string.rt_dialog_delete_scene_message))
+            .setNegativeButton(context.getString(R.string.rt_action_cancel), null)
+            .setPositiveButton(context.getString(R.string.rt_action_delete)) { _, _ ->
                 if (SceneLibraryStore.delete(context, mode, scene.id)) {
                     notifySceneChanged()
-                    toast("已删除：${scene.label}")
+                    toast(context.getString(R.string.rt_toast_scene_deleted, scene.label))
                 } else {
                     val message = if (SceneLibraryStore.list(context, mode).size <= 1) {
-                        "每种模式至少保留一个场景"
+                        context.getString(R.string.rt_toast_keep_at_least_one_scene)
                     } else {
-                        "场景库数据异常，请先恢复模板"
+                        context.getString(R.string.rt_scene_data_corrupt_hint)
                     }
                     toast(message)
                 }
@@ -225,17 +225,23 @@ internal class SceneLibraryController(
         prompt.setText(existing?.instruction.orEmpty())
 
         val dialog = MaterialAlertDialogBuilder(context)
-            .setTitle(if (existing == null) "新建${mode.label}场景" else "编辑场景")
+            .setTitle(
+                if (existing == null) {
+                    context.getString(R.string.rt_dialog_new_scene_title, modeLocalized(mode))
+                } else {
+                    context.getString(R.string.rt_dialog_edit_scene_title)
+                }
+            )
             .setView(content)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("保存", null)
+            .setNegativeButton(context.getString(R.string.rt_action_cancel), null)
+            .setPositiveButton(context.getString(R.string.rt_action_save), null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val label = name.text?.toString().orEmpty().trim()
                 val instruction = prompt.text?.toString().orEmpty().trim()
-                nameLayout.error = if (label.isEmpty()) "请填写场景名称" else null
-                promptLayout.error = if (instruction.isEmpty()) "请填写场景提示词" else null
+                nameLayout.error = if (label.isEmpty()) context.getString(R.string.rt_error_fill_scene_name) else null
+                promptLayout.error = if (instruction.isEmpty()) context.getString(R.string.rt_error_fill_scene_prompt) else null
                 if (label.isEmpty() || instruction.isEmpty()) return@setOnClickListener
 
                 val saved = if (existing == null) {
@@ -244,7 +250,7 @@ internal class SceneLibraryController(
                     if (SceneLibraryStore.update(
                             context,
                             mode,
-                            existing.copy(label = label, instruction = instruction),
+                            existing.copy(labelText = label, instruction = instruction),
                         )
                     ) {
                         existing
@@ -253,7 +259,7 @@ internal class SceneLibraryController(
                     }
                 }
                 if (saved == null) {
-                    promptLayout.error = "场景库数据异常，请先恢复模板"
+                    promptLayout.error = context.getString(R.string.rt_scene_data_corrupt_hint)
                     return@setOnClickListener
                 }
                 notifySceneChanged()
@@ -262,6 +268,13 @@ internal class SceneLibraryController(
         }
         dialog.show()
     }
+
+    private fun modeLocalized(m: TranslationMode): String =
+        if (m == TranslationMode.INTERPRETATION) {
+            context.getString(R.string.rt_mode_interpretation)
+        } else {
+            context.getString(R.string.rt_mode_video)
+        }
 
     private fun notifySceneChanged() {
         onSceneChanged(mode)

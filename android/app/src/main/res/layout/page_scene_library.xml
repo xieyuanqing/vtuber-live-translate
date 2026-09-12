@@ -32,22 +32,24 @@
                     android:id="@+id/btnSceneLibraryInterp"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target"
                     android:layout_weight="1"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="同传场景"
+                    android:text="@string/scene_library_tab_interp"
                     android:textAllCaps="false" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSceneLibraryVideo"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target"
                     android:layout_weight="1"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="视频场景"
+                    android:text="@string/scene_library_tab_video"
                     android:textAllCaps="false" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -65,7 +67,7 @@
                 android:layout_height="@dimen/touch_target"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="@dimen/space_8"
-                android:text="恢复该模式默认场景"
+                android:text="@string/scene_library_btn_reset_defaults"
                 android:textAllCaps="false"
                 android:textColor="@color/text_muted"
                 android:textSize="12sp" />
@@ -78,7 +80,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/space_16"
-        android:text="新建场景"
+        android:text="@string/scene_library_btn_new_scene"
         android:textColor="@color/brand_on"
         app:backgroundTint="@color/brand"
         app:icon="@drawable/ic_add_24"

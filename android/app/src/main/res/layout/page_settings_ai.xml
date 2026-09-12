@@ -32,7 +32,7 @@
                     android:layout_height="40dp"
                     android:background="@drawable/bg_history_badge"
                     android:gravity="center"
-                    android:text="AI"
+                    android:text="@string/settings_ai_title"
                     android:textColor="@color/brand"
                     android:textStyle="bold"/>
                 <LinearLayout
@@ -44,7 +44,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="背景分析 AI（可选）"
+                        android:text="@string/settings_ai_card_title"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold"/>
@@ -52,7 +52,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="用于整理视频资料和补充背景。不配置也能使用实时翻译。"
+                        android:text="@string/settings_ai_card_desc"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp"/>
                 </LinearLayout>
@@ -61,7 +61,7 @@
         <TextView
             style="@style/LuminousSectionLabel"
             android:layout_marginTop="@dimen/space_24"
-            android:text="连接配置"/>
+            android:text="@string/settings_ai_section_connection"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousCard"
             android:layout_width="match_parent"
@@ -75,37 +75,208 @@
                 <TextView
                     style="@style/FieldLabel"
                     android:layout_marginTop="0dp"
-                    android:text="API 格式"/>
+                    android:text="@string/service_label"/>
                 <com.google.android.material.button.MaterialButtonToggleGroup
-                    android:id="@+id/toggleSecondAiFormat"
+                    android:id="@+id/toggleSecondAiService"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
                     app:selectionRequired="true"
                     app:singleSelection="true">
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSecondAiFormatGemini"
+                        android:id="@+id/btnSecondAiServiceGemini"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="@dimen/touch_target"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
-                        android:text="Gemini 原生"
+                        android:text="@string/service_gemini"
                         android:textAllCaps="false"/>
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSecondAiFormatOpenAi"
+                        android:id="@+id/btnSecondAiServiceZen"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="@dimen/touch_target"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
+                        android:layout_weight="1.2"
+                        android:text="@string/service_opencode_zen"
+                        android:textAllCaps="false"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSecondAiServiceCustom"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
-                        android:text="OpenAI 兼容"
+                        android:text="@string/service_custom"
                         android:textAllCaps="false"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
+                <LinearLayout
+                    android:id="@+id/containerGeminiActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:orientation="vertical">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUseTranslateKeyForSecondAi"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="40dp"
+                        android:text="@string/btn_use_translate_gemini_key"
+                        android:textSize="13sp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecondAiApplyKey"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_apply_api_key"
+                            android:textSize="13sp"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecondAiTutorial"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_view_api_key_tutorial"
+                            android:textSize="13sp"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPasteSecondAiKey"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_paste_key"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="@string/tv_free_quota_hint"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/containerZenInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:background="@drawable/bg_history_context"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_12"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/zen_info_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="@string/zen_limitation_warning"
+                        android:textColor="@color/warning"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="@string/zen_info_summary"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="@string/zen_privacy_notice"
+                        android:textColor="@color/warning"
+                        android:textSize="11sp"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/grid_4"
+                        android:text="@string/zen_isolation_note"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:orientation="horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnZenDocLink"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:minHeight="40dp"
+                            android:text="@string/zen_view_docs"
+                            android:textSize="12sp"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecondAiSwitchService"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_switch_service"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/containerCustomFormat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:layout_marginTop="0dp"
+                        android:text="@string/settings_ai_format_label"/>
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleSecondAiFormat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecondAiFormatGemini"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:minHeight="@dimen/touch_target"
+                            android:layout_weight="1"
+                            android:text="@string/settings_ai_format_gemini"
+                            android:textAllCaps="false"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecondAiFormatOpenAi"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:minHeight="@dimen/touch_target"
+                            android:layout_weight="1"
+                            android:text="@string/settings_ai_format_openai"
+                            android:textAllCaps="false"/>
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+                </LinearLayout>
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSecondAiKey"
                     style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="API Key"
+                    android:hint="@string/hint_api_key"
                     app:endIconMode="password_toggle"
-                    app:helperText="可与翻译服务使用相同 Key">
+                    app:helperText="@string/helper_second_ai_key">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSecondAiKey"
                         android:layout_width="match_parent"
@@ -115,10 +286,11 @@
                         android:maxLines="1"/>
                 </com.google.android.material.textfield.TextInputLayout>
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSecondAiUrl"
                     style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="服务地址（Base URL）"
-                    app:helperText="填到域名即可，末尾多写的 /v1 会自动忽略">
+                    android:hint="@string/hint_base_url"
+                    app:helperText="@string/helper_second_ai_url">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSecondAiUrl"
                         android:layout_width="match_parent"
@@ -128,10 +300,11 @@
                         android:maxLines="2"/>
                 </com.google.android.material.textfield.TextInputLayout>
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilSecondAiModel"
                     style="@style/Field"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="分析模型"
-                    app:helperText="可直接手动输入模型 ID">
+                    android:hint="@string/hint_analysis_model"
+                    app:helperText="@string/helper_second_ai_model">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSecondAiModel"
                         android:layout_width="match_parent"
@@ -146,7 +319,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/touch_target"
                     android:layout_marginTop="@dimen/space_8"
-                    android:text="拉取模型列表"/>
+                    android:text="@string/btn_fetch_models"/>
                 <TextView
                     android:id="@+id/tvSecondAiModelsHint"
                     android:layout_width="match_parent"
@@ -160,7 +333,7 @@
         <TextView
             style="@style/LuminousSectionLabel"
             android:layout_marginTop="@dimen/space_24"
-            android:text="连通性检查"/>
+            android:text="@string/settings_ai_section_check"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousCard"
             android:layout_width="match_parent"
@@ -174,7 +347,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="拉到模型列表不等于选中的模型能用。这里会用当前配置真跑一次最短请求。"
+                    android:text="@string/settings_ai_check_desc"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"/>
                 <com.google.android.material.button.MaterialButton
@@ -183,7 +356,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/touch_target"
                     android:layout_marginTop="@dimen/space_12"
-                    android:text="测试分析服务"/>
+                    android:text="@string/btn_test_second_ai"/>
                 <TextView
                     android:id="@+id/tvSecondAiTestStatus"
                     android:layout_width="match_parent"
@@ -199,7 +372,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
             android:gravity="center"
-            android:text="凭据仅保存在本机应用数据中"
+            android:text="@string/settings_ai_privacy_note"
             android:textColor="@color/text_muted"
             android:textSize="12sp"/>
     </LinearLayout>

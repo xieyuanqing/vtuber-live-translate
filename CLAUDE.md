@@ -11,7 +11,13 @@
 - 定位是低延迟理解辅助，不追求发布级字幕，不做商店分发。
 - 默认运行形态仍是纯本地：用户填自己的 API Key，无需任何后端。
 
-当前版本：`2.5.0` / versionCode `37`。
+当前版本：`2.6.0` / versionCode `38`。
+
+界面语言与翻译方向是两件独立的事：`AppLocale` 控制界面语言（跟随系统 / 简体中文 / English），
+翻译方向由每模式的 `TranslationPlan` 独立保存。**切换界面语言绝不能改变发给模型的 prompt**——
+`TranslationLanguage.promptLabel`、`TranslationMode.promptLabel`、`ScenePromptPreset.promptLabel`
+是写进 systemInstruction 的固定中文名，`label` 才是跟随界面语言的展示名，两者不可混用。
+`PromptLocaleIndependenceTest` 锁住这条边界。
 
 ## 不可破坏的产品边界
 

@@ -46,10 +46,10 @@ internal class UpdateController(
 
     fun check(manual: Boolean) {
         if (!busy.compareAndSet(false, true)) {
-            if (manual) toast("正在检查或下载更新…")
+            if (manual) toast(activity.getString(R.string.rt_toast_checking_or_downloading_update))
             return
         }
-        if (manual) toast("正在检查更新…")
+        if (manual) toast(activity.getString(R.string.rt_toast_checking_update))
         Thread({
             val current = currentVersionCode()
             val ignored = SettingsStore.ignoredUpdateVersionCode(activity)
@@ -66,10 +66,10 @@ internal class UpdateController(
         when (result) {
             is UpdateCheckResult.Available -> showUpdateDialog(result.info)
             is UpdateCheckResult.UpToDate -> if (manual) {
-                toast("已是最新版本 ${currentVersionName()}（${result.currentCode}）")
+                toast(activity.getString(R.string.rt_toast_up_to_date, currentVersionName(), result.currentCode))
             }
             UpdateCheckResult.Ignored -> if (manual) {
-                toast("已忽略此版本；可在关于页再次检查")
+                toast(activity.getString(R.string.rt_toast_version_ignored))
             }
             is UpdateCheckResult.Failed -> if (manual) {
                 toast(result.message)
@@ -86,23 +86,22 @@ internal class UpdateController(
 
     private fun showUpdateDialog(info: AppUpdateInfo) {
         val message = buildString {
-            append("当前 ${currentVersionName()}（${currentVersionCode()}）\n")
-            append("最新 ${info.versionName}（${info.versionCode}）\n\n")
+            append(activity.getString(R.string.rt_update_dialog_version_info, currentVersionName(), currentVersionCode(), info.versionName, info.versionCode))
             if (info.notes.isNotBlank()) append(info.notes.trim())
-            else append("有新版本可用。")
+            else append(activity.getString(R.string.rt_update_dialog_default_notes))
         }
         MaterialAlertDialogBuilder(activity)
-            .setTitle(info.title.ifBlank { "发现新版本 ${info.versionName}" })
+            .setTitle(info.title.ifBlank { activity.getString(R.string.rt_update_dialog_title, info.versionName) })
             .setMessage(message)
-            .setPositiveButton("下载并安装") { _, _ -> startDownload(info) }
-            .setNeutralButton("忽略此版本") { _, _ ->
+            .setPositiveButton(activity.getString(R.string.rt_update_action_download_and_install)) { _, _ -> startDownload(info) }
+            .setNeutralButton(activity.getString(R.string.rt_update_action_ignore_version)) { _, _ ->
                 SettingsStore.saveIgnoredUpdateVersionCode(activity, info.versionCode)
-                toast("已忽略 ${info.versionName}")
+                toast(activity.getString(R.string.rt_toast_ignored_version, info.versionName))
             }
-            .setNegativeButton("不再提醒") { _, _ ->
+            .setNegativeButton(activity.getString(R.string.rt_update_action_dont_remind)) { _, _ ->
                 SettingsStore.saveAutoCheckUpdate(activity, false)
                 onStatusChanged?.invoke(lastFailureMessage)
-                toast("已关闭启动时自动检查；可在关于页手动检查")
+                toast(activity.getString(R.string.rt_toast_auto_check_disabled_hint))
             }
             .setCancelable(true)
             .show()
@@ -110,16 +109,16 @@ internal class UpdateController(
 
     private fun startDownload(info: AppUpdateInfo) {
         if (!busy.compareAndSet(false, true)) {
-            toast("已有下载任务进行中")
+            toast(activity.getString(R.string.rt_toast_download_in_progress))
             return
         }
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_update_progress, null)
         val tv = view.findViewById<TextView>(R.id.tvUpdateProgress)
         val bar = view.findViewById<ProgressBar>(R.id.pbUpdateProgress)
-        tv.text = "准备下载…"
+        tv.text = activity.getString(R.string.rt_update_preparing_download)
         bar.isIndeterminate = true
         val dialog = MaterialAlertDialogBuilder(activity)
-            .setTitle("下载更新")
+            .setTitle(activity.getString(R.string.rt_update_download_dialog_title))
             .setView(view)
             .setCancelable(false)
             .create()
@@ -135,11 +134,11 @@ internal class UpdateController(
                             bar.isIndeterminate = false
                             bar.max = 100
                             bar.progress = pct
-                            tv.text = "源 ${progress.sourceIndex}/${progress.sourceTotal} · ${progress.sourceLabel}\n$pct%"
+                            tv.text = activity.getString(R.string.rt_update_progress_pct, progress.sourceIndex, progress.sourceTotal, progress.sourceLabel, pct)
                         } else {
                             bar.isIndeterminate = true
                             val kb = progress.bytesRead / 1024
-                            tv.text = "源 ${progress.sourceIndex}/${progress.sourceTotal} · ${progress.sourceLabel}\n已下载 ${kb} KB"
+                            tv.text = activity.getString(R.string.rt_update_progress_kb, progress.sourceIndex, progress.sourceTotal, progress.sourceLabel, kb)
                         }
                     }
                 }
@@ -154,7 +153,7 @@ internal class UpdateController(
                     busy.set(false)
                     dialog.dismiss()
                     if (!isHostActive()) return@postToUi
-                    toast("下载失败：${e.message ?: "未知错误"}")
+                    toast(activity.getString(R.string.rt_update_download_failed, e.message ?: activity.getString(R.string.rt_unknown_error)))
                 }
             }
         }, "update-download").start()
@@ -163,17 +162,17 @@ internal class UpdateController(
     fun installApk(file: java.io.File) {
         if (!UpdateInstaller.canRequestPackageInstalls(activity)) {
             pendingInstallApk = file
-            toast("请允许安装未知应用，返回后将继续安装")
+            toast(activity.getString(R.string.rt_update_toast_unknown_sources_required))
             runCatching {
                 launchIntent(UpdateInstaller.unknownSourcesSettingsIntent(activity))
-            }.onFailure { toast("无法打开安装权限设置") }
+            }.onFailure { toast(activity.getString(R.string.rt_update_toast_cannot_open_install_settings)) }
             return
         }
         pendingInstallApk = null
         runCatching {
             launchIntent(UpdateInstaller.installIntent(activity, file))
         }.onFailure {
-            toast("无法打开安装界面：${it.message ?: "未知错误"}")
+            toast(activity.getString(R.string.rt_update_toast_cannot_open_installer, it.message ?: activity.getString(R.string.rt_unknown_error)))
         }
     }
 

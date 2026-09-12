@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General & Actions -->
+    <!-- Translation language display names: UI only; language codes never change with app locale -->
+    <string name="rt_lang_auto">Auto detect</string>
+    <string name="rt_lang_zh">Chinese</string>
+    <string name="rt_lang_zh_hans">Simplified Chinese</string>
+    <string name="rt_lang_zh_hant">Traditional Chinese</string>
+    <string name="rt_lang_en">English</string>
+    <string name="rt_lang_ja">Japanese</string>
+    <string name="rt_lang_ko">Korean</string>
+    <string name="rt_lang_es">Spanish</string>
+    <string name="rt_lang_fr">French</string>
+    <string name="rt_lang_de">German</string>
+    <string name="rt_lang_ru">Russian</string>
+    <!-- Default scene template names: affect first-time setup and template restore only -->
+    <string name="rt_scene_general">General</string>
+    <string name="rt_scene_meeting">Meeting</string>
+    <string name="rt_scene_classroom">Classroom</string>
+    <string name="rt_scene_interview">Interview</string>
+    <string name="rt_scene_travel">Travel</string>
+    <string name="rt_scene_general_video">General video</string>
+    <string name="rt_scene_livestream">Live stream</string>
+    <string name="rt_scene_anime">Anime</string>
+    <string name="rt_scene_game">Games</string>
+    <string name="rt_scene_news">News</string>
+    <string name="rt_scene_course">Course</string>
+    <string name="rt_mode_interpretation">Interpretation</string>
+    <string name="rt_mode_video">Video Subtitles</string>
+    <string name="rt_action_cancel">Cancel</string>
+    <string name="rt_action_delete">Delete</string>
+    <string name="rt_action_save">Save</string>
+    <string name="rt_action_close">Close</string>
+    <string name="rt_action_reset">Reset</string>
+    <string name="rt_action_edit">Edit</string>
+    <string name="rt_action_set_default">Set as default</string>
+    <string name="rt_action_pause">Pause</string>
+    <string name="rt_action_resume">Resume</string>
+    <string name="rt_action_stop">Stop</string>
+    <string name="rt_action_expand_simple">Expand</string>
+    <string name="rt_action_collapse_simple">Collapse</string>
+    <string name="rt_action_refetch">Refetch</string>
+    <string name="rt_unknown_error">Unknown error</string>
+    <string name="rt_connection_failed">Connection failed</string>
+    <string name="rt_testing_ellipsis">Testing…</string>
+    <string name="rt_fetch_failed">Fetch failed</string>
+
+    <!-- SubtitleOverlay -->
+    <string name="rt_overlay_status_live">LiveTranslate · Live</string>
+    <string name="rt_overlay_status_paused">LiveTranslate · Paused</string>
+    <string name="rt_overlay_action_pause">Pause translation</string>
+    <string name="rt_overlay_action_resume">Resume translation</string>
+    <string name="rt_overlay_action_open">Open app</string>
+    <string name="rt_overlay_action_collapse">Collapse subtitles to screen edge; translation continues</string>
+    <string name="rt_overlay_action_expand">Expand subtitle overlay</string>
+    <string name="rt_overlay_waiting_subtitles">Waiting for subtitles…</string>
+    <string name="rt_overlay_handle_collapsed_left">TL\n›</string>
+    <string name="rt_overlay_handle_collapsed_right">‹\nTL</string>
+
+    <!-- CaptureService Notifications -->
+    <string name="rt_notif_channel_name">Live Translation</string>
+    <string name="rt_notif_title_mic">Interpretation Running</string>
+    <string name="rt_notif_title_video">Video Subtitles Running</string>
+    <string name="rt_notif_desc_mic">Transcribing and translating microphone input live</string>
+    <string name="rt_notif_desc_video">Capturing system audio and translating live</string>
+    <string name="rt_notif_action_stop">Stop</string>
+
+    <!-- UiRuntimeStatus -->
+    <string name="rt_status_paused">Paused</string>
+    <string name="rt_status_translating">Translating</string>
+    <string name="rt_status_error">Connection error</string>
+    <string name="rt_status_rotating">Switching connection</string>
+    <string name="rt_status_preparing">Preparing connection</string>
+
+    <!-- MainNavigator Subpage Titles -->
+    <string name="rt_subpage_history_detail">History Details</string>
+    <string name="rt_subpage_settings_translate">Translation Service</string>
+    <string name="rt_subpage_settings_subtitle">Subtitles &amp; Overlay</string>
+    <string name="rt_subpage_settings_profile_ai">Context Analysis AI</string>
+    <string name="rt_subpage_settings_diagnostics">Diagnostics</string>
+    <string name="rt_subpage_settings_about">About</string>
+    <string name="rt_subpage_scene_library">Scene Library</string>
+
+    <!-- ModeHomePages -->
+    <string name="rt_dialog_stop_mode_title">Stop %1$s?</string>
+    <string name="rt_dialog_stop_interp_message">Subtitles will be saved to history; starting again will require reconnecting to the translation service.</string>
+    <string name="rt_dialog_stop_video_message">Subtitles will be saved to history; starting again will require reauthorizing audio capture.</string>
+    <string name="rt_toast_cannot_swap_language_running">Cannot switch languages while running</string>
+    <string name="rt_toast_cannot_swap_auto_source">Cannot swap languages when source is Auto-detect</string>
+    <string name="rt_toast_direction_not_reversible">Current language direction cannot be swapped</string>
+    <string name="rt_label_target_language">Target Language · %1$s</string>
+    <string name="rt_busy_video_running">Video translation is running; stop it before starting interpretation</string>
+    <string name="rt_busy_mic_running">Microphone interpretation is running; stop it before starting video translation</string>
+    <string name="rt_substatus_other_app_audio_prefix">Other apps\' audio · </string>
+    <string name="rt_substatus_overlay_enabled">Overlay enabled</string>
+    <string name="rt_substatus_overlay_unauthorized">Overlay permission not granted</string>
+    <string name="rt_waiting_translation">Waiting for translation…</string>
+    <string name="rt_waiting_voice_detected">Waiting for speech detection…</string>
+    <string name="rt_waiting_voice">Waiting for speech…</string>
+    <string name="rt_overlay_unauthorized">Overlay permission not granted</string>
+    <string name="rt_listening_silent">Silent</string>
+    <string name="rt_listening_active">Listening…</string>
+    <string name="rt_silence_tip_mic">No sound detected. Make sure the microphone is not occupied by another app and bring it closer to the audio source.</string>
+    <string name="rt_silence_tip_video">No sound detected. Make sure the video is playing; if there is still no sound, the app may not support audio capture.</string>
+
+    <!-- HistoryController & HistoryStore -->
+    <string name="rt_toast_copied_full_text">Full text copied</string>
+    <string name="rt_toast_no_shareable_content">No shareable content</string>
+    <string name="rt_history_share_title">Share History Record</string>
+    <string name="rt_toast_cannot_delete_active_session">Cannot delete active session; please stop translation first</string>
+    <string name="rt_dialog_delete_history_title">Delete this history record?</string>
+    <string name="rt_dialog_delete_history_message">Cannot be undone after deletion.</string>
+    <string name="rt_toast_history_deleted">History record deleted</string>
+    <string name="rt_toast_history_delete_failed">Failed to delete; record may no longer exist</string>
+    <string name="rt_history_empty">No history records</string>
+    <string name="rt_history_no_match">No matching records</string>
+    <string name="rt_history_icon_mic">MIC</string>
+    <string name="rt_history_icon_broadcast">VID</string>
+    <string name="rt_history_no_summary">No subtitle summary</string>
+    <string name="rt_date_today">Today</string>
+    <string name="rt_date_yesterday">Yesterday</string>
+    <string name="rt_toast_history_not_found_or_corrupt">Record does not exist or is corrupted</string>
+    <string name="rt_history_detail_context_prefix">Session Context\n%1$s</string>
+    <string name="rt_history_md_mode">Mode</string>
+    <string name="rt_history_md_translation">Translation</string>
+    <string name="rt_history_md_scene">Scene</string>
+    <string name="rt_history_md_start">Start</string>
+    <string name="rt_history_md_duration">Duration</string>
+    <string name="rt_history_md_context">Session Context</string>
+    <string name="rt_history_title_interp">Interpretation Record</string>
+    <string name="rt_history_title_video">Video Translation</string>
+    <string name="rt_transcript_internal_history">In-app history</string>
+
+    <!-- SceneLibraryController & SceneLibraryStore -->
+    <string name="rt_dialog_reset_scenes_title">Reset default scenes?</string>
+    <string name="rt_dialog_reset_scenes_message">Will replace all scenes and default choice for current mode; active deleted scenes will fall back to default.</string>
+    <string name="rt_toast_scenes_reset">Default %1$s scenes restored</string>
+    <string name="rt_toast_scene_already_in_use">Already in use: %1$s</string>
+    <string name="rt_toast_scene_switched">Now in use: %1$s</string>
+    <string name="rt_scene_data_corrupt_hint">Scene library data is corrupted; please restore defaults</string>
+    <string name="rt_toast_set_default_scene">Set as %1$s default scene</string>
+    <string name="rt_toast_set_default_scene_kept_current">Set as %1$s default scene; current session continues using \"%2$s\"</string>
+    <string name="rt_dialog_delete_scene_title">Delete \"%1$s\"?</string>
+    <string name="rt_dialog_delete_scene_message">Modes currently using this scene will revert to current default on next start.</string>
+    <string name="rt_toast_scene_deleted">Deleted: %1$s</string>
+    <string name="rt_toast_keep_at_least_one_scene">Each mode must retain at least one scene</string>
+    <string name="rt_dialog_new_scene_title">New %1$s Scene</string>
+    <string name="rt_dialog_edit_scene_title">Edit Scene</string>
+    <string name="rt_error_fill_scene_name">Please enter scene name</string>
+    <string name="rt_error_fill_scene_prompt">Please enter scene prompt</string>
+    <string name="rt_scene_new_default_name">New Scene</string>
+
+    <!-- SessionContextController -->
+    <string name="rt_toast_interp_context_cleared">Session context cleared</string>
+    <string name="rt_toast_video_context_cleared">Video context cleared</string>
+    <string name="rt_ctx_status_input_changed_cancelled">Input changed; previous analysis cancelled</string>
+    <string name="rt_ctx_header_interp_expanded">Session Context · Optional</string>
+    <string name="rt_ctx_header_interp_collapsed">Session Context · Optional ›</string>
+    <string name="rt_ctx_header_video_expanded">Video Context · Optional</string>
+    <string name="rt_ctx_header_video_collapsed">Video Context · Optional ›</string>
+    <string name="rt_ctx_summary_has_url"> · With link</string>
+    <string name="rt_ctx_summary_url_only">Video link entered</string>
+    <string name="rt_ctx_btn_fetch_video_context">AI Fetch Video Context</string>
+    <string name="rt_ctx_btn_organize_context">AI Organize Context</string>
+    <string name="rt_ctx_status_ready_for_review">Ready; review before using in translation</string>
+    <string name="rt_ctx_status_applied">Applied to current translation</string>
+    <string name="rt_ctx_status_discarded">Result discarded; original content kept</string>
+    <string name="rt_ctx_status_undone">Replacement undone; original content restored</string>
+    <string name="rt_ctx_status_no_ai_configured">Context analysis AI is not configured yet</string>
+    <string name="rt_ctx_hint_fill_video_or_context">Please enter a video link or some context first</string>
+    <string name="rt_ctx_hint_fill_context">Please enter some context first</string>
+    <string name="rt_ctx_fetching_video_data">Fetching video info…</string>
+    <string name="rt_ctx_organizing">Organizing context…</string>
+    <string name="rt_ctx_status_input_changed_ignored">Input changed; previous analysis result ignored</string>
+    <string name="rt_ctx_no_available_context">AI returned no usable context; please add info and retry</string>
+    <string name="rt_ctx_organize_failed">Analysis failed: %1$s</string>
+
+    <!-- SessionCoordinator -->
+    <string name="rt_toast_session_running_conflict">Currently running \"%1$s\"; please stop it before switching</string>
+    <string name="rt_toast_projection_permission_denied">Screen capture permission not granted; internal audio cannot be recorded</string>
+    <string name="rt_toast_fill_gemini_api_key_first">Please fill in Gemini API Key first</string>
+    <string name="rt_toast_record_audio_permission_required">Recording permission missing; please grant in system settings</string>
+    <string name="rt_toast_overlay_permission_required">Please enable overlay permission; will resume automatically upon return</string>
+
+    <!-- SettingsController -->
+    <string name="rt_settings_disclosure_custom_endpoint">Custom Service Address</string>
+    <string name="rt_settings_disclosure_translate_advanced">Advanced Translation Parameters</string>
+    <string name="rt_settings_disclosure_subtitle_advanced">Advanced Segmentation Parameters</string>
+    <string name="rt_state_expanded">Expanded</string>
+    <string name="rt_state_collapsed">Collapsed</string>
+    <string name="rt_diag_status_running">● Running</string>
+    <string name="rt_diag_status_stopped">○ Stopped</string>
+    <string name="rt_diag_mode_prefix">  Mode: </string>
+    <string name="rt_diag_connection_prefix">  Connection: </string>
+    <string name="rt_diag_volume_prefix">  Volume: </string>
+    <string name="rt_diag_sent_chunks">  Sent: %1$d chunks\n</string>
+    <string name="rt_diag_record_prefix">Record: </string>
+    <string name="rt_diag_connection_label">Connection: %1$s</string>
+    <string name="rt_diag_volume_label">Volume: %1$d%%</string>
+    <string name="rt_diag_sent_label">Sent: %1$d chunks</string>
+    <string name="rt_diag_no_credential">No credential selected</string>
+    <string name="rt_toast_no_browser">No browser available</string>
+    <string name="rt_dialog_tutorial_message">1. Sign in with Google account and visit Google AI Studio\n2. Create or select an existing Google Cloud project\n3. Create API key and copy it\n4. Return to this app and click \"Paste Key\" or enter manually\n\nNote: Free tier available, subject to Google\'s terms.</string>
+    <string name="rt_dialog_btn_official_and_pricing">Official &amp; Pricing</string>
+    <string name="rt_tutorial_link_official">View official documentation (ai.google.dev)</string>
+    <string name="rt_tutorial_link_pricing">View pricing details (ai.google.dev)</string>
+    <string name="rt_dialog_official_pricing_title">Official Docs &amp; Pricing</string>
+    <string name="rt_toast_clipboard_empty">Clipboard is empty</string>
+    <string name="rt_toast_pasted_key">Key pasted from clipboard</string>
+    <string name="rt_toast_fill_translation_api_key_first">Please enter API Key in Translation Service first</string>
+    <string name="rt_toast_copied_first_gemini_key">First Gemini Key copied (only first key taken)</string>
+    <string name="rt_toast_copied_translation_gemini_key">Translation service Gemini Key copied</string>
+    <string name="rt_settings_hint_fill_gemini_key_first">Please enter Gemini API Key first</string>
+    <string name="rt_live_probe_success">Live model connected successfully (audio translation not tested)</string>
+    <string name="rt_test_failed_prefix">Test failed: %1$s</string>
+    <string name="rt_settings_helper_manual_model_id">You can enter model ID directly</string>
+    <string name="rt_btn_fetch_models">Fetch model list</string>
+    <string name="rt_zen_client_restricted">Current free tier is restricted to OpenCode client, not verified in this app; retest or switch service</string>
+    <string name="rt_zen_client_restricted_full">Not verified: Current free tier is restricted to OpenCode client, not verified in this app; retest or switch service</string>
+    <string name="rt_service_option_gemini">Gemini (Official, API Key required)</string>
+    <string name="rt_service_option_custom">Custom Service (Proxy / 3rd party compatible)</string>
+    <string name="rt_settings_toast_format_switched">Switched to %1$s; please fetch model list again</string>
+    <string name="rt_settings_hint_format_url_mismatch">Switched to %1$s, but current service URL does not seem to match this interface; please verify before fetching models</string>
+    <string name="rt_format_gemini_native">Gemini Native</string>
+    <string name="rt_format_openai_compatible">OpenAI Compatible</string>
+    <string name="rt_settings_hint_fill_custom_url_first">Please enter custom service URL first</string>
+    <string name="rt_settings_fetching_models">Fetching model list…</string>
+    <string name="rt_settings_fetching_zen_models">Fetching Zen free allowlist models…</string>
+    <string name="rt_settings_fetching_models_from_service">Fetching available models from %1$s service…</string>
+    <string name="rt_settings_zen_no_free_models">Remote returned no official free allowlist models; currently unavailable</string>
+    <string name="rt_settings_no_models_returned">Remote returned no models; please enter model ID manually</string>
+    <string name="rt_settings_models_fetched_count">Fetched %1$d available models</string>
+    <string name="rt_settings_fetch_models_failed">Fetch failed: %1$s</string>
+    <string name="rt_dialog_model_picker_title">Select Analysis Model</string>
+    <string name="rt_settings_model_selected">Selected model: %1$s</string>
+    <string name="rt_settings_hint_custom_fill_url">Please enter service URL (Base URL) for custom service</string>
+    <string name="rt_settings_hint_custom_fill_model">Please enter analysis model for custom service</string>
+    <string name="rt_settings_testing_second_ai_with_model">Running a minimal test request with %1$s…</string>
+    <string name="rt_btn_test_second_ai">Test Analysis Service</string>
+    <string name="rt_settings_second_ai_available">Available: %1$s returned results successfully; analysis function is ready to use.</string>
+    <string name="rt_settings_check_config">Please check configuration</string>
+    <string name="rt_settings_second_ai_unavailable">Unavailable: %1$s</string>
+    <string name="rt_settings_hint_fill_key_first">Please fill in API Key first</string>
+    <string name="rt_settings_hint_config_modified">Configuration changed; please fetch model list again or enter model ID manually</string>
+    <string name="rt_settings_font_size">Font size %1$dsp</string>
+    <string name="rt_settings_bg_opacity">Background opacity %1$d%%</string>
+    <string name="rt_settings_max_lines">Max lines %1$d</string>
+    <string name="rt_toast_translate_params_reset">Translation parameters reset to default; takes effect on next session</string>
+    <string name="rt_toast_subtitle_params_reset">Subtitle settings reset to default</string>
+    <string name="rt_settings_rotate_seconds">Reconnect every %1$d seconds</string>
+    <string name="rt_settings_idle_commit_seconds">Commit subtitle after %1$s seconds pause</string>
+    <string name="rt_settings_max_chars">Max %1$d characters per line</string>
+    <string name="rt_about_version_format">Version %1$s (%2$d)</string>
+    <string name="rt_about_version_unknown">Version unknown</string>
+    <string name="rt_toast_auto_check_update_enabled">Auto update check on startup enabled</string>
+    <string name="rt_toast_auto_check_update_disabled">Auto update check on startup disabled</string>
+    <string name="rt_toast_battery_already_whitelisted">Already on battery optimization whitelist</string>
+
+    <!-- UpdateController & UpdateDownloader -->
+    <string name="rt_toast_checking_or_downloading_update">Checking or downloading update…</string>
+    <string name="rt_toast_checking_update">Checking for updates…</string>
+    <string name="rt_toast_up_to_date">Already latest version %1$s (%2$d)</string>
+    <string name="rt_toast_version_ignored">This version ignored; check again in About page</string>
+    <string name="rt_update_dialog_version_info">Current %1$s (%2$d)\nLatest %3$s (%4$d)\n\n</string>
+    <string name="rt_update_dialog_default_notes">New version available.</string>
+    <string name="rt_update_dialog_title">New version found: %1$s</string>
+    <string name="rt_update_action_download_and_install">Download &amp; Install</string>
+    <string name="rt_update_action_ignore_version">Ignore this version</string>
+    <string name="rt_toast_ignored_version">Ignored %1$s</string>
+    <string name="rt_update_action_dont_remind">Don\'t remind again</string>
+    <string name="rt_toast_auto_check_disabled_hint">Auto-check on startup disabled; can manually check in About</string>
+    <string name="rt_toast_download_in_progress">Download already in progress</string>
+    <string name="rt_update_preparing_download">Preparing download…</string>
+    <string name="rt_update_download_dialog_title">Download Update</string>
+    <string name="rt_update_progress_pct">Source %1$d/%2$d · %3$s\n%4$d%%</string>
+    <string name="rt_update_progress_kb">Source %1$d/%2$d · %3$s\nDownloaded %4$d KB</string>
+    <string name="rt_update_download_failed">Download failed: %1$s</string>
+    <string name="rt_update_toast_unknown_sources_required">Please allow installing unknown apps; installation will resume on return</string>
+    <string name="rt_update_toast_cannot_open_install_settings">Cannot open install permission settings</string>
+    <string name="rt_update_toast_cannot_open_installer">Cannot open installation screen: %1$s</string>
+    <string name="rt_update_file_too_small">File too small</string>
+    <string name="rt_update_all_sources_failed">All download sources failed: %1$s</string>
+    <string name="rt_update_empty_response">Empty response</string>
+    <string name="rt_update_source_ghproxy">Mirror %1$d·ghproxy</string>
+    <string name="rt_update_source_mirror">Mirror %1$d·mirror</string>
+    <string name="rt_update_source_github">Source %1$d·GitHub</string>
+    <string name="rt_update_source_direct">Source %1$d</string>
+</resources>

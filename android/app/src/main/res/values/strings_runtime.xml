@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General & Actions -->
+    <!-- 翻译语言显示名：仅用于界面展示，语言 code 不随界面语言变化 -->
+    <string name="rt_lang_auto">自动检测</string>
+    <string name="rt_lang_zh">中文</string>
+    <string name="rt_lang_zh_hans">简体中文</string>
+    <string name="rt_lang_zh_hant">繁体中文</string>
+    <string name="rt_lang_en">英语</string>
+    <string name="rt_lang_ja">日语</string>
+    <string name="rt_lang_ko">韩语</string>
+    <string name="rt_lang_es">西班牙语</string>
+    <string name="rt_lang_fr">法语</string>
+    <string name="rt_lang_de">德语</string>
+    <string name="rt_lang_ru">俄语</string>
+    <!-- 默认场景模板名：仅影响首次初始化与恢复模板，不覆盖用户已编辑的场景 -->
+    <string name="rt_scene_general">通用</string>
+    <string name="rt_scene_meeting">会议</string>
+    <string name="rt_scene_classroom">课堂</string>
+    <string name="rt_scene_interview">采访</string>
+    <string name="rt_scene_travel">旅行交流</string>
+    <string name="rt_scene_general_video">通用视频</string>
+    <string name="rt_scene_livestream">直播</string>
+    <string name="rt_scene_vtuber" translatable="false">VTuber</string>
+    <string name="rt_scene_anime">动漫</string>
+    <string name="rt_scene_game">游戏</string>
+    <string name="rt_scene_news">新闻</string>
+    <string name="rt_scene_course">课程</string>
+    <string name="rt_mode_interpretation">同传</string>
+    <string name="rt_mode_video">视频字幕</string>
+    <string name="rt_action_cancel">取消</string>
+    <string name="rt_action_delete">删除</string>
+    <string name="rt_action_save">保存</string>
+    <string name="rt_action_close">关闭</string>
+    <string name="rt_action_reset">恢复</string>
+    <string name="rt_action_edit">编辑</string>
+    <string name="rt_action_set_default">设为默认</string>
+    <string name="rt_action_pause">暂停</string>
+    <string name="rt_action_resume">继续</string>
+    <string name="rt_action_stop">停止</string>
+    <string name="rt_action_expand_simple">展开</string>
+    <string name="rt_action_collapse_simple">收起</string>
+    <string name="rt_action_refetch">重新拉取</string>
+    <string name="rt_unknown_error">未知错误</string>
+    <string name="rt_connection_failed">连接失败</string>
+    <string name="rt_testing_ellipsis">正在测试…</string>
+    <string name="rt_fetch_failed">获取失败</string>
+
+    <!-- SubtitleOverlay -->
+    <string name="rt_overlay_status_live">流译 · 实时</string>
+    <string name="rt_overlay_status_paused">流译 · 已暂停</string>
+    <string name="rt_overlay_action_pause">暂停翻译</string>
+    <string name="rt_overlay_action_resume">继续翻译</string>
+    <string name="rt_overlay_action_open">打开主应用</string>
+    <string name="rt_overlay_action_collapse">收起字幕到屏幕侧边，翻译继续进行</string>
+    <string name="rt_overlay_action_expand">展开悬浮字幕</string>
+    <string name="rt_overlay_waiting_subtitles">等待字幕…</string>
+    <string name="rt_overlay_handle_collapsed_left">译\n›</string>
+    <string name="rt_overlay_handle_collapsed_right">‹\n译</string>
+
+    <!-- CaptureService Notifications -->
+    <string name="rt_notif_channel_name">实时翻译</string>
+    <string name="rt_notif_title_mic">同传运行中</string>
+    <string name="rt_notif_title_video">视频字幕运行中</string>
+    <string name="rt_notif_desc_mic">正在用麦克风实时同传</string>
+    <string name="rt_notif_desc_video">正在捕获系统音频并实时翻译</string>
+    <string name="rt_notif_action_stop">停止</string>
+
+    <!-- UiRuntimeStatus -->
+    <string name="rt_status_paused">已暂停</string>
+    <string name="rt_status_translating">翻译中</string>
+    <string name="rt_status_error">连接出错</string>
+    <string name="rt_status_rotating">正在切换连接</string>
+    <string name="rt_status_preparing">准备连接</string>
+
+    <!-- MainNavigator Subpage Titles -->
+    <string name="rt_subpage_history_detail">历史详情</string>
+    <string name="rt_subpage_settings_translate">翻译服务</string>
+    <string name="rt_subpage_settings_subtitle">字幕与悬浮窗</string>
+    <string name="rt_subpage_settings_profile_ai">背景分析 AI</string>
+    <string name="rt_subpage_settings_diagnostics">诊断</string>
+    <string name="rt_subpage_settings_about">关于</string>
+    <string name="rt_subpage_scene_library">场景库</string>
+
+    <!-- ModeHomePages -->
+    <string name="rt_dialog_stop_mode_title">停止%1$s？</string>
+    <string name="rt_dialog_stop_interp_message">字幕会保存在历史中；再次开始需要重新连接翻译服务。</string>
+    <string name="rt_dialog_stop_video_message">字幕会保存在历史中；再次开始需要重新授权音频捕获。</string>
+    <string name="rt_toast_cannot_swap_language_running">运行中无法切换语言</string>
+    <string name="rt_toast_cannot_swap_auto_source">源语言为自动检测时无法交换</string>
+    <string name="rt_toast_direction_not_reversible">当前语言方向不支持交换</string>
+    <string name="rt_label_target_language">目标译文 · %1$s</string>
+    <string name="rt_busy_video_running">视频翻译正在进行，停止后才能开始同传</string>
+    <string name="rt_busy_mic_running">麦克风同传正在进行，停止后才能开始视频翻译</string>
+    <string name="rt_substatus_other_app_audio_prefix">其他应用音频 · </string>
+    <string name="rt_substatus_overlay_enabled">悬浮字幕已开启</string>
+    <string name="rt_substatus_overlay_unauthorized">悬浮字幕未授权</string>
+    <string name="rt_waiting_translation">等待译文…</string>
+    <string name="rt_waiting_voice_detected">等待识别到语音…</string>
+    <string name="rt_waiting_voice">等待语音…</string>
+    <string name="rt_overlay_unauthorized">悬浮字幕未授权</string>
+    <string name="rt_listening_silent">静音中</string>
+    <string name="rt_listening_active">聆听中…</string>
+    <string name="rt_silence_tip_mic">一直没有检测到声音。请确认麦克风没有被其他应用占用，并靠近声源。</string>
+    <string name="rt_silence_tip_video">一直没有检测到声音。请确认视频正在播放；若仍无声音，该应用可能不支持音频捕获。</string>
+
+    <!-- HistoryController & HistoryStore -->
+    <string name="rt_toast_copied_full_text">已复制全文</string>
+    <string name="rt_toast_no_shareable_content">暂无可分享内容</string>
+    <string name="rt_history_share_title">分享历史记录</string>
+    <string name="rt_toast_cannot_delete_active_session">正在进行的会话不能删除，请先停止翻译</string>
+    <string name="rt_dialog_delete_history_title">删除这条历史记录？</string>
+    <string name="rt_dialog_delete_history_message">删除后无法恢复。</string>
+    <string name="rt_toast_history_deleted">历史记录已删除</string>
+    <string name="rt_toast_history_delete_failed">删除失败，记录可能已经不存在</string>
+    <string name="rt_history_empty">暂无历史记录</string>
+    <string name="rt_history_no_match">没有匹配的记录</string>
+    <string name="rt_history_icon_mic">麦</string>
+    <string name="rt_history_icon_broadcast">播</string>
+    <string name="rt_history_no_summary">暂无字幕摘要</string>
+    <string name="rt_date_today">今天</string>
+    <string name="rt_date_yesterday">昨天</string>
+    <string name="rt_toast_history_not_found_or_corrupt">记录不存在或已损坏</string>
+    <string name="rt_history_detail_context_prefix">本场背景\n%1$s</string>
+    <string name="rt_history_md_mode">模式</string>
+    <string name="rt_history_md_translation">翻译</string>
+    <string name="rt_history_md_scene">场景</string>
+    <string name="rt_history_md_start">开始</string>
+    <string name="rt_history_md_duration">时长</string>
+    <string name="rt_history_md_context">本场背景</string>
+    <string name="rt_history_title_interp">同传记录</string>
+    <string name="rt_history_title_video">视频翻译</string>
+    <string name="rt_transcript_internal_history">应用内历史</string>
+
+    <!-- SceneLibraryController & SceneLibraryStore -->
+    <string name="rt_dialog_reset_scenes_title">恢复默认场景？</string>
+    <string name="rt_dialog_reset_scenes_message">会替换当前模式的全部场景和默认选择；正在使用已删除场景的模式会回退到默认场景。</string>
+    <string name="rt_toast_scenes_reset">已恢复%1$s默认场景</string>
+    <string name="rt_toast_scene_already_in_use">当前已使用：%1$s</string>
+    <string name="rt_toast_scene_switched">已使用：%1$s</string>
+    <string name="rt_scene_data_corrupt_hint">场景库数据异常，请先恢复模板</string>
+    <string name="rt_toast_set_default_scene">已设为%1$s默认场景</string>
+    <string name="rt_toast_set_default_scene_kept_current">已设为%1$s默认场景，本次仍使用「%2$s」</string>
+    <string name="rt_dialog_delete_scene_title">删除“%1$s”？</string>
+    <string name="rt_dialog_delete_scene_message">正在使用该场景的模式下次启动会回退到当前默认场景。</string>
+    <string name="rt_toast_scene_deleted">已删除：%1$s</string>
+    <string name="rt_toast_keep_at_least_one_scene">每种模式至少保留一个场景</string>
+    <string name="rt_dialog_new_scene_title">新建%1$s场景</string>
+    <string name="rt_dialog_edit_scene_title">编辑场景</string>
+    <string name="rt_error_fill_scene_name">请填写场景名称</string>
+    <string name="rt_error_fill_scene_prompt">请填写场景提示词</string>
+    <string name="rt_scene_new_default_name">新场景</string>
+
+    <!-- SessionContextController -->
+    <string name="rt_toast_interp_context_cleared">已清除本场背景</string>
+    <string name="rt_toast_video_context_cleared">已清除视频背景</string>
+    <string name="rt_ctx_status_input_changed_cancelled">输入已修改，之前的分析已取消</string>
+    <string name="rt_ctx_header_interp_expanded">本场背景 · 可选</string>
+    <string name="rt_ctx_header_interp_collapsed">本场背景 · 可选 ›</string>
+    <string name="rt_ctx_header_video_expanded">视频背景 · 可选</string>
+    <string name="rt_ctx_header_video_collapsed">视频背景 · 可选 ›</string>
+    <string name="rt_ctx_summary_has_url"> · 含链接</string>
+    <string name="rt_ctx_summary_url_only">已填视频链接</string>
+    <string name="rt_ctx_btn_fetch_video_context">AI 获取视频背景</string>
+    <string name="rt_ctx_btn_organize_context">AI 整理背景</string>
+    <string name="rt_ctx_status_ready_for_review">已整理好，确认后再用于本次翻译</string>
+    <string name="rt_ctx_status_applied">已用于本次翻译</string>
+    <string name="rt_ctx_status_discarded">已放弃这次结果，原来的内容没有变</string>
+    <string name="rt_ctx_status_undone">已撤销替换，恢复成你原来写的内容</string>
+    <string name="rt_ctx_status_no_ai_configured">还没有配置背景分析 AI</string>
+    <string name="rt_ctx_hint_fill_video_or_context">请先填视频链接，或写几句背景</string>
+    <string name="rt_ctx_hint_fill_context">请先写几句本场背景</string>
+    <string name="rt_ctx_fetching_video_data">正在获取视频资料…</string>
+    <string name="rt_ctx_organizing">正在整理背景…</string>
+    <string name="rt_ctx_status_input_changed_ignored">输入已修改，之前的分析结果已忽略</string>
+    <string name="rt_ctx_no_available_context">AI 没有返回可用背景，请补充资料后重试</string>
+    <string name="rt_ctx_organize_failed">整理失败：%1$s</string>
+
+    <!-- SessionCoordinator -->
+    <string name="rt_toast_session_running_conflict">当前正在运行「%1$s」，请先停止后再切换</string>
+    <string name="rt_toast_projection_permission_denied">未获得屏幕捕获授权，无法内录</string>
+    <string name="rt_toast_fill_gemini_api_key_first">请先填 Gemini API Key</string>
+    <string name="rt_toast_record_audio_permission_required">缺少录音权限，请在系统设置中授予</string>
+    <string name="rt_toast_overlay_permission_required">请开启悬浮窗权限，返回后将自动继续</string>
+
+    <!-- SettingsController -->
+    <string name="rt_settings_disclosure_custom_endpoint">自定义服务地址</string>
+    <string name="rt_settings_disclosure_translate_advanced">高级翻译参数</string>
+    <string name="rt_settings_disclosure_subtitle_advanced">高级断句参数</string>
+    <string name="rt_state_expanded">已展开</string>
+    <string name="rt_state_collapsed">已折叠</string>
+    <string name="rt_diag_status_running">● 运行中</string>
+    <string name="rt_diag_status_stopped">○ 未运行</string>
+    <string name="rt_diag_mode_prefix">  模式: </string>
+    <string name="rt_diag_connection_prefix">  连接: </string>
+    <string name="rt_diag_volume_prefix">  音量: </string>
+    <string name="rt_diag_sent_chunks">  已发送: %1$d 块\n</string>
+    <string name="rt_diag_record_prefix">记录: </string>
+    <string name="rt_diag_connection_label">连接: %1$s</string>
+    <string name="rt_diag_volume_label">音量: %1$d%%</string>
+    <string name="rt_diag_sent_label">已发送: %1$d 块</string>
+    <string name="rt_diag_no_credential">未选择凭据</string>
+    <string name="rt_toast_no_browser">没有可用的浏览器</string>
+    <string name="rt_dialog_tutorial_message">1. 登录 Google 账号并访问 Google AI Studio\n2. 创建或选择已有 Google Cloud 项目\n3. 创建 API 密钥并复制\n4. 返回本应用点击「粘贴 Key」或直接填入\n\n注：提供免费额度，实际额度以 Google 为准。</string>
+    <string name="rt_dialog_btn_official_and_pricing">官方与定价</string>
+    <string name="rt_tutorial_link_official">查看官方说明 (ai.google.dev)</string>
+    <string name="rt_tutorial_link_pricing">查看定价说明 (ai.google.dev)</string>
+    <string name="rt_dialog_official_pricing_title">官方文档与定价</string>
+    <string name="rt_toast_clipboard_empty">剪贴板中没有文本</string>
+    <string name="rt_toast_pasted_key">已从剪贴板粘贴 Key</string>
+    <string name="rt_toast_fill_translation_api_key_first">请先在翻译服务中填写 API Key</string>
+    <string name="rt_toast_copied_first_gemini_key">已复制首个 Gemini Key（多 Key 仅取第一个）</string>
+    <string name="rt_toast_copied_translation_gemini_key">已复制翻译服务的 Gemini Key</string>
+    <string name="rt_settings_hint_fill_gemini_key_first">请先填写 Gemini API Key</string>
+    <string name="rt_live_probe_success">Live 模型连接通过（未测试音频翻译）</string>
+    <string name="rt_test_failed_prefix">测试失败：%1$s</string>
+    <string name="rt_settings_helper_manual_model_id">可直接手动输入模型 ID</string>
+    <string name="rt_btn_fetch_models">拉取模型列表</string>
+    <string name="rt_zen_client_restricted">当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务</string>
+    <string name="rt_zen_client_restricted_full">未验证可用：当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务</string>
+    <string name="rt_service_option_gemini">Gemini（官方，需自备 API Key）</string>
+    <string name="rt_service_option_custom">自定义服务（反代 / 第三方兼容）</string>
+    <string name="rt_settings_toast_format_switched">已切换到 %1$s，请重新拉取模型列表</string>
+    <string name="rt_settings_hint_format_url_mismatch">已切换到 %1$s，但当前服务地址看起来不是这套接口的地址，请确认后再拉取模型</string>
+    <string name="rt_format_gemini_native">Gemini 原生</string>
+    <string name="rt_format_openai_compatible">OpenAI 兼容</string>
+    <string name="rt_settings_hint_fill_custom_url_first">请先填写自定义服务地址</string>
+    <string name="rt_settings_fetching_models">正在获取模型列表…</string>
+    <string name="rt_settings_fetching_zen_models">正在拉取 Zen 免费白名单模型…</string>
+    <string name="rt_settings_fetching_models_from_service">正在从 %1$s 服务获取可用模型…</string>
+    <string name="rt_settings_zen_no_free_models">远端未返回任何官方免费白名单模型，当前不可用</string>
+    <string name="rt_settings_no_models_returned">远端没有返回任何模型，请手动输入模型 ID</string>
+    <string name="rt_settings_models_fetched_count">已获取 %1$d 个可用模型</string>
+    <string name="rt_settings_fetch_models_failed">获取失败：%1$s</string>
+    <string name="rt_dialog_model_picker_title">选择分析模型</string>
+    <string name="rt_settings_model_selected">已选择模型：%1$s</string>
+    <string name="rt_settings_hint_custom_fill_url">自定义服务请先填写服务地址（Base URL）</string>
+    <string name="rt_settings_hint_custom_fill_model">自定义服务请先填写分析模型</string>
+    <string name="rt_settings_testing_second_ai_with_model">正在用 %1$s 跑一次最短请求…</string>
+    <string name="rt_btn_test_second_ai">测试分析服务</string>
+    <string name="rt_settings_second_ai_available">可用：%1$s 已成功返回结果，分析功能可以使用。</string>
+    <string name="rt_settings_check_config">请检查配置</string>
+    <string name="rt_settings_second_ai_unavailable">不可用：%1$s</string>
+    <string name="rt_settings_hint_fill_key_first">请先填写 API Key</string>
+    <string name="rt_settings_hint_config_modified">配置已修改，请重新拉取模型列表，也可以手动输入模型 ID</string>
+    <string name="rt_settings_font_size">字号 %1$dsp</string>
+    <string name="rt_settings_bg_opacity">背景不透明度 %1$d%%</string>
+    <string name="rt_settings_max_lines">最多行数 %1$d</string>
+    <string name="rt_toast_translate_params_reset">翻译参数已恢复默认，下次开始翻译时生效</string>
+    <string name="rt_toast_subtitle_params_reset">字幕设置已恢复默认</string>
+    <string name="rt_settings_rotate_seconds">每 %1$d 秒定期重新连接</string>
+    <string name="rt_settings_idle_commit_seconds">停顿 %1$s 秒后确认字幕</string>
+    <string name="rt_settings_max_chars">当前行最长 %1$d 字</string>
+    <string name="rt_about_version_format">版本 %1$s（%2$d）</string>
+    <string name="rt_about_version_unknown">版本未知</string>
+    <string name="rt_toast_auto_check_update_enabled">已开启启动时检查更新</string>
+    <string name="rt_toast_auto_check_update_disabled">已关闭启动时检查更新</string>
+    <string name="rt_toast_battery_already_whitelisted">已在电池白名单里</string>
+
+    <!-- UpdateController & UpdateDownloader -->
+    <string name="rt_toast_checking_or_downloading_update">正在检查或下载更新…</string>
+    <string name="rt_toast_checking_update">正在检查更新…</string>
+    <string name="rt_toast_up_to_date">已是最新版本 %1$s（%2$d）</string>
+    <string name="rt_toast_version_ignored">已忽略此版本；可在关于页再次检查</string>
+    <string name="rt_update_dialog_version_info">当前 %1$s（%2$d）\n最新 %3$s（%4$d）\n\n</string>
+    <string name="rt_update_dialog_default_notes">有新版本可用。</string>
+    <string name="rt_update_dialog_title">发现新版本 %1$s</string>
+    <string name="rt_update_action_download_and_install">下载并安装</string>
+    <string name="rt_update_action_ignore_version">忽略此版本</string>
+    <string name="rt_toast_ignored_version">已忽略 %1$s</string>
+    <string name="rt_update_action_dont_remind">不再提醒</string>
+    <string name="rt_toast_auto_check_disabled_hint">已关闭启动时自动检查；可在关于页手动检查</string>
+    <string name="rt_toast_download_in_progress">已有下载任务进行中</string>
+    <string name="rt_update_preparing_download">准备下载…</string>
+    <string name="rt_update_download_dialog_title">下载更新</string>
+    <string name="rt_update_progress_pct">源 %1$d/%2$d · %3$s\n%4$d%%</string>
+    <string name="rt_update_progress_kb">源 %1$d/%2$d · %3$s\n已下载 %4$d KB</string>
+    <string name="rt_update_download_failed">下载失败：%1$s</string>
+    <string name="rt_update_toast_unknown_sources_required">请允许安装未知应用，返回后将继续安装</string>
+    <string name="rt_update_toast_cannot_open_install_settings">无法打开安装权限设置</string>
+    <string name="rt_update_toast_cannot_open_installer">无法打开安装界面：%1$s</string>
+    <string name="rt_update_file_too_small">文件过小</string>
+    <string name="rt_update_all_sources_failed">全部下载源失败：%1$s</string>
+    <string name="rt_update_empty_response">空响应</string>
+    <string name="rt_update_source_ghproxy">镜像 %1$d·ghproxy</string>
+    <string name="rt_update_source_mirror">镜像 %1$d·mirror</string>
+    <string name="rt_update_source_github">源 %1$d·GitHub</string>
+    <string name="rt_update_source_direct">源 %1$d</string>
+</resources>

@@ -17,12 +17,12 @@
 
         <TextView
             style="@style/PageTitle"
-            android:text="历史" />
+            android:text="@string/history_title" />
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Field"
             android:layout_marginTop="@dimen/space_16"
-            android:hint="搜索标题、场景或字幕摘要"
+            android:hint="@string/history_search_hint"
             app:startIconDrawable="@drawable/ic_search_24">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="全部"
+                android:text="@string/history_filter_all"
                 app:checkedIconVisible="false"
                 app:chipBackgroundColor="@color/selector_scene_chip_bg"
                 app:chipStrokeWidth="0dp"
@@ -61,7 +61,7 @@
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="同传"
+                android:text="@string/history_filter_interp"
                 app:checkedIconVisible="false"
                 app:chipBackgroundColor="@color/selector_scene_chip_bg"
                 app:chipStrokeWidth="0dp"
@@ -73,7 +73,7 @@
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="视频"
+                android:text="@string/history_filter_video"
                 app:checkedIconVisible="false"
                 app:chipBackgroundColor="@color/selector_scene_chip_bg"
                 app:chipStrokeWidth="0dp"
@@ -88,7 +88,7 @@
             android:layout_marginTop="@dimen/space_32"
             android:gravity="center"
             android:padding="@dimen/space_24"
-            android:text="暂无历史记录"
+            android:text="@string/history_empty"
             android:textColor="@color/text_muted"
             android:textSize="14sp"
             android:visibility="gone" />

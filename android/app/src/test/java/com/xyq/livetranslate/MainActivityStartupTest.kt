@@ -184,7 +184,7 @@ class MainActivityStartupTest {
         historyList.getChildAt(1).performClick()
         activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
 
-        assertEquals("正在进行的会话不能删除，请先停止翻译", ShadowToast.getTextOfLatestToast())
+        assertEquals(activity.getString(R.string.rt_toast_cannot_delete_active_session), ShadowToast.getTextOfLatestToast())
         assertEquals(1, HistoryStore.list(activity).size)
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
     }
@@ -476,7 +476,7 @@ class MainActivityStartupTest {
             val banner = activity.findViewById<View>(R.id.rowVideoBusy)
             assertEquals(View.VISIBLE, banner.visibility)
             assertEquals(
-                "麦克风同传正在进行，停止后才能开始视频翻译",
+                activity.getString(R.string.rt_busy_mic_running),
                 activity.findViewById<android.widget.TextView>(R.id.tvVideoBusyStatus).text,
             )
             // 自己这一侧空闲时不该出现占用横幅。
@@ -753,6 +753,61 @@ class MainActivityStartupTest {
                 key.contains("key", ignoreCase = true) || key.contains("token", ignoreCase = true)
             },
         )
+    }
+
+    @Test
+    fun stage1SettingsViewsAndSecondAiServiceSwitching() = withActivity { activity ->
+        // 验证翻译服务新增控件绑定
+        val btnApply = activity.findViewById<View>(R.id.btnApplyApiKey)
+        val btnTutorial = activity.findViewById<View>(R.id.btnViewApiKeyTutorial)
+        val btnPaste = activity.findViewById<View>(R.id.btnPasteApiKey)
+        val btnTestTranslate = activity.findViewById<View>(R.id.btnTestTranslateConnection)
+        val tvStatus = activity.findViewById<View>(R.id.tvTranslateTestStatus)
+        val tvQuotaHint = activity.findViewById<View>(R.id.tvFreeQuotaHint)
+
+        assertTrue(btnApply != null && btnTutorial != null && btnPaste != null && btnTestTranslate != null && tvStatus != null && tvQuotaHint != null)
+
+        // 验证第二 AI 服务切换
+        val btnZen = activity.findViewById<View>(R.id.btnSecondAiServiceZen)
+        val btnCustom = activity.findViewById<View>(R.id.btnSecondAiServiceCustom)
+        val btnGemini = activity.findViewById<View>(R.id.btnSecondAiServiceGemini)
+        val containerGemini = activity.findViewById<View>(R.id.containerGeminiActions)
+        val containerZen = activity.findViewById<View>(R.id.containerZenInfo)
+        val containerCustom = activity.findViewById<View>(R.id.containerCustomFormat)
+        val tilKey = activity.findViewById<View>(R.id.tilSecondAiKey)
+        val tilUrl = activity.findViewById<View>(R.id.tilSecondAiUrl)
+
+        // 初始为 Gemini 服务
+        assertEquals(View.VISIBLE, containerGemini.visibility)
+        assertEquals(View.GONE, containerZen.visibility)
+        assertEquals(View.GONE, containerCustom.visibility)
+        assertEquals(View.VISIBLE, tilKey.visibility)
+        assertEquals(View.VISIBLE, tilUrl.visibility)
+
+        // 切换到 Zen 模式
+        btnZen.performClick()
+        assertEquals(View.GONE, containerGemini.visibility)
+        assertEquals(View.VISIBLE, containerZen.visibility)
+        assertEquals(View.GONE, containerCustom.visibility)
+        assertEquals(View.GONE, tilKey.visibility)
+        assertEquals(View.GONE, tilUrl.visibility)
+        assertEquals(SettingsStore.SERVICE_OPENCODE_ZEN, SettingsStore.secondAiService(activity))
+
+        // 切换到自定义模式
+        btnCustom.performClick()
+        assertEquals(View.GONE, containerGemini.visibility)
+        assertEquals(View.GONE, containerZen.visibility)
+        assertEquals(View.VISIBLE, containerCustom.visibility)
+        assertEquals(View.VISIBLE, tilKey.visibility)
+        assertEquals(View.VISIBLE, tilUrl.visibility)
+        assertEquals(SettingsStore.SERVICE_CUSTOM, SettingsStore.secondAiService(activity))
+
+        // 切回 Gemini 模式
+        btnGemini.performClick()
+        assertEquals(View.VISIBLE, containerGemini.visibility)
+        assertEquals(View.GONE, containerZen.visibility)
+        assertEquals(View.GONE, containerCustom.visibility)
+        assertEquals(SettingsStore.SERVICE_GEMINI, SettingsStore.secondAiService(activity))
     }
 
     private fun refreshHomeScenes(

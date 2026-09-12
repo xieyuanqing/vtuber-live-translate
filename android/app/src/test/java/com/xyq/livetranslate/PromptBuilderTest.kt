@@ -1,10 +1,39 @@
 package com.xyq.livetranslate
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+/**
+ * 场景与模式的显示名现在取自字符串资源，因此需要 Robolectric 提供资源上下文。
+ * 显式把界面语言设为简体中文，断言的仍是发给模型的固定中文 prompt。
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class PromptBuilderTest {
+
+    private val context: Context
+        get() = ApplicationProvider.getApplicationContext()
+
+    @Before
+    fun useChineseUi() {
+        AppLocale.setApplicationContextForTest(context)
+        AppLocale.save(context, AppLocale.TAG_ZH_HANS)
+        AppLocale.apply(AppLocale.TAG_ZH_HANS)
+    }
+
+    @After
+    fun resetUiLanguage() {
+        AppLocale.save(context, AppLocale.TAG_SYSTEM)
+        AppLocale.apply(AppLocale.TAG_SYSTEM)
+    }
 
     @Test
     fun `prompt combines concise base rules language direction and scene`() {

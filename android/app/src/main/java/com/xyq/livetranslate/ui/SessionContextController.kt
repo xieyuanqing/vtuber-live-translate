@@ -116,13 +116,13 @@ internal class SessionContextController(
         interpClearButton?.setOnClickListener {
             setContextText(TranslationMode.INTERPRETATION, "")
             resetAnalysisUi(TranslationMode.INTERPRETATION)
-            toast("已清除本场背景")
+            toast(context.getString(R.string.rt_toast_interp_context_cleared))
         }
         videoClearButton?.setOnClickListener {
             setContextText(TranslationMode.VIDEO, "")
             setVideoUrlText("")
             resetAnalysisUi(TranslationMode.VIDEO)
-            toast("已清除视频背景")
+            toast(context.getString(R.string.rt_toast_video_context_cleared))
         }
         renderVideoAnalyzeButtonLabel()
         renderVideoContextFold()
@@ -145,16 +145,16 @@ internal class SessionContextController(
         setLatestRequestId(mode, "")
         val modeViews = views(mode)
         modeViews.analyzeContextButton.isEnabled = true
-        showAnalyzeStatus(mode, "输入已修改，之前的分析已取消")
+        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_input_changed_cancelled))
     }
 
     private fun renderInterpContextFold() {
         val body = interpContextBody ?: return
         body.visibility = if (interpContextExpanded) View.VISIBLE else View.GONE
         interpContextHeader?.text = if (interpContextExpanded) {
-            "本场背景 · 可选"
+            context.getString(R.string.rt_ctx_header_interp_expanded)
         } else {
-            "本场背景 · 可选 ›"
+            context.getString(R.string.rt_ctx_header_interp_collapsed)
         }
         val text = interpretationViews.sessionContext.text?.toString().orEmpty().trim()
         renderSummary(
@@ -169,17 +169,17 @@ internal class SessionContextController(
         val body = videoContextBody ?: return
         body.visibility = if (videoContextExpanded) View.VISIBLE else View.GONE
         videoContextHeader?.text = if (videoContextExpanded) {
-            "视频背景 · 可选"
+            context.getString(R.string.rt_ctx_header_video_expanded)
         } else {
-            "视频背景 · 可选 ›"
+            context.getString(R.string.rt_ctx_header_video_collapsed)
         }
         val text = videoViews.sessionContext.text?.toString().orEmpty().trim()
         val url = videoViews.videoSessionUrl?.text?.toString().orEmpty().trim()
         // 折叠行显示一段能认出来的内容，而不是只报字数。
         val summary = when {
-            text.isNotEmpty() && url.isNotEmpty() -> snippet(text) + " · 含链接"
+            text.isNotEmpty() && url.isNotEmpty() -> snippet(text) + context.getString(R.string.rt_ctx_summary_has_url)
             text.isNotEmpty() -> snippet(text)
-            url.isNotEmpty() -> "已填视频链接"
+            url.isNotEmpty() -> context.getString(R.string.rt_ctx_summary_url_only)
             else -> ""
         }
         renderSummary(
@@ -212,7 +212,11 @@ internal class SessionContextController(
     /** 有链接就是抓资料，只有文字就是整理；按钮别说自己做不到的事。 */
     private fun renderVideoAnalyzeButtonLabel() {
         val hasUrl = videoViews.videoSessionUrl?.text?.toString().orEmpty().isNotBlank()
-        videoViews.analyzeContextButton.text = if (hasUrl) "AI 获取视频背景" else "AI 整理背景"
+        videoViews.analyzeContextButton.text = if (hasUrl) {
+            context.getString(R.string.rt_ctx_btn_fetch_video_context)
+        } else {
+            context.getString(R.string.rt_ctx_btn_organize_context)
+        }
     }
 
     fun saveState(outState: Bundle) {
@@ -302,7 +306,7 @@ internal class SessionContextController(
         modeViews.analyzePreview.visibility = View.VISIBLE
         modeViews.analyzeUndoButton.visibility = View.GONE
         setUndoSnapshot(mode, null)
-        showAnalyzeStatus(mode, note.ifBlank { "已整理好，确认后再用于本次翻译" })
+        showAnalyzeStatus(mode, note.ifBlank { context.getString(R.string.rt_ctx_status_ready_for_review) })
     }
 
     private fun applyAnalysisResult(mode: TranslationMode) {
@@ -313,7 +317,7 @@ internal class SessionContextController(
         setContextText(mode, result)
         modeViews.analyzePreview.visibility = View.GONE
         modeViews.analyzeUndoButton.visibility = View.VISIBLE
-        showAnalyzeStatus(mode, "已用于本次翻译")
+        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_applied))
         if (mode == TranslationMode.INTERPRETATION) renderInterpContextFold() else renderVideoContextFold()
     }
 
@@ -321,7 +325,7 @@ internal class SessionContextController(
         val modeViews = views(mode)
         modeViews.analyzePreview.visibility = View.GONE
         modeViews.analyzePreviewText.text = ""
-        showAnalyzeStatus(mode, "已放弃这次结果，原来的内容没有变")
+        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_discarded))
     }
 
     private fun undoAnalysisResult(mode: TranslationMode) {
@@ -329,7 +333,7 @@ internal class SessionContextController(
         setContextText(mode, snapshot)
         setUndoSnapshot(mode, null)
         views(mode).analyzeUndoButton.visibility = View.GONE
-        showAnalyzeStatus(mode, "已撤销替换，恢复成你原来写的内容")
+        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_undone))
         if (mode == TranslationMode.INTERPRETATION) renderInterpContextFold() else renderVideoContextFold()
     }
 
@@ -340,7 +344,7 @@ internal class SessionContextController(
         modeViews.analyzeConfigureButton.visibility = View.GONE
         val apiKey = SettingsStore.secondAiApiKey(context)
         if (apiKey.isBlank()) {
-            showAnalyzeStatus(mode, "还没有配置背景分析 AI", warn = true)
+            showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_no_ai_configured), warn = true)
             modeViews.analyzeConfigureButton.visibility = View.VISIBLE
             return
         }
@@ -350,9 +354,9 @@ internal class SessionContextController(
             showAnalyzeStatus(
                 mode,
                 if (mode == TranslationMode.VIDEO) {
-                    "请先填视频链接，或写几句背景"
+                    context.getString(R.string.rt_ctx_hint_fill_video_or_context)
                 } else {
-                    "请先写几句本场背景"
+                    context.getString(R.string.rt_ctx_hint_fill_context)
                 },
                 warn = true,
             )
@@ -367,7 +371,14 @@ internal class SessionContextController(
         val format = AiTextClient.Format.fromKey(SettingsStore.secondAiFormat(context))
         button.isEnabled = false
         // 两段进度：先抓网页资料，再整理背景，失败时能看出卡在哪一步。
-        showAnalyzeStatus(mode, if (url.isNotBlank()) "正在获取视频资料…" else "正在整理背景…")
+        showAnalyzeStatus(
+            mode,
+            if (url.isNotBlank()) {
+                context.getString(R.string.rt_ctx_fetching_video_data)
+            } else {
+                context.getString(R.string.rt_ctx_organizing)
+            },
+        )
 
         Thread({
             runCatching {
@@ -376,10 +387,10 @@ internal class SessionContextController(
                 } else {
                     null
                 }
-                check(isHostActive() && requestId == latestRequestId(mode)) { "分析已取消" }
+                check(isHostActive() && requestId == latestRequestId(mode)) { "analysis cancelled" }
                 postToUi {
                     if (isHostActive() && requestId == latestRequestId(mode)) {
-                        showAnalyzeStatus(mode, "正在整理背景…")
+                        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_organizing))
                     }
                 }
                 val source = TranslationLanguageCatalog.source(plan.sourceLanguageCode)
@@ -404,7 +415,7 @@ internal class SessionContextController(
                         modeViews.videoSessionUrl?.text?.toString().orEmpty().trim() != url
                     if (inputChanged) {
                         setLatestRequestId(mode, "")
-                        showAnalyzeStatus(mode, "输入已修改，之前的分析结果已忽略")
+                        showAnalyzeStatus(mode, context.getString(R.string.rt_ctx_status_input_changed_ignored))
                         button.isEnabled = true
                         return@success
                     }
@@ -412,7 +423,7 @@ internal class SessionContextController(
                     if (result.sessionContext.isBlank()) {
                         showAnalyzeStatus(
                             mode,
-                            result.note.take(200).ifBlank { "AI 没有返回可用背景，请补充资料后重试" },
+                            result.note.take(200).ifBlank { context.getString(R.string.rt_ctx_no_available_context) },
                             warn = true,
                         )
                     } else {
@@ -424,7 +435,14 @@ internal class SessionContextController(
                 postToUi failure@{
                     if (!isHostActive() || requestId != latestRequestId(mode)) return@failure
                     setLatestRequestId(mode, "")
-                    showAnalyzeStatus(mode, "整理失败：${error.message ?: "未知错误"}", warn = true)
+                    showAnalyzeStatus(
+                        mode,
+                        context.getString(
+                            R.string.rt_ctx_organize_failed,
+                            error.message ?: context.getString(R.string.rt_unknown_error),
+                        ),
+                        warn = true,
+                    )
                     button.isEnabled = true
                 }
             }

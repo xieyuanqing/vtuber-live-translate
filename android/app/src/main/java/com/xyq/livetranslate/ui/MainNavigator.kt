@@ -94,13 +94,13 @@ internal class MainNavigator(
         )
         private val RESTORABLE_SUB_PAGE_IDS = SUB_PAGE_IDS - R.id.pageHistoryDetail
         private val SUB_PAGE_TITLES = mapOf(
-            R.id.pageHistoryDetail to "历史详情",
-            R.id.pageSettingsTranslate to "翻译服务",
-            R.id.pageSettingsSubtitle to "字幕与悬浮窗",
-            R.id.pageSettingsProfileAi to "背景分析 AI",
-            R.id.pageSettingsDiagnostics to "诊断",
-            R.id.pageSettingsAbout to "关于",
-            R.id.pageSceneLibrary to "场景库",
+            R.id.pageHistoryDetail to R.string.rt_subpage_history_detail,
+            R.id.pageSettingsTranslate to R.string.rt_subpage_settings_translate,
+            R.id.pageSettingsSubtitle to R.string.rt_subpage_settings_subtitle,
+            R.id.pageSettingsProfileAi to R.string.rt_subpage_settings_profile_ai,
+            R.id.pageSettingsDiagnostics to R.string.rt_subpage_settings_diagnostics,
+            R.id.pageSettingsAbout to R.string.rt_subpage_settings_about,
+            R.id.pageSceneLibrary to R.string.rt_subpage_scene_library,
         )
     }
 
@@ -157,7 +157,7 @@ internal class MainNavigator(
             page.visibility = if (id == pageId) View.VISIBLE else View.GONE
         }
         views.toolbar.visibility = View.VISIBLE
-        views.toolbar.title = SUB_PAGE_TITLES.getValue(pageId)
+        views.toolbar.setTitle(SUB_PAGE_TITLES.getValue(pageId))
         views.toolbar.logo = null
         views.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_24)
         applyStatusBarCompensation(toolbarVisible = true)
@@ -205,7 +205,7 @@ internal class MainNavigator(
         }
         // 主 Tab 只保留页面大标题，避免 Toolbar + PageTitle 双头部。
         views.toolbar.visibility = View.GONE
-        views.toolbar.title = "流译"
+        views.toolbar.setTitle(R.string.app_name)
         views.toolbar.setLogo(R.drawable.ic_brand_translate_24)
         views.toolbar.navigationIcon = null
         applyStatusBarCompensation(toolbarVisible = false)

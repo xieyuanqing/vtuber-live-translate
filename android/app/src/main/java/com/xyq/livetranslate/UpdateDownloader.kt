@@ -30,11 +30,11 @@ object UpdateDownloader {
         val errors = mutableListOf<String>()
         val urls = info.downloadUrls
         urls.forEachIndexed { index, url ->
-            val label = sourceLabel(url, index)
+            val label = sourceLabel(context, url, index)
             try {
-                downloadOne(url, partial, index, urls.size, label, onProgress)
+                downloadOne(context, url, partial, index, urls.size, label, onProgress)
                 if (!partial.exists() || partial.length() < 1024L) {
-                    throw IOException("文件过小")
+                    throw IOException(context.getString(R.string.rt_update_file_too_small))
                 }
                 if (target.exists()) target.delete()
                 if (!partial.renameTo(target)) {
@@ -47,10 +47,11 @@ object UpdateDownloader {
                 errors += "$label: ${e.message ?: e.javaClass.simpleName}"
             }
         }
-        throw IOException("全部下载源失败：${errors.take(3).joinToString("；")}")
+        throw IOException(context.getString(R.string.rt_update_all_sources_failed, errors.take(3).joinToString("；")))
     }
 
     private fun downloadOne(
+        context: Context,
         url: String,
         partial: File,
         index: Int,
@@ -65,7 +66,7 @@ object UpdateDownloader {
             .build()
         http.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")
-            val body = resp.body ?: throw IOException("空响应")
+            val body = resp.body ?: throw IOException(context.getString(R.string.rt_update_empty_response))
             val length = body.contentLength()
             body.byteStream().use { input ->
                 partial.outputStream().use { output ->
@@ -92,11 +93,11 @@ object UpdateDownloader {
         }
     }
 
-    private fun sourceLabel(url: String, index: Int): String = when {
-        url.contains("ghproxy.net") -> "镜像 ${index + 1}·ghproxy"
-        url.contains("mirror.ghproxy.com") -> "镜像 ${index + 1}·mirror"
-        url.contains("github.com") -> "源 ${index + 1}·GitHub"
-        else -> "源 ${index + 1}"
+    private fun sourceLabel(context: Context, url: String, index: Int): String = when {
+        url.contains("ghproxy.net") -> context.getString(R.string.rt_update_source_ghproxy, index + 1)
+        url.contains("mirror.ghproxy.com") -> context.getString(R.string.rt_update_source_mirror, index + 1)
+        url.contains("github.com") -> context.getString(R.string.rt_update_source_github, index + 1)
+        else -> context.getString(R.string.rt_update_source_direct, index + 1)
     }
 
     private fun sanitizeFileName(name: String): String {

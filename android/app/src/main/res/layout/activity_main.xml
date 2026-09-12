@@ -14,8 +14,8 @@
         android:layout_height="wrap_content"
         android:minHeight="@dimen/touch_target"
         app:logo="@drawable/ic_brand_translate_24"
-        app:logoDescription="流译"
-        app:title="流译" />
+        app:logoDescription="@string/app_name"
+        app:title="@string/app_name" />
 
     <FrameLayout
         android:id="@+id/pageContainer"
