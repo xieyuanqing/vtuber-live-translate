@@ -28,6 +28,14 @@
 - GET `/zen/v1/models` 不带该头 → HTTP 200（模型列表无需会话头）。
 - 单测新增 3 个断言组（extraHeaders 仅 Zen、稳定且格式正确、probe 转发/默认不带）；
   `testDebugUnitTest` + `lintDebug` + `assembleDebug` 全过，`git diff --check` 干净。
+- **模拟器端到端复测**（本机 Pixel 6 AVD / API 35，安装 3315305 debug APK）：设置 → 背景分析 AI
+  → 选 OpenCode Zen → 「测试分析服务」，真实请求返回
+  "Available: big-pickle returned results successfully; analysis function is ready to use."，
+  Zen 信息卡文案（已实测可用/隐私提示/凭据隔离）渲染正常。
+- 同日 CI run 34741991972 首跑失败为 `GeminiLiveProbeTest` 两个 WebSocket 用例的 tearDown
+  `server.shutdown()` 在资源紧张的 runner 上抛 IOException（失败点在清理，断言本体已通过；
+  同分支前一日运行即绿）。已在 f49d290 对 tearDown 做 `runCatching` 容错，随后 CI 绿
+  （run 34748796400，headSha 核验一致）。
 
 ## 2026-09-12 · 阶段2：中英双语界面（v2.6.0 / 38）
 
