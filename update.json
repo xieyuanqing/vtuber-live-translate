@@ -1,10 +1,10 @@
 {
-  "versionCode": 38,
-  "versionName": "2.6.0",
-  "title": "流译 2.6.0（界面收敛与开源）",
-  "notes": "2.4.1 以来的累积更新，重点是把界面收干净。\n\n• 翻译服务与背景分析 AI 两页统一骨架，按钮按主次分层\n• 模型选择改为模型框右侧刷新图标 + 就地下拉，取代全屏面板\n• 悬浮窗控制按钮 44dp 改 28dp，收起后只留一根贴边小蓝条\n• 修复控制条自动隐藏失效（倒计时被每条字幕重置）与收起态拖不动\n• 新增中英双语界面，界面语言不改变发给模型的提示词\n• 背景分析 AI 支持 OpenCode Zen 免费接入点与连通性自检\n• 仓库开源为 MIT，README 重写并补英文版\n\n安装包为 Debug 签名内测包，可覆盖安装同签名旧版。",
-  "apkName": "LiveTranslate-2.6.0.apk",
+  "versionCode": 39,
+  "versionName": "2.6.1",
+  "title": "流译 2.6.1（场景库跟随界面语言）",
+  "notes": "修复场景库的语言问题，其余同 2.6.0。\n\n• 没改过的内置场景，名称和描述都跟随界面语言；你改过的内容原样保留\n• 修复首次运行时的界面语言被冻进存储，并顺着场景名漏进发给模型的提示词\n\n2.4.1 升级上来的还包含 2.6.0 的全部改动：\n\n• 翻译服务与背景分析 AI 两页统一骨架，按钮按主次分层\n• 模型选择改为模型框右侧刷新图标 + 就地下拉\n• 悬浮窗控制按钮做小，收起后只留一根贴边小蓝条\n• 修复控制条自动隐藏失效与收起态拖不动\n• 新增中英双语界面；背景分析 AI 支持 OpenCode Zen 免费接入点\n• 仓库开源为 MIT，README 重写并补英文版\n\n安装包为 Debug 签名内测包，可覆盖安装同签名旧版。",
+  "apkName": "LiveTranslate-2.6.1.apk",
   "downloadUrls": [
-    "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.6.0/LiveTranslate-2.6.0.apk"
+    "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.6.1/LiveTranslate-2.6.1.apk"
   ]
 }

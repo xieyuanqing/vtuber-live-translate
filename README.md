@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.6.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.6.1-0058BC)
 
 [English](README.en.md) · [下载 APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [文档索引](docs/README.md)
 
@@ -41,13 +41,14 @@
 | **实时字幕** | App 内字幕流 + 可拖动、可暂停、可收进屏幕侧边的系统悬浮字幕 |
 | **结构化历史** | 按会话保存语言、场景、时长、原文与译文，支持搜索、筛选、Markdown 复制 |
 | **本地安全存储** | API Key 经 Android Keystore 加密，历史保存在 App 私有目录 |
-| **双语界面** | 跟随系统 / 简体中文 / English；**界面语言不改变发给模型的提示词** |
+| **双语界面** | 跟随系统 / 简体中文 / English；没改过的内置场景会跟着界面语言一起本地化 |
 
 ### 配置边界
 
 界面语言、翻译方向和场景是三件独立的事，这条边界由测试锁定：
 
-- **场景库**是唯一的长期配置，保存可复用的场景名称与提示词。
+- **场景库**是唯一的长期配置，保存可复用的场景名称与提示词。没改过的内置场景，名称和描述跟随界面语言；**你改过的内容任何语言下都原样保留**。
+- 界面语言对发给模型的提示词**只影响一处**：内置场景的描述正文。翻译方向、输入模式、场景名和提示词底座始终是固定中文，切界面语言不会改变它们。
 - **语言方向**不属于任何场景条目，按模式独立保存、随时可调；切换场景不改变语言。
 - **本场上下文**只存在于同传或视频主页，不写入场景库。
 - 会话启动时**冻结**完整 Prompt 与场景名称；权限回调、重连和后台服务不会重新读取正在编辑的配置。
@@ -175,7 +176,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 当前状态
 
-当前版本 **v2.6.0（versionCode 38）**。
+当前版本 **v2.6.1（versionCode 39）**。
 
 本版的重点是把界面收干净：
 
@@ -183,6 +184,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - **模型选择就地下拉** — 模型输入框右侧一个刷新图标，点一下拉取并原地展开选择，取代原来的全屏选择面板。
 - **悬浮窗瘦身** — 控制按钮 44dp → 28dp，收起后只留一根贴边小蓝条（视觉 10dp，触摸区 28dp，多出的部分做成朝屏幕内侧的半透明晕）。
 - **修掉控制条自动隐藏失效** — 旧实现把定时隐藏排在每条字幕都会调用的刷新函数里，倒计时被无限重置；现在改成点面板空白处手动切换。
+- **场景库跟随界面语言**（2.6.1）— 没改过的内置场景，名称和描述都跟随界面语言；用户改过的原样保留。顺带修掉一个更隐蔽的问题：首次运行时的界面语言会被冻进存储，并顺着场景名漏进发给模型的 prompt。
 
 详细变更与验证记录见 [开发日志](docs/04-dev-log.md)。
 

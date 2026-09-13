@@ -9,7 +9,7 @@ Microphone interpretation · In-app audio capture · System overlay subtitles
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.6.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.6.1-0058BC)
 
 [简体中文](README.md) · [Download APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [Docs](docs/README.md)
 
@@ -41,13 +41,14 @@ The goal is **low-latency comprehension support**, not broadcast-quality subtitl
 | **Real-time subtitles** | In-app subtitle stream plus a draggable, pausable overlay that can collapse to the screen edge |
 | **Structured history** | Sessions store language, scene, duration, source and translation, with search, filtering and Markdown copy |
 | **Local secure storage** | API keys are encrypted with the Android Keystore; history stays in the app's private directory |
-| **Bilingual UI** | Follow system / Simplified Chinese / English — **the UI language never changes the prompt sent to the model** |
+| **Bilingual UI** | Follow system / Simplified Chinese / English; untouched built-in scenes localise along with the interface |
 
 ### Configuration boundaries
 
 UI language, translation direction and scenes are three independent things, and tests lock that boundary:
 
-- The **scene library** is the only long-lived configuration: reusable scene names and prompts.
+- The **scene library** is the only long-lived configuration: reusable scene names and prompts. Untouched built-in scenes localise their name and description with the interface; **anything you edited is kept verbatim in every language**.
+- The UI language affects the prompt sent to the model in **exactly one place**: the body of a built-in scene description. Translation direction, input mode, scene name and the prompt preamble are always fixed Chinese and never follow the interface language.
 - **Language direction** belongs to no scene entry. It is stored per mode and adjustable at any time; switching scenes never changes it.
 - **Session context** lives only on the Live or Video home screen and is never written into the scene library.
 - Starting a session **freezes** the full prompt and scene name. Permission callbacks, reconnects and the foreground service never re-read configuration you are still editing.
@@ -175,7 +176,7 @@ Full index in [docs/README.md](docs/README.md). Most of it is written in Chinese
 
 ## Current status
 
-Current version **v2.6.0 (versionCode 38)**.
+Current version **v2.6.1 (versionCode 39)**.
 
 This release is about quieting the interface down:
 
@@ -183,6 +184,7 @@ This release is about quieting the interface down:
 - **In-place model dropdown** — a refresh icon sits next to the model field; tapping it fetches the list and expands a dropdown right there, replacing the old full-screen picker panel.
 - **Slimmer overlay** — control buttons went from 44dp to 28dp, and collapsing now leaves a thin blue bar hugging the screen edge (10dp visible, 28dp touch target, the difference rendered as a halo fading inward).
 - **Fixed the control bar that never auto-hid** — the old implementation scheduled the hide inside a refresh callback that fires on every subtitle line, so the countdown was reset forever. Controls are now toggled by tapping a blank area of the panel.
+- **Scene library follows the UI language** (2.6.1) — untouched built-in scenes localise both their name and description, while anything you edited is kept verbatim. This also fixed a subtler problem: the UI language at first run was frozen into storage and leaked into the scene name sent to the model.
 
 See the [dev log](docs/04-dev-log.md) for the full change and verification record.
 
