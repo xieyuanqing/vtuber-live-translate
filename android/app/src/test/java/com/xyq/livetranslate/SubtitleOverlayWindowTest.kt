@@ -2,12 +2,15 @@ package com.xyq.livetranslate
 
 import android.app.Application
 import android.content.Context
+import android.os.Looper
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
+import java.time.Duration
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -79,6 +82,36 @@ class SubtitleOverlayWindowTest {
             assertEquals(View.GONE, handle.visibility)
             assertFalse(StatusBus.paused)
             assertNull(shadowOf(context).nextStartedService)
+        } finally {
+            overlay.hide()
+            StatusBus.paused = false
+        }
+    }
+
+    @Test
+    fun headerControlsAutoHideAndRevealOnTouch() {
+        val overlay = SubtitleOverlay(appContext())
+        try {
+            assertTrue(overlay.show())
+            val header = overlay.field<View>("headerRow")
+            assertEquals(View.VISIBLE, header.visibility)
+
+            // 无操作约 3.5 秒后控制条自动隐藏，字幕独占面板
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(4000))
+            assertEquals(View.GONE, header.visibility)
+
+            // 触摸悬浮窗重新唤出控制条
+            val root = overlay.field<ViewGroup>("root")
+            val down = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0)
+            root.dispatchTouchEvent(down)
+            down.recycle()
+            assertEquals(View.VISIBLE, header.visibility)
+
+            // 暂停态控制条常驻，不自动隐藏（真实链路：状态变化经 maybeReapplyStyle 进入悬浮窗）
+            StatusBus.paused = true
+            overlay.maybeReapplyStyle()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5000))
+            assertEquals(View.VISIBLE, header.visibility)
         } finally {
             overlay.hide()
             StatusBus.paused = false

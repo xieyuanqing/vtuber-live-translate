@@ -20,13 +20,9 @@
     <string name="btn_use_translate_gemini_key">使用翻译服务的 Gemini Key</string>
     <string name="btn_refresh_free_models">刷新免费模型</string>
     <string name="btn_switch_service">切换服务</string>
-    <string name="zen_badge">免 Key · 免费模型</string>
     <string name="zen_info_title">OpenCode Zen 免费模型</string>
-    <string name="zen_session_note">免费模型已实测可用（App 自动声明网关要求的会话标识）；免费额度与模型可用性以 OpenCode 官方为准，可能随时调整</string>
-    <string name="zen_info_summary">无需自备 API Key，使用 OpenCode Zen 免费模型候选（big-pickle）。</string>
     <string name="zen_privacy_notice">免费模型可能使用提交内容改进模型，请勿发送敏感资料</string>
     <string name="zen_view_docs">查看官方文档与隐私条款</string>
-    <string name="zen_isolation_note">凭据隔离说明：使用公开接入点（public），无需填写 Key，绝不向 Zen 发送您的 Gemini Key。</string>
     <string name="zen_model_restricted">Zen 仅支持官方免费模型（%s）</string>
 
     <!-- 阶段2: 布局与菜单文案提取 -->

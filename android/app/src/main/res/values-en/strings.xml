@@ -20,13 +20,9 @@
     <string name="btn_use_translate_gemini_key">Use Translation Service\'s Gemini Key</string>
     <string name="btn_refresh_free_models">Refresh Free Models</string>
     <string name="btn_switch_service">Switch Service</string>
-    <string name="zen_badge">No Key · Free Model</string>
     <string name="zen_info_title">OpenCode Zen Free Models</string>
-    <string name="zen_session_note">Free model verified working (the app declares the gateway-required session id automatically); free tier and model availability follow OpenCode and may change</string>
-    <string name="zen_info_summary">No API key needed; uses OpenCode Zen free model candidates (big-pickle).</string>
     <string name="zen_privacy_notice">Free models may use submitted content to improve the model. Do not send sensitive data.</string>
     <string name="zen_view_docs">View official documentation and privacy terms</string>
-    <string name="zen_isolation_note">Credential isolation note: uses the public endpoint with no key required; your Gemini key is never sent to Zen.</string>
     <string name="zen_model_restricted">Zen only supports official free models (%s)</string>
 
     <!-- 阶段2: 布局与菜单文案提取 -->

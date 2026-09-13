@@ -2,6 +2,31 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · 悬浮窗控制条自动隐藏 + 模型选择说明精简（v2.6.0 / 38）
+
+**改动**
+
+- `SubtitleOverlay`：控制条（状态点 + LIVE/暂停文案 + 暂停/打开/收起三个 44dp 按钮）不再常驻。
+  默认只显示字幕文本；触摸悬浮窗临时唤出控制条，无操作 3.5 秒自动隐藏；暂停态控制条常驻
+  方便找到「继续」，恢复后照常自动隐藏；从收起胶囊展开时也会短暂唤出一次。拖动、收起、
+  打开主应用等既有交互与 View 引用全部保留。
+- 模型选择区：Zen 信息卡从「标题 + 4 段说明 + 2 按钮」精简为「标题 + 1 句隐私警示 + 2 按钮」，
+  删除 `zen_session_note`（会话头实现细节）、`zen_info_summary`、`zen_isolation_note`、
+  `zen_badge`（本就零引用）四条字符串（中英同步）及 `OpenCodeZenCatalog.PRIVACY_NOTICE`
+  死常量。模型字段 helper 与自检状态文案保留。
+
+**原因**：用户反馈悬浮窗里暂停/收起按钮占比过大，字幕只占约三成，看视频时遮挡且无用；
+以及设置页模型选择处说明文字过多。悬浮窗定位是「只占一点点、主要显示字幕」，
+控制条属于低频操作，应让位给字幕；说明文字保留隐私警示这一必要项即可。
+
+**真实验证**
+
+- 新增 `SubtitleOverlayWindowTest.headerControlsAutoHideAndRevealOnTouch`：初始显示 →
+  idle 4s 自动隐藏 → 触摸唤出 → 暂停态 idle 5s 仍常驻。
+- `testDebugUnitTest` + `lintDebug` + `assembleDebug` 全过，`git diff --check` 干净。
+- 模拟器实测（Pixel 6 AVD / API 35）：同传会话中悬浮窗 1.3s 截图控制条可见、6.3s 截图
+  控制条已隐藏只剩一行字幕；设置页 Zen 卡片仅剩标题、一句隐私警示与两个按钮。
+
 ## 2026-09-13 · CI 改为仅手动触发（v2.6.0 / 38）
 
 **改动**：`android-debug.yml` 去掉 `push` / `pull_request` 自动触发，只保留 `workflow_dispatch`；

@@ -25,7 +25,6 @@ object OpenCodeZenCatalog {
     const val PUBLIC_KEY = "public"
     const val CANDIDATE_MODEL = "big-pickle"
     const val DOCS_URL = "https://opencode.ai/docs/zen/"
-    const val PRIVACY_NOTICE = "免费模型可能使用提交内容改进模型，请勿发送敏感资料"
 
     /**
      * 官方文档明确确认为免费的模型白名单。
