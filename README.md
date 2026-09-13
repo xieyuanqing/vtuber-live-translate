@@ -1,9 +1,9 @@
 <div align="center">
 
-# 流译 LiveTranslate
+# LiveTranslate
 
-**Android 实时翻译工具**
-麦克风同传 · 应用内音频捕获 · 系统悬浮字幕
+**Real-time translation for Android**
+Microphone interpretation · In-app audio capture · System overlay subtitles
 
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -11,78 +11,78 @@
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
 ![Version](https://img.shields.io/badge/version-2.6.1-0058BC)
 
-[English](README.en.md) · [下载 APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [文档索引](docs/README.md)
+[简体中文](README.zh-CN.md) · [Download APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [Docs](docs/README.md)
 
 </div>
 
 ---
 
-既可以通过麦克风进行现场同传，也可以捕获手机里正在播放的视频或直播音频，把译文显示在 App 内或系统悬浮窗上。
+Translate live speech from the microphone, or capture the audio a video or stream is playing on your phone, and read the result inside the app or in a system overlay.
 
-目标是**低延迟的理解辅助**，而不是发布级字幕制作。默认运行形态是纯本地：填自己的 API Key，不需要任何后端、账号或订阅。
+The goal is **low-latency comprehension support**, not broadcast-quality subtitling. It runs fully local by default: bring your own API key, no backend, no account, no subscription.
 
-> 目前提供 GitHub Release 内测包（Debug 签名），不做商店分发，App 内支持检查更新。
+> Builds are distributed as GitHub Releases (debug-signed), not through app stores. In-app update checking is included.
 
-## 界面
+## Screens
 
-| 同传 | 视频 | 字幕与悬浮窗 | 设置 |
+| Live | Video | Subtitles & Overlay | Settings |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/images/zh-live.png" width="200" alt="同传主页"> | <img src="docs/images/zh-video.png" width="200" alt="视频主页"> | <img src="docs/images/zh-subtitle.png" width="200" alt="字幕与悬浮窗设置"> | <img src="docs/images/zh-settings.png" width="200" alt="设置首页"> |
+| <img src="docs/images/en-live.png" width="200" alt="Live interpretation"> | <img src="docs/images/en-video.png" width="200" alt="Video capture"> | <img src="docs/images/en-subtitle.png" width="200" alt="Subtitle and overlay settings"> | <img src="docs/images/en-settings.png" width="200" alt="Settings"> |
 
-## 功能
+## Features
 
 | | |
 |---|---|
-| **麦克风同传** | 会议、课堂、采访、旅行交流等现场场景 |
-| **视频字幕** | 通过 MediaProjection + AudioPlaybackCapture 捕获应用内播放的音频 |
-| **模式隔离** | 同传与视频各自维护语言方向、场景和本场上下文，互不覆盖 |
-| **统一场景库** | 场景 = 名称 + 提示词，是唯一的长期配置；可按模式新建、编辑、使用、设为默认或恢复模板 |
-| **背景分析 AI** | 可选。YouTube / 哔哩哔哩 / Twitch 走专用元数据接口，其他公网播放页经 Jina Reader 提取文本；结果先进预览，确认后才写入 |
-| **实时字幕** | App 内字幕流 + 可拖动、可暂停、可收进屏幕侧边的系统悬浮字幕 |
-| **结构化历史** | 按会话保存语言、场景、时长、原文与译文，支持搜索、筛选、Markdown 复制 |
-| **本地安全存储** | API Key 经 Android Keystore 加密，历史保存在 App 私有目录 |
-| **双语界面** | 跟随系统 / 简体中文 / English；没改过的内置场景会跟着界面语言一起本地化 |
+| **Live interpretation** | Meetings, lectures, interviews, travel conversations |
+| **Video subtitles** | Captures in-app playback audio via MediaProjection + AudioPlaybackCapture |
+| **Mode isolation** | Live and Video keep separate language directions, scenes and session context |
+| **Unified scene library** | A scene is a name + a prompt, and it is the only long-lived configuration; create, edit, use, set as default or restore templates per mode |
+| **Background analysis AI** | Optional. YouTube / Bilibili / Twitch use dedicated metadata endpoints; other public pages go through Jina Reader. Results land in a preview first and are only applied once you confirm |
+| **Real-time subtitles** | In-app subtitle stream plus a draggable, pausable overlay that can collapse to the screen edge |
+| **Structured history** | Sessions store language, scene, duration, source and translation, with search, filtering and Markdown copy |
+| **Local secure storage** | API keys are encrypted with the Android Keystore; history stays in the app's private directory |
+| **Bilingual UI** | Follow system / Simplified Chinese / English; untouched built-in scenes localise along with the interface |
 
-### 配置边界
+### Configuration boundaries
 
-界面语言、翻译方向和场景是三件独立的事，这条边界由测试锁定：
+UI language, translation direction and scenes are three independent things, and tests lock that boundary:
 
-- **场景库**是唯一的长期配置，保存可复用的场景名称与提示词。没改过的内置场景，名称和描述跟随界面语言；**你改过的内容任何语言下都原样保留**。
-- 界面语言对发给模型的提示词**只影响一处**：内置场景的描述正文。翻译方向、输入模式、场景名和提示词底座始终是固定中文，切界面语言不会改变它们。
-- **语言方向**不属于任何场景条目，按模式独立保存、随时可调；切换场景不改变语言。
-- **本场上下文**只存在于同传或视频主页，不写入场景库。
-- 会话启动时**冻结**完整 Prompt 与场景名称；权限回调、重连和后台服务不会重新读取正在编辑的配置。
+- The **scene library** is the only long-lived configuration: reusable scene names and prompts. Untouched built-in scenes localise their name and description with the interface; **anything you edited is kept verbatim in every language**.
+- The UI language affects the prompt sent to the model in **exactly one place**: the body of a built-in scene description. Translation direction, input mode, scene name and the prompt preamble are always fixed Chinese and never follow the interface language.
+- **Language direction** belongs to no scene entry. It is stored per mode and adjustable at any time; switching scenes never changes it.
+- **Session context** lives only on the Live or Video home screen and is never written into the scene library.
+- Starting a session **freezes** the full prompt and scene name. Permission callbacks, reconnects and the foreground service never re-read configuration you are still editing.
 
-## 工作原理
+## How it works
 
 ```text
-麦克风 AudioRecord ───────────────┐
+Microphone AudioRecord ───────────┐
                                   ├─→ PCM16 / 16 kHz / mono / 100 ms
-应用音频 AudioPlaybackCapture ────┘
+App audio AudioPlaybackCapture ───┘
                                       ↓
                             Gemini Live Translate
                                       ↓
                               SubtitleStabilizer
                          ┌────────────┼────────────┐
                          ↓            ↓            ↓
-                    App 字幕流    系统悬浮字幕   结构化历史
+                   In-app stream   Overlay    Structured history
 ```
 
-实时管线跑在前台服务 `CaptureService` 里：
+The real-time pipeline runs inside the `CaptureService` foreground service:
 
-- `PcmProcessor` — 音频重采样与分块
-- `GeminiLiveClient` — WebSocket、音频队列、主动轮换与断线重连
-- `SubtitleStabilizer` — 流式字幕切句、去重与确认行处理
-- `StatusBus` — 向界面提供只读的会话状态快照
-- `SubtitleOverlay` / `TranscriptLogger` — 悬浮显示与本地历史
+- `PcmProcessor` — resampling and chunking
+- `GeminiLiveClient` — WebSocket, audio queue, proactive rotation and reconnection
+- `SubtitleStabilizer` — streaming segmentation, deduplication and confirmed lines
+- `StatusBus` — read-only session state snapshot for the UI
+- `SubtitleOverlay` / `TranscriptLogger` — overlay rendering and local history
 
-背景分析 AI 是独立链路，不参与实时音频连接。
+Background analysis AI is a separate path and never touches the real-time audio connection.
 
-## 快速开始
+## Getting started
 
-### 安装
+### Install
 
-从 [Releases](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) 下载 APK，或自行构建：
+Grab the APK from [Releases](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest), or build it yourself:
 
 ```bash
 git clone https://github.com/xieyuanqing/vtuber-live-translate.git
@@ -91,56 +91,56 @@ cd vtuber-live-translate/android
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-需要 JDK 17 与 Android SDK 35。仓库内的 `android/app/debug.keystore` 是固定的公开 Debug 签名，只为让本地与 CI 产物能互相覆盖安装，**不是正式发布密钥**。
+Requires JDK 17 and Android SDK 35. The `android/app/debug.keystore` in this repository is a fixed public debug key so local and CI artifacts can replace each other on install — it is **not** a release signing key.
 
-### 首次配置
+### First run
 
-1. **设置 → 翻译服务**，填写 Gemini API Key（多个 Key 用英文逗号分隔）。需要反代时在「自定义服务地址」里改 Base URL。
-2. 在同传或视频主页选择源语言、目标语言和场景；需要改提示词就进场景库编辑。
-3. 同传模式授予录音权限；视频模式额外需要悬浮窗权限和每次开始时的屏幕捕获授权。
-4. 开始会话后页面切到专注字幕的运行态，停止后回到配置界面。
+1. Open **Settings → Translation Service** and enter a Gemini API key (separate multiple keys with commas). Use *Custom service address* if you go through a proxy.
+2. Pick source language, target language and a scene on the Live or Video home screen. Edit prompts in the scene library when needed.
+3. Grant microphone permission for Live; Video additionally needs overlay permission and a MediaProjection prompt on every start.
+4. Once a session starts the page switches to a subtitle-focused running state, and returns to configuration when you stop.
 
-背景分析 AI 在 **设置 → 背景分析 AI** 单独配置，不复用实时翻译的连接状态。
+Background analysis AI is configured separately under **Settings → Background Analysis AI** and does not share the real-time connection state.
 
-## 环境要求
+## Requirements
 
-- Android 10（API 29）或更高版本
-- 可访问 Gemini Live Translate 服务的网络
-- 至少一个有效 API Key
+- Android 10 (API 29) or newer
+- Network access to a Gemini Live Translate endpoint
+- At least one valid API key
 
-视频字幕另有两个系统限制：
+Video subtitles have two additional system constraints:
 
-- 目标应用必须允许 AudioPlaybackCapture；部分 DRM、通话或主动禁止捕获的应用无法内录。
-- 视频模式需要系统悬浮窗权限，且每次开始捕获都要确认 MediaProjection 授权。
+- The target app must allow AudioPlaybackCapture. DRM playback, calls and apps that explicitly opt out cannot be captured.
+- Video mode needs the system overlay permission plus a MediaProjection confirmation each time capture starts.
 
-## 数据与隐私
+## Data and privacy
 
-- API Key 经 Android Keystore AES-GCM 加密后存入本地 SharedPreferences。
-- 会话历史以结构化 JSON 保存在 App 私有目录 `history_v2`，不会自动复制到公共 Downloads。
-- 音频只在翻译会话运行期间发送到用户配置的实时翻译端点。
-- 本场上下文会进入当前会话提示词；历史只保存截断后的上下文摘要。
-- 解析未知平台页面时，完整目标 URL（含 query）会发送给第三方 Jina Reader；已知的 YouTube、哔哩哔哩和 Twitch 链接不走该服务。通用抓取会拒绝单标签/内网域名、本地/私网/保留地址、带凭据 URL 和非标准端口，并在发送前检查域名的全部 A/AAAA 解析结果。
-- 不含账号系统、广告 SDK 或分析 SDK。
+- API keys are encrypted with Android Keystore AES-GCM before being stored in local SharedPreferences.
+- Session history is stored as structured JSON in the app-private `history_v2` directory and is never copied to public Downloads automatically.
+- Audio is sent to your configured endpoint only while a translation session is running.
+- Session context enters the current session prompt; history keeps only a truncated summary of it.
+- When analysing an unknown platform page, the full target URL (including query parameters) is sent to the third-party Jina Reader. Known YouTube, Bilibili and Twitch links never use that service. Generic fetching rejects single-label/intranet hosts, local/private/reserved addresses, URLs carrying credentials and non-standard ports, and checks every resolved A/AAAA record before sending.
+- No account system, ad SDK or analytics SDK.
 
-使用自定义 Base URL 或第三方分析服务时，数据处理规则取决于对应服务提供方，请自行评估。
+When you point the app at a custom base URL or a third-party analysis service, data handling is governed by that provider — evaluate it yourself.
 
 <details>
-<summary><b>权限说明</b></summary>
+<summary><b>Permissions</b></summary>
 
-| 权限 | 用途 |
+| Permission | Purpose |
 |---|---|
-| `INTERNET` | 连接实时翻译与背景分析接口 |
-| `RECORD_AUDIO` | 麦克风同传和 AudioPlaybackCapture |
-| `SYSTEM_ALERT_WINDOW` | 系统悬浮字幕；视频模式必须启用 |
-| `FOREGROUND_SERVICE_*` | 会话期间保持音频管线运行 |
-| `POST_NOTIFICATIONS` | Android 13+ 显示前台服务通知；拒绝不影响核心管线 |
-| `WAKE_LOCK` | 降低长会话被休眠打断的概率 |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | 可选的后台存活设置入口 |
+| `INTERNET` | Reaching the translation and analysis endpoints |
+| `RECORD_AUDIO` | Microphone interpretation and AudioPlaybackCapture |
+| `SYSTEM_ALERT_WINDOW` | Overlay subtitles; required for video mode |
+| `FOREGROUND_SERVICE_*` | Keeping the audio pipeline alive during a session |
+| `POST_NOTIFICATIONS` | Foreground service notification on Android 13+; denying it does not block the pipeline |
+| `WAKE_LOCK` | Reduces the chance of long sessions being interrupted by sleep |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Optional entry point for background survival settings |
 
 </details>
 
 <details>
-<summary><b>技术栈与项目结构</b></summary>
+<summary><b>Tech stack and project layout</b></summary>
 
 - Kotlin 2.0.21 · Android XML Views + Material 3
 - Gradle 8.9 / AGP 8.7.3 · Java 17
@@ -149,65 +149,65 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ```text
 .
-├── android/                         # Android Studio / Gradle 项目
+├── android/                         # Android Studio / Gradle project
 │   └── app/src/
-│       ├── main/java/.../           # Kotlin 业务代码
-│       ├── main/res/                # XML 布局、主题与图形资源
-│       └── test/java/.../           # JVM / Robolectric 回归测试
-├── docs/                            # 路线图、技术记录、开发日志与截图
-├── .github/workflows/               # 单元测试、Lint 与 Debug 构建
-├── CLAUDE.md                        # AI 辅助开发速览
+│       ├── main/java/.../           # Kotlin sources
+│       ├── main/res/                # Layouts, themes and drawables
+│       └── test/java/.../           # JVM / Robolectric regression tests
+├── docs/                            # Roadmap, tech notes, dev log, screenshots
+├── .github/workflows/               # Unit tests, lint and debug build
+├── CLAUDE.md                        # Brief for AI-assisted development
 └── README.md
 ```
 
 </details>
 
-## 文档
+## Documentation
 
-完整索引见 [docs/README.md](docs/README.md)。常用入口：
+Full index in [docs/README.md](docs/README.md). Most of it is written in Chinese. Frequently used entries:
 
-- [开发路线图](docs/01-roadmap.md) · [技术记录](docs/02-tech-notes.md) · [Android 项目入门](docs/03-android-primer.md)
-- [开发日志](docs/04-dev-log.md) — 每次改动的原因与真实验证结果
-- [UI 去噪与信息架构方案](docs/08-ui-declutter-plan.md)
+- [Roadmap](docs/01-roadmap.md) · [Tech notes](docs/02-tech-notes.md) · [Android primer](docs/03-android-primer.md)
+- [Dev log](docs/04-dev-log.md) — the reason and the real verification result behind every change
+- [UI declutter plan](docs/08-ui-declutter-plan.md)
 
-## 持续集成
+## Continuous integration
 
-[`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml) **不随 push / PR 自动运行**；交付以本地验证为准。需要远端 APK artifact 或独立复核时在 Actions 页手动触发（`workflow_dispatch`），流程为：校验 Gradle Wrapper → 配置 JDK 17 与 Android SDK → `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug` → 上传 Debug APK。
+[`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml) **does not run on push or pull requests**; local verification is the source of truth. Trigger it manually (`workflow_dispatch`) when you need a remote APK artifact or an independent check. It validates the Gradle wrapper, sets up JDK 17 and the Android SDK, runs `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug`, and uploads the debug APK.
 
-## 当前状态
+## Current status
 
-当前版本 **v2.6.1（versionCode 39）**。
+Current version **v2.6.1 (versionCode 39)**.
 
-本版的重点是把界面收干净：
+This release is about quieting the interface down:
 
-- **设置页统一骨架** — 翻译服务与背景分析 AI 两页压成同一套结构（输入 → 小按钮自检 → 折叠行承载可选项），按钮按主次分三层，不再是一屏同权重色块。
-- **模型选择就地下拉** — 模型输入框右侧一个刷新图标，点一下拉取并原地展开选择，取代原来的全屏选择面板。
-- **悬浮窗瘦身** — 控制按钮 44dp → 28dp，收起后只留一根贴边小蓝条（视觉 10dp，触摸区 28dp，多出的部分做成朝屏幕内侧的半透明晕）。
-- **修掉控制条自动隐藏失效** — 旧实现把定时隐藏排在每条字幕都会调用的刷新函数里，倒计时被无限重置；现在改成点面板空白处手动切换。
-- **场景库跟随界面语言**（2.6.1）— 没改过的内置场景，名称和描述都跟随界面语言；用户改过的原样保留。顺带修掉一个更隐蔽的问题：首次运行时的界面语言会被冻进存储，并顺着场景名漏进发给模型的 prompt。
+- **One skeleton for both service pages** — Translation Service and Background Analysis AI now share the same structure (inputs → a small self-test button → collapsible rows for optional settings), with buttons split into three weight tiers instead of a screenful of equally loud blocks.
+- **In-place model dropdown** — a refresh icon sits next to the model field; tapping it fetches the list and expands a dropdown right there, replacing the old full-screen picker panel.
+- **Slimmer overlay** — control buttons went from 44dp to 28dp, and collapsing now leaves a thin blue bar hugging the screen edge (10dp visible, 28dp touch target, the difference rendered as a halo fading inward).
+- **Fixed the control bar that never auto-hid** — the old implementation scheduled the hide inside a refresh callback that fires on every subtitle line, so the countdown was reset forever. Controls are now toggled by tapping a blank area of the panel.
+- **Scene library follows the UI language** (2.6.1) — untouched built-in scenes localise both their name and description, while anything you edited is kept verbatim. This also fixed a subtler problem: the UI language at first run was frozen into storage and leaked into the scene name sent to the model.
 
-详细变更与验证记录见 [开发日志](docs/04-dev-log.md)。
+See the [dev log](docs/04-dev-log.md) for the full change and verification record.
 
-## 已知限制
+## Known limitations
 
-- Gemini Live Translate 使用预览模型，模型名称、可用区域和配额可能由上游调整。
-- 实时输出适合快速理解，不保证完整、逐字或可直接发布的字幕质量。
-- 厂商后台策略、悬浮窗策略和目标应用的内录策略都可能影响体验。
-- 当前是 Debug 签名内测包；支持检查更新，不提供静默安装、账号同步或跨设备历史同步。
-- 未针对无障碍、平板、横屏和所有厂商 ROM 做完整测试。
+- Gemini Live Translate uses a preview model; names, regions and quotas can change upstream.
+- Real-time output is meant for quick comprehension, not complete, verbatim or publishable subtitles.
+- Vendor background policies, overlay policies and the target app's capture policy all affect the experience.
+- Builds are debug-signed. Update checking is supported; silent installs, account sync and cross-device history sync are not.
+- Not fully tested for accessibility, tablets, landscape or every vendor ROM.
 
-## 参与开发
+## Contributing
 
-这是个人自用项目，但欢迎通过 Issue 提交可复现的问题或明确的建议。提交改动时请：
+This is a personal project, but reproducible issues and concrete suggestions are welcome. When submitting changes:
 
-- 使用中文注释、文档和提交说明；
-- 保持同传与视频配置严格隔离；
-- 不把本场临时上下文写入场景库；
-- 更新 [`docs/04-dev-log.md`](docs/04-dev-log.md)；
-- 至少通过单元测试、Lint 和 Debug APK 构建。
+- write comments, docs and commit messages in Chinese;
+- keep Live and Video configuration strictly isolated;
+- never write session context into the scene library;
+- update [`docs/04-dev-log.md`](docs/04-dev-log.md);
+- pass unit tests, lint and the debug APK build at minimum.
 
-更多约束见 [CLAUDE.md](CLAUDE.md)。
+More constraints in [CLAUDE.md](CLAUDE.md).
 
-## 许可证
+## License
 
 [MIT](LICENSE) © 2026 xieyuanqing
