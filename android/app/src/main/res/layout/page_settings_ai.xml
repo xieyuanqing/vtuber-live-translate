@@ -50,7 +50,9 @@
                         android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
                         android:text="@string/service_gemini"
-                        android:textAllCaps="false"/>
+                        android:paddingHorizontal="@dimen/grid_4"
+                        android:textAllCaps="false"
+                        android:textSize="13sp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSecondAiServiceZen"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -59,7 +61,9 @@
                         android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
                         android:text="@string/service_opencode_zen"
-                        android:textAllCaps="false"/>
+                        android:paddingHorizontal="@dimen/grid_4"
+                        android:textAllCaps="false"
+                        android:textSize="13sp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSecondAiServiceCustom"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -68,7 +72,9 @@
                         android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
                         android:text="@string/service_custom"
-                        android:textAllCaps="false"/>
+                        android:paddingHorizontal="@dimen/grid_4"
+                        android:textAllCaps="false"
+                        android:textSize="13sp"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
                 <!-- Zen 分支：无需凭据，只说明这是公开免费接入点。 -->
                 <LinearLayout

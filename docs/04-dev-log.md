@@ -2,6 +2,33 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · 开源许可证、双语 README 与发布准备（v2.6.0 / 38）
+
+**改动**
+
+- 新增 `LICENSE`（MIT，Copyright 2026 xieyuanqing）；README 许可证一节从「未附带开源
+  许可证」改为 MIT，并加上 License 徽章。
+- README 重写：加居中头部与徽章区、界面截图表、功能表格、`<details>` 折叠权限与技术栈，
+  并补 `README.en.md` 英文版；两版互相链接。「当前状态」改写为本版实际内容。
+- 新增 `docs/images/`：在 AVD `test35`（1080×2400 / 420dpi）上用 SysUI demo mode 固定状态栏
+  后截图，中英各 4 张（同传 / 视频 / 字幕与悬浮窗 / 设置），统一降采样到 540×1200。
+
+**顺带修掉截图时暴露的两个界面问题**
+
+- 英文界面里设置行叫「Background Analysis AI」、页头却叫「Context Analysis AI」，
+  同一个页面两个名字。`rt_subpage_settings_profile_ai` 英文值统一为前者。
+- 分析服务三选一 toggle 的「OpenCode Zen」被截断成「OpenCod…」。先试了缩字号到 13sp
+  仍然截断——真正的原因是 Material3 OutlinedButton 默认左右各约 24dp 内边距，三等分后
+  文字区只剩约 67dp。加 `paddingHorizontal=4dp` 后放得下了。**结论：等分 toggle 里文字装
+  不下时，先看按钮内边距，别只改字号。**
+
+**未做**：场景库截图。模拟器上的场景库是在英文 locale 下初始化的，中文界面里条目名仍是
+英文（场景名是存储数据，不随界面语言变），放进中文 README 会像 bug；重置默认场景会动到
+真机/模拟器上的用户数据，故略过。
+
+**真实验证**：改了布局与文案后重跑 `testDebugUnitTest` + `lintDebug` + `assembleDebug`
+全过；改动后的 APK 装回模拟器逐页复核了截图。
+
 ## 2026-09-13 · 悬浮窗控制条改点击切换，收起态改贴边小蓝条（v2.6.0 / 38）
 
 **改动**

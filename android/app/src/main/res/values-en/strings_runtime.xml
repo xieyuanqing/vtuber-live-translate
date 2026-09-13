@@ -68,7 +68,7 @@
     <string name="rt_subpage_history_detail">History Details</string>
     <string name="rt_subpage_settings_translate">Translation Service</string>
     <string name="rt_subpage_settings_subtitle">Subtitles &amp; Overlay</string>
-    <string name="rt_subpage_settings_profile_ai">Context Analysis AI</string>
+    <string name="rt_subpage_settings_profile_ai">Background Analysis AI</string>
     <string name="rt_subpage_settings_diagnostics">Diagnostics</string>
     <string name="rt_subpage_settings_about">About</string>
     <string name="rt_subpage_scene_library">Scene Library</string>
