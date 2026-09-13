@@ -1,18 +1,8 @@
 name: Android Debug Build
 
+# 交付以本地验证（单测 + Lint + assembleDebug）为准；远端只在手动触发时构建，
+# 用于需要下载 APK artifact 或独立复核的场合（2026-09-13 起不再随 push/PR 自动运行）。
 "on":
-  push:
-    branches:
-      - main
-    paths:
-      - "android/**"
-      - ".github/workflows/android-debug.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "android/**"
-      - ".github/workflows/android-debug.yml"
   workflow_dispatch:
 
 permissions:

@@ -10,7 +10,7 @@
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Field"
         android:layout_marginTop="0dp"
-        android:hint="搜索模型"
+        android:hint="@string/dialog_model_picker_search_hint"
         app:startIconDrawable="@drawable/ic_search_24">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_12"
-        android:text="没有匹配的模型，可关闭面板后手动输入模型 ID。"
+        android:text="@string/dialog_model_picker_empty"
         android:textColor="@color/text_muted"
         android:textSize="13sp"
         android:visibility="gone"/>

@@ -1,78 +1,137 @@
 package com.xyq.livetranslate
 
-enum class TranslationMode(val storageKey: String, val label: String) {
-    INTERPRETATION("interpretation", "同传"),
-    VIDEO("video", "视频"),
+/**
+ * 翻译模式。
+ *
+ * [storageKey] 是持久化标识，不随界面语言变化。
+ * [promptLabel] 写进 systemInstruction，固定中文，不跟随界面语言。
+ * [labelRes] 仅用于界面展示。
+ */
+enum class TranslationMode(
+    val storageKey: String,
+    val promptLabel: String,
+    val labelRes: Int,
+) {
+    INTERPRETATION("interpretation", "同传", R.string.rt_mode_interpretation),
+    VIDEO("video", "视频", R.string.rt_mode_video),
+    ;
+
+    /** 按当前界面语言取显示名。 */
+    val label: String
+        get() = AppStrings.get(labelRes)
 }
 
-data class TranslationLanguage(val code: String, val label: String)
+/**
+ * 翻译语言选项。
+ *
+ * [code] 是发给模型的语言标识，属于业务数据，**不随界面语言变化**。
+ * [promptLabel] 是写进 systemInstruction 的固定中文名，**绝不能跟随界面语言**，
+ * 否则把界面切成英文会改变发给模型的 prompt，进而改变翻译行为。
+ * [labelRes] 只用于界面展示，跟随 App 当前界面语言。
+ */
+data class TranslationLanguage(
+    val code: String,
+    val promptLabel: String,
+    val labelRes: Int,
+) {
+    /** 按当前界面语言取显示名；未知 code 回退为 code 本身。 */
+    val label: String
+        get() = if (labelRes == 0) code else AppStrings.get(labelRes)
+}
 
 object TranslationLanguageCatalog {
     val sources = listOf(
-        TranslationLanguage("ja", "日语"),
-        TranslationLanguage("auto", "自动检测"),
-        TranslationLanguage("en", "英语"),
-        TranslationLanguage("zh", "中文"),
-        TranslationLanguage("ko", "韩语"),
-        TranslationLanguage("es", "西班牙语"),
-        TranslationLanguage("fr", "法语"),
-        TranslationLanguage("de", "德语"),
-        TranslationLanguage("ru", "俄语"),
+        TranslationLanguage("ja", "日语", R.string.rt_lang_ja),
+        TranslationLanguage("auto", "自动检测", R.string.rt_lang_auto),
+        TranslationLanguage("en", "英语", R.string.rt_lang_en),
+        TranslationLanguage("zh", "中文", R.string.rt_lang_zh),
+        TranslationLanguage("ko", "韩语", R.string.rt_lang_ko),
+        TranslationLanguage("es", "西班牙语", R.string.rt_lang_es),
+        TranslationLanguage("fr", "法语", R.string.rt_lang_fr),
+        TranslationLanguage("de", "德语", R.string.rt_lang_de),
+        TranslationLanguage("ru", "俄语", R.string.rt_lang_ru),
     )
     val targets = listOf(
-        TranslationLanguage("zh", "中文"),
-        TranslationLanguage("zh-Hans", "简体中文"),
-        TranslationLanguage("zh-Hant", "繁体中文"),
-        TranslationLanguage("en", "英语"),
-        TranslationLanguage("ja", "日语"),
-        TranslationLanguage("ko", "韩语"),
-        TranslationLanguage("es", "西班牙语"),
-        TranslationLanguage("fr", "法语"),
-        TranslationLanguage("de", "德语"),
-        TranslationLanguage("ru", "俄语"),
+        TranslationLanguage("zh", "中文", R.string.rt_lang_zh),
+        TranslationLanguage("zh-Hans", "简体中文", R.string.rt_lang_zh_hans),
+        TranslationLanguage("zh-Hant", "繁体中文", R.string.rt_lang_zh_hant),
+        TranslationLanguage("en", "英语", R.string.rt_lang_en),
+        TranslationLanguage("ja", "日语", R.string.rt_lang_ja),
+        TranslationLanguage("ko", "韩语", R.string.rt_lang_ko),
+        TranslationLanguage("es", "西班牙语", R.string.rt_lang_es),
+        TranslationLanguage("fr", "法语", R.string.rt_lang_fr),
+        TranslationLanguage("de", "德语", R.string.rt_lang_de),
+        TranslationLanguage("ru", "俄语", R.string.rt_lang_ru),
     )
 
     fun source(code: String): TranslationLanguage =
         sources.firstOrNull { it.code.equals(code, ignoreCase = true) }
-            ?: TranslationLanguage(code, code)
+            ?: TranslationLanguage(code, code, 0)
 
     fun target(code: String): TranslationLanguage =
         targets.firstOrNull { it.code.equals(code, ignoreCase = true) }
-            ?: TranslationLanguage(code, code)
+            ?: TranslationLanguage(code, code, 0)
 }
 
+/**
+ * 场景条目。
+ *
+ * 用户在场景库里创建或编辑的场景，[label] 是用户输入的名字，直接存字符串。
+ * [DefaultSceneCatalog] 的内置模板用 [labelRes] 提供名字，使首次初始化能按当前
+ * 界面语言生成，但一旦写入场景库就固化为用户数据，切换界面语言不会覆盖它。
+ *
+ * [promptLabel] 是写进 systemInstruction 的名字：用户自定义场景用其原名，
+ * 内置模板用固定中文名（[promptLabelText]），保证切换界面语言不改变发给模型的 prompt。
+ */
 data class ScenePromptPreset(
     val id: String,
-    val label: String,
     val instruction: String,
-)
+    internal val labelText: String? = null,
+    internal val labelRes: Int = 0,
+    internal val promptLabelText: String? = null,
+) {
+    constructor(id: String, label: String, instruction: String) :
+        this(id = id, instruction = instruction, labelText = label)
+
+    val label: String
+        get() = labelText ?: if (labelRes != 0) AppStrings.get(labelRes) else id
+
+    /** 发给模型时使用；绝不跟随界面语言。 */
+    val promptLabel: String
+        get() = labelText ?: promptLabelText ?: id
+}
 
 /** 首次初始化场景库使用的默认模板，不作为运行时场景真源。 */
 object DefaultSceneCatalog {
     private val interpretationPresets = listOf(
         ScenePromptPreset(
             id = "general",
-            label = "通用",
+            labelRes = R.string.rt_scene_general,
+            promptLabelText = "通用",
             instruction = "适用于日常对话和一般现场交流。优先保证意思准确、表达自然，避免书面腔。",
         ),
         ScenePromptPreset(
             id = "meeting",
-            label = "会议",
+            labelRes = R.string.rt_scene_meeting,
+            promptLabelText = "会议",
             instruction = "这是会议或商务讨论。准确处理议题、结论、数字、职责和行动项，保持专业、简洁。",
         ),
         ScenePromptPreset(
             id = "classroom",
-            label = "课堂",
+            labelRes = R.string.rt_scene_classroom,
+            promptLabelText = "课堂",
             instruction = "这是课堂或讲座。保留学科术语、定义、例子和推导关系，让译文便于跟随讲解。",
         ),
         ScenePromptPreset(
             id = "interview",
-            label = "采访",
+            labelRes = R.string.rt_scene_interview,
+            promptLabelText = "采访",
             instruction = "这是采访。区分提问与回答，保留人物语气、观点和措辞边界，不替说话人润色立场。",
         ),
         ScenePromptPreset(
             id = "travel",
-            label = "旅行交流",
+            labelRes = R.string.rt_scene_travel,
+            promptLabelText = "旅行交流",
             instruction = "这是旅行中的现场交流。优先准确处理地点、时间、价格、路线、规则和礼貌表达。",
         ),
     )
@@ -80,37 +139,44 @@ object DefaultSceneCatalog {
     private val videoPresets = listOf(
         ScenePromptPreset(
             id = "general_video",
-            label = "通用视频",
+            labelRes = R.string.rt_scene_general_video,
+            promptLabelText = "通用视频",
             instruction = "适用于一般视频内容。保持前后字幕连贯，准确处理标题、人物、组织和主题词。",
         ),
         ScenePromptPreset(
             id = "livestream",
-            label = "直播",
+            labelRes = R.string.rt_scene_livestream,
+            promptLabelText = "直播",
             instruction = "这是实时直播。适应口语、省略、互动和话题跳转，弹幕或观众称呼按上下文自然翻译。",
         ),
         ScenePromptPreset(
             id = "vtuber",
-            label = "VTuber",
+            labelRes = R.string.rt_scene_vtuber,
+            promptLabelText = "VTuber",
             instruction = "这是 VTuber 直播。优先使用圈内常见的人名、组合名和直播术语译法；不确定的专名保留原文。",
         ),
         ScenePromptPreset(
             id = "anime",
-            label = "动漫",
+            labelRes = R.string.rt_scene_anime,
+            promptLabelText = "动漫",
             instruction = "这是动漫内容。保持角色口吻和称谓关系，作品名、角色名、招式与设定优先采用通行译名。",
         ),
         ScenePromptPreset(
             id = "game",
-            label = "游戏",
+            labelRes = R.string.rt_scene_game,
+            promptLabelText = "游戏",
             instruction = "这是游戏内容。准确处理游戏名、角色、技能、道具、地图和机制术语，保留玩家口语节奏。",
         ),
         ScenePromptPreset(
             id = "news",
-            label = "新闻",
+            labelRes = R.string.rt_scene_news,
+            promptLabelText = "新闻",
             instruction = "这是新闻内容。保持客观和信息密度，准确翻译人名、地名、机构、数字、日期与引语。",
         ),
         ScenePromptPreset(
             id = "course",
-            label = "课程",
+            labelRes = R.string.rt_scene_course,
+            promptLabelText = "课程",
             instruction = "这是课程或教学视频。保留专业术语、步骤、定义和因果关系，译文清楚但不额外解释。",
         ),
     )
@@ -157,17 +223,19 @@ object PromptBuilder {
         return buildString {
             appendLine(baseInstruction)
             appendLine()
-            appendLine("【翻译方向：${sourceLanguage.label} → ${targetLanguage.label}】")
+            // 注意：这里一律用 promptLabel（固定中文），不要用 label。
+            // label 会跟随界面语言，用在这里会导致切换界面语言就改变发给模型的 prompt。
+            appendLine("【翻译方向：${sourceLanguage.promptLabel} → ${targetLanguage.promptLabel}】")
             if (sourceLanguage.code == "auto") {
-                appendLine("自动识别输入语音语言，并统一翻译为${targetLanguage.label}。")
+                appendLine("自动识别输入语音语言，并统一翻译为${targetLanguage.promptLabel}。")
             } else {
-                appendLine("输入语音应为${sourceLanguage.label}；将其翻译为${targetLanguage.label}。")
+                appendLine("输入语音应为${sourceLanguage.promptLabel}；将其翻译为${targetLanguage.promptLabel}。")
             }
             appendLine()
-            appendLine("【输入模式：${normalized.mode.label}】")
+            appendLine("【输入模式：${normalized.mode.promptLabel}】")
             appendLine(modeInstruction(normalized.mode))
             appendLine()
-            appendLine("【场景：${scene.label}】")
+            appendLine("【场景：${scene.promptLabel}】")
             appendLine(scene.instruction)
             appendSessionContext(context, protectFixedRules = true)
         }.trim()

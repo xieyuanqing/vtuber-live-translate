@@ -11,7 +11,7 @@
         android:id="@+id/tvUpdateProgress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="准备下载…"
+        android:text="@string/dialog_update_preparing_download"
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="13sp" />
 

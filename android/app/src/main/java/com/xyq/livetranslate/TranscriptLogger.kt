@@ -54,7 +54,7 @@ class TranscriptLogger(
         startedAt = startedAt,
     )
 
-    val pathHint: String = "应用内历史"
+    val pathHint: String = appContext.getString(R.string.rt_transcript_internal_history)
 
     init {
         saveHistory(session)

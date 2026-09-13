@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- View IDs for settings language row -->
+    <item type="id" name="rowSetLanguage" />
+    <item type="id" name="tvSettingsLanguageValue" />
+
+    <!-- Language settings strings (Simplified Chinese default) -->
+    <string name="settings_language_title">界面语言</string>
+    <string name="settings_language_desc">切换应用界面的显示语言</string>
+    <string name="locale_dialog_title">界面语言</string>
+    <string name="locale_option_system">跟随系统</string>
+    <string name="locale_option_zh_hans">简体中文</string>
+    <string name="locale_option_en">English</string>
+    <string name="locale_independent_hint">界面语言与翻译方向互相独立，修改此项不会变更翻译配置。</string>
+</resources>

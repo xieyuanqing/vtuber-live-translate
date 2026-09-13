@@ -21,7 +21,7 @@
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="加入电池白名单" />
+                        android:text="@string/btn_battery_whitelist" />
 
                     <com.google.android.material.card.MaterialCardView
                         style="@style/LuminousOutlinedCard"
@@ -36,7 +36,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="monospace"
                             android:padding="@dimen/space_16"
-                            android:text="○ 未运行"
+                            android:text="@string/diagnostics_status_not_running"
                             android:textSize="12sp" />
                     </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>

@@ -71,15 +71,31 @@ object HistoryStore {
     fun delete(context: Context, fileNameOrId: String): Boolean =
         File(historyDir(context), safeFileName(fileNameOrId.removeSuffix(".json"))).delete()
 
-    fun toMarkdown(session: HistorySession): String = buildString {
+    fun toMarkdown(session: HistorySession, context: Context? = null): String = buildString {
         appendLine("# ${session.title}")
         appendLine()
-        appendLine("- 模式：${session.mode.label}")
-        appendLine("- 翻译：${session.directionLabel}")
-        appendLine("- 场景：${session.sceneLabel}")
-        appendLine("- 开始：${formatTime(session.startedAt)}")
-        appendLine("- 时长：${formatDuration(session.durationMs)}")
-        if (session.contextSummary.isNotBlank()) appendLine("- 本场背景：${session.contextSummary}")
+        val modeLabel = if (context != null) {
+            if (session.mode == TranslationMode.INTERPRETATION) {
+                context.getString(R.string.rt_mode_interpretation)
+            } else {
+                context.getString(R.string.rt_mode_video)
+            }
+        } else {
+            session.mode.label
+        }
+        val lblMode = context?.getString(R.string.rt_history_md_mode) ?: "模式"
+        val lblTranslation = context?.getString(R.string.rt_history_md_translation) ?: "翻译"
+        val lblScene = context?.getString(R.string.rt_history_md_scene) ?: "场景"
+        val lblStart = context?.getString(R.string.rt_history_md_start) ?: "开始"
+        val lblDuration = context?.getString(R.string.rt_history_md_duration) ?: "时长"
+        val lblContext = context?.getString(R.string.rt_history_md_context) ?: "本场背景"
+
+        appendLine("- $lblMode：$modeLabel")
+        appendLine("- $lblTranslation：${session.directionLabel}")
+        appendLine("- $lblScene：${session.sceneLabel}")
+        appendLine("- $lblStart：${formatTime(session.startedAt)}")
+        appendLine("- $lblDuration：${formatDuration(session.durationMs)}")
+        if (session.contextSummary.isNotBlank()) appendLine("- $lblContext：${session.contextSummary}")
         appendLine()
         session.segments.forEach { segment ->
             appendLine("## ${formatElapsed(segment.elapsedMs)}")

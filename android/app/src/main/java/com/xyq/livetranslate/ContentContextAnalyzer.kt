@@ -29,6 +29,7 @@ object ContentContextAnalyzer {
         apiKey: String,
         model: String,
         format: AiTextClient.Format,
+        extraHeaders: Map<String, String> = emptyMap(),
     ): ContentAnalysisResult {
         val modeRequest = request.copy(
             video = request.video.takeIf { request.mode == TranslationMode.VIDEO },
@@ -43,6 +44,7 @@ object ContentContextAnalyzer {
             apiKey = apiKey,
             model = model,
             format = format,
+            extraHeaders = extraHeaders,
         )
         return parse(response)
     }

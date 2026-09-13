@@ -30,14 +30,14 @@
 
                             <TextView
                                 style="@style/CardTitle"
-                                android:text="流译 · 实时同传 / 视频字幕" />
+                                android:text="@string/about_app_slogan" />
 
                             <TextView
                                 android:id="@+id/tvAboutVersion"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:text="版本 —"
+                                android:text="@string/about_version_placeholder"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="13sp" />
 
@@ -46,14 +46,14 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_12"
                                 android:lineSpacingExtra="2dp"
-                                android:text="通用实时翻译：同传（麦克风）与视频（系统内录 + 悬浮字幕）共用同一翻译引擎。自用辅助工具，字幕以看懂大意为目标。"
+                                android:text="@string/about_description"
                                 android:textSize="13sp" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:text="翻译模型：gemini-3.5-live-translate-preview"
+                                android:text="@string/about_translation_model"
                                 android:textColor="?android:attr/textColorSecondary"
                                 android:textSize="12sp" />
 
@@ -62,7 +62,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_12"
-                                android:text="启动时自动检查更新"
+                                android:text="@string/about_auto_check_update"
                                 android:textSize="14sp" />
 
                             <com.google.android.material.button.MaterialButton
@@ -71,7 +71,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_12"
-                                android:text="检查更新" />
+                                android:text="@string/btn_check_update" />
 
                             <TextView
                                 android:id="@+id/tvUpdateStatus"
@@ -89,7 +89,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/grid_4"
-                                android:text="GitHub 项目主页"
+                                android:text="@string/btn_github_repo"
                                 android:textSize="13sp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>

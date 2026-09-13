@@ -528,7 +528,7 @@ class CaptureService : Service() {
     private fun createChannel() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, "实时翻译", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL, getString(R.string.rt_notif_channel_name), NotificationManager.IMPORTANCE_LOW)
         )
     }
 
@@ -543,11 +543,15 @@ class CaptureService : Service() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val title = if (mode == StatusBus.MODE_MIC) "同传运行中" else "视频字幕运行中"
-        val text = if (mode == StatusBus.MODE_MIC) {
-            "正在用麦克风实时同传"
+        val title = if (mode == StatusBus.MODE_MIC) {
+            getString(R.string.rt_notif_title_mic)
         } else {
-            "正在捕获系统音频并实时翻译"
+            getString(R.string.rt_notif_title_video)
+        }
+        val text = if (mode == StatusBus.MODE_MIC) {
+            getString(R.string.rt_notif_desc_mic)
+        } else {
+            getString(R.string.rt_notif_desc_video)
         }
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_subtitle)
@@ -555,7 +559,7 @@ class CaptureService : Service() {
             .setContentText(text)
             .setOngoing(true)
             .setContentIntent(openIntent)
-            .addAction(0, "停止", stopIntent)
+            .addAction(0, getString(R.string.rt_notif_action_stop), stopIntent)
             .build()
     }
 }

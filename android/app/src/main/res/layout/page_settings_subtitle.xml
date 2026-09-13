@@ -24,12 +24,12 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="@dimen/space_16">
-                <TextView style="@style/CardTitle" android:text="悬浮窗样式"/>
+                <TextView style="@style/CardTitle" android:text="@string/settings_subtitle_style_title"/>
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="样式预览 · 切换底色可以看清盖在画面上的效果"
+                    android:text="@string/settings_subtitle_style_desc"
                     android:textColor="@color/text_muted"
                     android:textSize="12sp"/>
                 <com.google.android.material.button.MaterialButtonToggleGroup
@@ -43,18 +43,20 @@
                         android:id="@+id/btnSubtitlePreviewDark"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="@dimen/touch_target"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
                         android:checked="true"
-                        android:text="暗色画面"
+                        android:text="@string/settings_subtitle_preview_dark"
                         android:textAllCaps="false"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSubtitlePreviewLight"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="@dimen/touch_target"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
                         android:layout_weight="1"
-                        android:text="明亮画面"
+                        android:text="@string/settings_subtitle_preview_light"
                         android:textAllCaps="false"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
                 <FrameLayout
@@ -69,7 +71,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:padding="16dp"
-                        android:text="字幕样式预览\n拖动下方滑杆调整字号与背景\n最多显示三行字幕"
+                        android:text="@string/settings_subtitle_preview_text"
                         android:textColor="#FFFFFF"
                         android:textSize="16sp"
                         android:maxLines="3"
@@ -80,7 +82,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:text="字号 16sp"
+                    android:text="@string/settings_subtitle_font_size_default"
                     android:textSize="13sp"/>
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slFont"
@@ -93,7 +95,7 @@
                     android:id="@+id/tvOpacityVal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="背景不透明度 66%"
+                    android:text="@string/settings_subtitle_opacity_default"
                     android:textSize="13sp"/>
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slOpacity"
@@ -111,13 +113,13 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="透明"
+                        android:text="@string/settings_subtitle_opacity_transparent"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="不透明"
+                        android:text="@string/settings_subtitle_opacity_opaque"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp"/>
                 </LinearLayout>
@@ -125,7 +127,7 @@
                     android:id="@+id/tvLinesVal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="最多行数 3"
+                    android:text="@string/settings_subtitle_lines_default"
                     android:textSize="13sp"/>
                 <com.google.android.material.slider.Slider
                     android:id="@+id/slLines"
@@ -151,7 +153,7 @@
                     android:id="@+id/btnSubtitleAdvanced"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="高级断句参数 · 展开"
+                    android:text="@string/settings_subtitle_btn_advanced_expand"
                     android:minHeight="48dp"
                     style="@style/Widget.Material3.Button.TextButton"/>
                 <LinearLayout
@@ -160,17 +162,17 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="gone">
-                    <TextView style="@style/CardTitle" android:text="断句节奏"/>
+                    <TextView style="@style/CardTitle" android:text="@string/settings_subtitle_section_segmentation"/>
                     <TextView
                         style="@style/FieldLabel"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="改动在下次开始翻译时生效"/>
+                        android:text="@string/settings_effect_next_time"/>
                     <TextView
                         android:id="@+id/tvIdleVal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
-                        android:text="静默 2.5 秒转正"
+                        android:text="@string/settings_subtitle_idle_default"
                         android:textSize="13sp"/>
                     <com.google.android.material.slider.Slider
                         android:id="@+id/slIdle"
@@ -183,7 +185,7 @@
                         android:id="@+id/tvMaxCharsVal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="当前行最长 42 字"
+                        android:text="@string/settings_subtitle_max_chars_default"
                         android:textSize="13sp"/>
                     <com.google.android.material.slider.Slider
                         android:id="@+id/slMaxChars"
@@ -200,7 +202,7 @@
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="恢复字幕默认设置"
+            android:text="@string/settings_subtitle_btn_reset"
             android:textSize="13sp"
             android:layout_marginTop="8dp"/>
     </LinearLayout>

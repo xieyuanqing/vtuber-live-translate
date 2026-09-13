@@ -71,7 +71,7 @@ class SubtitleOverlay(private val context: Context) {
             LinearLayout.LayoutParams(dp(8), dp(8)).apply { rightMargin = dp(8) },
         )
         val stateText = TextView(context).apply {
-            text = "流译 · 实时"
+            text = context.getString(R.string.rt_overlay_status_live)
             setTextColor(Color.parseColor("#D9E8FF"))
             textSize = 12f
             letterSpacing = 0.04f
@@ -80,15 +80,15 @@ class SubtitleOverlay(private val context: Context) {
             stateText,
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
         )
-        val pause = controlButton(R.drawable.ic_overlay_pause_24, "暂停翻译").apply {
+        val pause = controlButton(R.drawable.ic_overlay_pause_24, context.getString(R.string.rt_overlay_action_pause)).apply {
             setOnClickListener { togglePause() }
         }
-        val open = controlButton(R.drawable.ic_overlay_open_24, "打开主应用").apply {
+        val open = controlButton(R.drawable.ic_overlay_open_24, context.getString(R.string.rt_overlay_action_open)).apply {
             setOnClickListener { openMainApp() }
         }
         val collapse = controlButton(
             R.drawable.ic_overlay_collapse_24,
-            "收起字幕到屏幕侧边，翻译继续进行",
+            context.getString(R.string.rt_overlay_action_collapse),
         ).apply {
             setOnClickListener { toggleCollapsed() }
         }
@@ -137,7 +137,7 @@ class SubtitleOverlay(private val context: Context) {
             setLineSpacing(0f, 1.08f)
             setShadowLayer(3f, 0f, 1f, Color.argb(120, 0, 0, 0))
             setPadding(0, dp(6), 0, 0)
-            text = "等待字幕…"
+            text = context.getString(R.string.rt_overlay_waiting_subtitles)
         }
         container.addView(
             current,
@@ -151,12 +151,12 @@ class SubtitleOverlay(private val context: Context) {
             elevation = dp(8).toFloat()
         }
         val sideHandle = TextView(context).apply {
-            text = "‹\n译"
+            text = context.getString(R.string.rt_overlay_handle_collapsed_right)
             gravity = Gravity.CENTER
             textSize = 14f
             setTextColor(Color.WHITE)
             setLineSpacing(0f, 0.9f)
-            contentDescription = "展开悬浮字幕"
+            contentDescription = context.getString(R.string.rt_overlay_action_expand)
             visibility = View.GONE
             isClickable = true
             isFocusable = true
@@ -249,8 +249,16 @@ class SubtitleOverlay(private val context: Context) {
         pauseButton?.setImageResource(
             if (isPaused) R.drawable.ic_overlay_play_24 else R.drawable.ic_overlay_pause_24,
         )
-        pauseButton?.contentDescription = if (isPaused) "继续翻译" else "暂停翻译"
-        statusLabel?.text = if (isPaused) "流译 · 已暂停" else "流译 · 实时"
+        pauseButton?.contentDescription = if (isPaused) {
+            context.getString(R.string.rt_overlay_action_resume)
+        } else {
+            context.getString(R.string.rt_overlay_action_pause)
+        }
+        statusLabel?.text = if (isPaused) {
+            context.getString(R.string.rt_overlay_status_paused)
+        } else {
+            context.getString(R.string.rt_overlay_status_live)
+        }
     }
 
     private fun togglePause() {
@@ -301,7 +309,7 @@ class SubtitleOverlay(private val context: Context) {
             text = when {
                 latestCurrent.isNotEmpty() -> latestCurrent
                 latestConfirmed.isNotEmpty() -> latestConfirmed
-                else -> "等待字幕…"
+                else -> context.getString(R.string.rt_overlay_waiting_subtitles)
             }
             visibility = View.VISIBLE
         }
@@ -325,7 +333,11 @@ class SubtitleOverlay(private val context: Context) {
         if (collapsed) {
             container.visibility = View.GONE
             handle.visibility = View.VISIBLE
-            handle.text = if (collapsedOnLeft) "译\n›" else "‹\n译"
+            handle.text = if (collapsedOnLeft) {
+                context.getString(R.string.rt_overlay_handle_collapsed_left)
+            } else {
+                context.getString(R.string.rt_overlay_handle_collapsed_right)
+            }
             window.accentVisible = false
             window.background = roundedRect(
                 fill = Color.argb(232, 0, 88, 188),

@@ -100,12 +100,12 @@ internal class HistoryController(
             if (text.isBlank()) return@setOnClickListener
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("transcript", text))
-            toast("已复制全文")
+            toast(context.getString(R.string.rt_toast_copied_full_text))
         }
         views.shareButton.setOnClickListener {
             val text = views.detailText.text.toString()
             if (text.isBlank()) {
-                toast("暂无可分享内容")
+                toast(context.getString(R.string.rt_toast_no_shareable_content))
                 return@setOnClickListener
             }
             val send = Intent(Intent.ACTION_SEND).apply {
@@ -113,28 +113,28 @@ internal class HistoryController(
                 putExtra(Intent.EXTRA_SUBJECT, views.detailTitle.text.toString())
                 putExtra(Intent.EXTRA_TEXT, text)
             }
-            context.startActivity(Intent.createChooser(send, "分享历史记录"))
+            context.startActivity(Intent.createChooser(send, context.getString(R.string.rt_history_share_title)))
         }
         views.deleteButton.setOnClickListener {
             val fileName = currentDetailFileName ?: return@setOnClickListener
             if (currentDetailIsActive) {
-                toast("正在进行的会话不能删除，请先停止翻译")
+                toast(context.getString(R.string.rt_toast_cannot_delete_active_session))
                 return@setOnClickListener
             }
             val dialog = MaterialAlertDialogBuilder(context)
-                .setTitle("删除这条历史记录？")
-                .setMessage("删除后无法恢复。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("删除") { _, _ ->
+                .setTitle(context.getString(R.string.rt_dialog_delete_history_title))
+                .setMessage(context.getString(R.string.rt_dialog_delete_history_message))
+                .setNegativeButton(context.getString(R.string.rt_action_cancel), null)
+                .setPositiveButton(context.getString(R.string.rt_action_delete)) { _, _ ->
                     if (HistoryStore.delete(context, fileName)) {
                         currentDetailFileName = null
                         currentDetailIsActive = false
                         views.detailText.text = ""
                         reload()
                         closeDetailPage()
-                        toast("历史记录已删除")
+                        toast(context.getString(R.string.rt_toast_history_deleted))
                     } else {
-                        toast("删除失败，记录可能已经不存在")
+                        toast(context.getString(R.string.rt_toast_history_delete_failed))
                         reload()
                     }
                 }
@@ -164,7 +164,11 @@ internal class HistoryController(
             matchesMode && (query.isEmpty() || query in haystack)
         }
         views.list.removeAllViews()
-        views.emptyText.text = if (allItems.isEmpty()) "暂无历史记录" else "没有匹配的记录"
+        views.emptyText.text = if (allItems.isEmpty()) {
+            context.getString(R.string.rt_history_empty)
+        } else {
+            context.getString(R.string.rt_history_no_match)
+        }
         views.emptyText.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         var lastGroupKey: String? = null
         items.forEach { item ->
@@ -199,7 +203,11 @@ internal class HistoryController(
         val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
         val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
         val isInterpretation = item.mode == TranslationMode.INTERPRETATION
-        icon.text = if (isInterpretation) "麦" else "播"
+        icon.text = if (isInterpretation) {
+            context.getString(R.string.rt_history_icon_mic)
+        } else {
+            context.getString(R.string.rt_history_icon_broadcast)
+        }
         icon.setTextColor(context.getColor(if (isInterpretation) R.color.brand else R.color.warning))
         ViewCompat.setBackgroundTintList(
             icon,
@@ -214,7 +222,7 @@ internal class HistoryController(
         val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
             TranslationLanguageCatalog.target(item.targetLanguageCode).label
         meta.text = "$direction · ${HistoryStore.formatDuration(item.durationMs)}"
-        summary.text = item.summary.trim().replace('\n', ' ').ifBlank { "暂无字幕摘要" }
+        summary.text = item.summary.trim().replace('\n', ' ').ifBlank { context.getString(R.string.rt_history_no_summary) }
         card.setOnClickListener { showDetail(item) }
         card.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -233,7 +241,11 @@ internal class HistoryController(
             item.mode == TranslationMode.VIDEO && !looksAuto -> rawTitle
             scene.isNotEmpty() -> scene
             rawTitle.isNotEmpty() -> rawTitle
-            else -> item.mode.label
+            else -> if (item.mode == TranslationMode.INTERPRETATION) {
+                context.getString(R.string.rt_mode_interpretation)
+            } else {
+                context.getString(R.string.rt_mode_video)
+            }
         }
     }
 
@@ -245,8 +257,8 @@ internal class HistoryController(
         val today = startOfDay(System.currentTimeMillis())
         val yesterday = today - 24L * 60L * 60L * 1000L
         return when (dayStart) {
-            today -> "今天"
-            yesterday -> "昨天"
+            today -> context.getString(R.string.rt_date_today)
+            yesterday -> context.getString(R.string.rt_date_yesterday)
             else -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(ms))
         }
     }
@@ -270,21 +282,26 @@ internal class HistoryController(
         if (session == null) {
             currentDetailFileName = null
             currentDetailIsActive = false
-            toast("记录不存在或已损坏")
+            toast(context.getString(R.string.rt_toast_history_not_found_or_corrupt))
             reload()
             return
         }
         currentDetailFileName = item.fileName
         currentDetailIsActive = session.endedAt == null
         views.detailTitle.text = session.title
-        views.detailText.text = HistoryStore.toMarkdown(session)
+        views.detailText.text = HistoryStore.toMarkdown(session, context)
+        val modeLabel = if (session.mode == TranslationMode.INTERPRETATION) {
+            context.getString(R.string.rt_mode_interpretation)
+        } else {
+            context.getString(R.string.rt_mode_video)
+        }
         views.detailMeta.text = buildString {
-            append(session.mode.label).append(" · ").append(session.directionLabel)
+            append(modeLabel).append(" · ").append(session.directionLabel)
             append("\n").append(session.sceneLabel)
             append(" · ").append(HistoryStore.formatTime(session.startedAt))
             append(" · ").append(HistoryStore.formatDuration(session.durationMs))
         }
-        views.detailContext.text = "本场背景\n${session.contextSummary}"
+        views.detailContext.text = context.getString(R.string.rt_history_detail_context_prefix, session.contextSummary)
         views.detailContext.visibility = if (session.contextSummary.isBlank()) View.GONE else View.VISIBLE
         views.detailSegments.removeAllViews()
         views.detailEmptyText.visibility = if (session.segments.isEmpty()) View.VISIBLE else View.GONE

@@ -3,7 +3,7 @@
 [![Android Debug Build](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml/badge.svg?branch=main)](https://github.com/xieyuanqing/vtuber-live-translate/actions/workflows/android-debug.yml)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.5.0-0058BC)
+![Version](https://img.shields.io/badge/version-2.6.0-0058BC)
 
 面向 Android 的个人实时翻译工具：既可以通过麦克风进行现场同传，也可以捕获手机中正在播放的视频或直播音频，并在 App 内或系统悬浮窗显示翻译字幕。
 
@@ -167,7 +167,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 持续集成
 
-GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml)，会在涉及 `android/**` 或工作流文件的 `main` 推送 / Pull Request，以及手动触发时：
+GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml)，**不随 push / Pull Request 自动运行**；交付以本地验证为准，需要远端构建产物（APK artifact）或独立复核时在 Actions 页手动触发（`workflow_dispatch`）。手动触发时执行：
 
 1. 校验 Gradle Wrapper；
 2. 配置 JDK 17 与 Android SDK；
@@ -179,7 +179,7 @@ CI 与本地交付均执行单元测试、Lint 和 APK 构建。
 
 ## 当前状态
 
-当前版本：**v2.5.0（versionCode 37）**。
+当前版本：**v2.6.0（versionCode 38）**。
 
 本版集中打磨「配置是否成功、这一步会改变什么、出错了怎么办」：背景分析 AI 有格式选择、地址容错、可搜索模型面板和连通性自检；AI 整理结果先预览再应用；另一模式占用录音、长时间收不到声音、停止会话都会说明原因和后果；场景库的「设为默认」不再顺手改掉本次使用的场景。应用仍然仅使用个人 API Key（支持自定义反代地址）。详细变更和验证记录见 [开发日志](docs/04-dev-log.md)。
 

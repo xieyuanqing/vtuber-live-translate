@@ -30,7 +30,7 @@
                 android:layout_height="40dp"
                 android:background="@drawable/bg_history_badge"
                 android:gravity="center"
-                android:text="麦"
+                android:text="@string/history_badge_mic"
                 android:textColor="@color/brand"
                 android:textSize="13sp"
                 android:textStyle="bold" />

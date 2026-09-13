@@ -14,17 +14,17 @@
         android:paddingHorizontal="@dimen/page_margin"
         android:paddingTop="@dimen/space_16"
         android:paddingBottom="@dimen/page_bottom_padding">
-        <TextView style="@style/PageTitle" android:text="设置"/>
+        <TextView style="@style/PageTitle" android:text="@string/settings_title"/>
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="连接服务，调整字幕，按自己的习惯使用。"
+            android:text="@string/settings_subtitle"
             android:textColor="@color/text_secondary"
             android:textSize="14sp"/>
         <TextView
             android:layout_marginTop="24dp"
-            android:text="常用设置"
+            android:text="@string/settings_section_general"
             style="@style/LuminousSectionLabel"/>
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -47,8 +47,8 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="翻译服务"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="API Key 与服务地址"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_translate_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_translate_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
@@ -68,8 +68,8 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="字幕与悬浮窗"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="样式预览、字号、背景不透明度"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_subtitle_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_subtitle_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
@@ -77,7 +77,7 @@
         </com.google.android.material.card.MaterialCardView>
         <TextView
             android:layout_marginTop="24dp"
-            android:text="场景与辅助"
+            android:text="@string/settings_section_scenes_ai"
             style="@style/LuminousSectionLabel"/>
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -100,8 +100,8 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="场景库"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="管理同传与视频的翻译偏好"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_scenes_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_scenes_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
@@ -121,14 +121,14 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="背景分析 AI"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="可选 · 帮翻译补充视频资料与背景"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_ai_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_ai_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <TextView android:layout_marginTop="24dp" android:text="维护" style="@style/LuminousSectionLabel"/>
+        <TextView android:layout_marginTop="24dp" android:text="@string/settings_section_maintenance" style="@style/LuminousSectionLabel"/>
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -150,8 +150,8 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="诊断"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="运行状态、电池白名单"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_diagnostics_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_diagnostics_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>
@@ -171,8 +171,32 @@
                     <LinearLayout
                         style="@style/SettingsRowText"
                         android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="关于与更新"/>
-                        <TextView style="@style/SettingsRowDesc" android:text="检查更新、版本与项目主页"/>
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_about_title"/>
+                        <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_about_desc"/>
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron"/>
+                </LinearLayout>
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="68dp"/>
+                <LinearLayout android:id="@+id/rowSetLanguage" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge"
+                        android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_brand_translate_24"
+                        app:tint="@color/brand"/>
+                    <LinearLayout
+                        style="@style/SettingsRowText"
+                        android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_language_title"/>
+                        <TextView
+                            android:id="@+id/tvSettingsLanguageValue"
+                            style="@style/SettingsRowDesc"
+                            android:text="@string/settings_language_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>

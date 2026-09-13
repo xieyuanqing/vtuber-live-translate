@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import com.xyq.livetranslate.CaptureService
 import com.xyq.livetranslate.PromptBuilder
+import com.xyq.livetranslate.R
 import com.xyq.livetranslate.SceneLibraryStore
 import com.xyq.livetranslate.SessionPromptContext
 import com.xyq.livetranslate.SettingsStore
@@ -83,7 +84,7 @@ internal class SessionCoordinator(
     /** 第二阶段接线：所有页面 controller 创建完成后再安装上下文访问边界。 */
     fun bindSessionContextAccess(access: SessionContextAccess) {
         check(sessionContextAccess == null || sessionContextAccess === access) {
-            "SessionContextAccess 已绑定"
+            "SessionContextAccess already bound"
         }
         sessionContextAccess = access
     }
@@ -91,8 +92,12 @@ internal class SessionCoordinator(
     fun onModeToggle(captureMode: String) {
         if (StatusBus.serviceRunning) {
             if (StatusBus.captureMode.isNotEmpty() && StatusBus.captureMode != captureMode) {
-                val other = if (StatusBus.captureMode == StatusBus.MODE_MIC) "同传" else "视频字幕"
-                host.toast("当前正在运行「$other」，请先停止后再切换")
+                val other = if (StatusBus.captureMode == StatusBus.MODE_MIC) {
+                    context.getString(R.string.rt_mode_interpretation)
+                } else {
+                    context.getString(R.string.rt_mode_video)
+                }
+                host.toast(context.getString(R.string.rt_toast_session_running_conflict, other))
                 return
             }
             host.startService(
@@ -123,7 +128,7 @@ internal class SessionCoordinator(
             ?: return
         if (resultCode != Activity.RESULT_OK || data == null) {
             pendingSnapshot = snapshot.copy(stage = PendingSessionStage.READY)
-            host.toast("未获得屏幕捕获授权，无法内录")
+            host.toast(context.getString(R.string.rt_toast_projection_permission_denied))
             return
         }
 
@@ -193,7 +198,7 @@ internal class SessionCoordinator(
         persistDraftInputs()
         val plan = TranslationPlanStore.loadDraft(context, mode)
         if (SettingsStore.apiKeyList(context).isEmpty()) {
-            host.toast("请先填 Gemini API Key")
+            host.toast(context.getString(R.string.rt_toast_fill_gemini_api_key_first))
             host.openTranslationSettings()
             return null
         }
@@ -212,8 +217,8 @@ internal class SessionCoordinator(
             scenePresetId = scene.id,
             sceneLabel = scene.label,
             sessionTitle = when (mode) {
-                TranslationMode.INTERPRETATION -> "同传记录"
-                TranslationMode.VIDEO -> "视频翻译"
+                TranslationMode.INTERPRETATION -> context.getString(R.string.rt_history_title_interp)
+                TranslationMode.VIDEO -> context.getString(R.string.rt_history_title_video)
             },
             sessionContext = sessionContext.manualContext.trim(),
         )
@@ -226,7 +231,7 @@ internal class SessionCoordinator(
         if (!host.checkPermission(Manifest.permission.RECORD_AUDIO)) {
             if (returningFromPermissionRequest) {
                 pendingSnapshot = snapshot.copy(stage = PendingSessionStage.READY)
-                host.toast("缺少录音权限，请在系统设置中授予")
+                host.toast(context.getString(R.string.rt_toast_record_audio_permission_required))
                 return
             }
             val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
@@ -246,7 +251,7 @@ internal class SessionCoordinator(
         if (ready.captureMode == StatusBus.MODE_VIDEO) {
             if (!host.canDrawOverlays()) {
                 pendingSnapshot = ready.copy(stage = PendingSessionStage.WAITING_OVERLAY)
-                host.toast("请开启悬浮窗权限，返回后将自动继续")
+                host.toast(context.getString(R.string.rt_toast_overlay_permission_required))
                 host.openOverlaySettings()
                 return
             }
@@ -312,7 +317,7 @@ internal class SessionCoordinator(
             snapshot.sceneLabel.isNotBlank()
 
     private fun requireSessionContextAccess(): SessionContextAccess =
-        checkNotNull(sessionContextAccess) { "SessionContextAccess 尚未绑定" }
+        checkNotNull(sessionContextAccess) { "SessionContextAccess not bound" }
 
     // 窄 internal 测试入口：只允许安装一个完整不可变 fixture，不暴露可变 pending 字段。
     internal fun installPendingSnapshotForTest(snapshot: PendingSessionSnapshot) {
@@ -330,7 +335,7 @@ internal class SessionCoordinator(
     internal fun pendingSnapshotForTest(): PendingSessionSnapshot? = pendingSnapshot
 
     internal fun captureStartIntentForTest(): Intent =
-        captureStartIntent(requireNotNull(pendingSnapshot) { "没有待启动会话快照" })
+        captureStartIntent(requireNotNull(pendingSnapshot) { "No pending session snapshot" })
 
     internal fun prepareSessionSettingsForTest(captureMode: String): Boolean {
         val prepared = prepareSessionSettings(captureMode) ?: return false

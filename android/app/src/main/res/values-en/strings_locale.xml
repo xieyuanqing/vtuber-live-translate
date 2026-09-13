@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Language settings strings (English) -->
+    <string name="settings_language_title">App Language</string>
+    <string name="settings_language_desc">Change the display language of the app interface</string>
+    <string name="locale_dialog_title">App Language</string>
+    <string name="locale_option_system">Follow system</string>
+    <string name="locale_option_zh_hans">Simplified Chinese</string>
+    <string name="locale_option_en">English</string>
+    <string name="locale_independent_hint">App language is independent of translation directions and scene settings.</string>
+</resources>

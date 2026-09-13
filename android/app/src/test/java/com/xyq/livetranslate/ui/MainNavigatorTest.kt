@@ -63,7 +63,7 @@ class MainNavigatorTest {
             assertEquals(View.VISIBLE, fixture.views.pageSceneLibrary.visibility)
             assertEquals(View.GONE, fixture.views.bottomNav.visibility)
             assertEquals(View.VISIBLE, fixture.views.toolbar.visibility)
-            assertEquals("场景库", fixture.views.toolbar.title.toString())
+            assertEquals(fixture.activity.getString(R.string.rt_subpage_scene_library), fixture.views.toolbar.title.toString())
             assertEquals(listOf(R.id.nav_video), mainHooks)
             assertEquals(listOf(R.id.pageSceneLibrary), subHooks)
 
@@ -94,7 +94,7 @@ class MainNavigatorTest {
 
         assertTrue(navigator.openSub(R.id.pageSettingsAbout, R.id.nav_settings))
         assertEquals(View.VISIBLE, fixture.views.toolbar.visibility)
-        assertEquals("关于", fixture.views.toolbar.title.toString())
+        assertEquals(fixture.activity.getString(R.string.rt_subpage_settings_about), fixture.views.toolbar.title.toString())
         assertEquals(View.GONE, fixture.views.bottomNav.visibility)
 
         assertTrue(navigator.handleBack())
@@ -110,11 +110,14 @@ class MainNavigatorTest {
             val content = LayoutInflater.from(activity).inflate(R.layout.activity_main, null, false)
             activity.setContentView(content)
             val root = content.findViewById<View>(R.id.rootLayout)
-            block(NavigatorFixture(MainNavigatorViews.bind(root)))
+            block(NavigatorFixture(MainNavigatorViews.bind(root), activity))
         } finally {
             controller.pause().stop().destroy()
         }
     }
 
-    private data class NavigatorFixture(val views: MainNavigatorViews)
+    private data class NavigatorFixture(
+        val views: MainNavigatorViews,
+        val activity: AppCompatActivity,
+    )
 }

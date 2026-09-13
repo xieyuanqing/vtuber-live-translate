@@ -28,11 +28,11 @@
                 android:paddingTop="@dimen/space_16"
                 android:paddingBottom="@dimen/space_16">
 
-                <TextView style="@style/PageTitle" android:text="视频" />
+                <TextView style="@style/PageTitle" android:text="@string/video_title" />
 
                 <TextView
                     style="@style/PageDesc"
-                    android:text="翻译其他应用正在播放的声音。视频链接可选，用于补充翻译背景。" />
+                    android:text="@string/video_subtitle" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -74,7 +74,7 @@
                         android:layout_height="48dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:gravity="center"
-                        android:text="⇄"
+                        android:text="@string/symbol_swap"
                         android:textColor="@color/brand"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -128,7 +128,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
-                        android:text="麦克风同传正在进行"
+                        android:text="@string/video_busy_status"
                         android:textColor="@color/warning"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -139,7 +139,7 @@
                         android:layout_height="48dp"
                         android:gravity="center"
                         android:paddingHorizontal="@dimen/space_8"
-                        android:text="返回同传"
+                        android:text="@string/video_busy_go_other"
                         android:textColor="@color/warning"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -172,7 +172,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
-                        android:text="悬浮字幕未授权"
+                        android:text="@string/overlay_permission_unauthorized"
                         android:textColor="@color/warning"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -183,7 +183,7 @@
                         android:layout_height="48dp"
                         android:gravity="center"
                         android:paddingHorizontal="@dimen/space_8"
-                        android:text="去设置"
+                        android:text="@string/btn_go_settings"
                         android:textColor="@color/warning"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -208,7 +208,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="场景" />
+                            android:text="@string/label_scene" />
 
                         <TextView
                             android:id="@+id/btnVideoOpenPlanLibrary"
@@ -216,7 +216,7 @@
                             android:layout_height="48dp"
                             android:gravity="center"
                             android:paddingHorizontal="@dimen/space_8"
-                            android:text="场景库 ›"
+                            android:text="@string/btn_scene_library_entry"
                             android:textColor="@color/brand"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -227,7 +227,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="通用视频 · 自动 → 中文"
+                        android:text="@string/video_plan_summary_default"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
 
@@ -289,7 +289,7 @@
                                     android:id="@+id/tvVideoSessionContextHeader"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:text="视频背景 · 可选 ›"
+                                    android:text="@string/video_session_context_header"
                                     android:textColor="@color/text_primary"
                                     android:textSize="15sp"
                                     android:textStyle="bold" />
@@ -312,7 +312,7 @@
                                 android:layout_height="48dp"
                                 android:gravity="center"
                                 android:paddingHorizontal="@dimen/space_8"
-                                android:text="清除"
+                                android:text="@string/btn_clear"
                                 android:textColor="@color/brand"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
@@ -329,8 +329,8 @@
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Field"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:hint="视频链接"
-                                app:helperText="YouTube / 哔哩哔哩 / Twitch 或其他公网播放页面">
+                                android:hint="@string/hint_video_url"
+                                app:helperText="@string/helper_video_url">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etVideoSessionUrl"
@@ -343,8 +343,8 @@
                             <com.google.android.material.textfield.TextInputLayout
                                 style="@style/Field"
                                 android:layout_marginTop="@dimen/space_12"
-                                android:hint="补充背景与翻译要求"
-                                app:helperText="例如人物称呼、专有名词、想要的语气">
+                                android:hint="@string/hint_session_context"
+                                app:helperText="@string/helper_video_context">
 
                                 <com.google.android.material.textfield.TextInputEditText
                                     android:id="@+id/etVideoSessionContext"
@@ -362,13 +362,13 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="48dp"
                                 android:layout_marginTop="@dimen/space_12"
-                                android:text="AI 获取视频背景" />
+                                android:text="@string/video_btn_ai_fetch_context" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
-                                android:text="根据标题、简介等公开资料整理背景，辅助翻译。结果会先给你看，确认后才会用。"
+                                android:text="@string/video_ai_fetch_tip"
                                 android:textColor="@color/text_muted"
                                 android:textSize="12sp" />
 
@@ -395,7 +395,7 @@
                                     android:layout_height="48dp"
                                     android:gravity="center"
                                     android:paddingHorizontal="@dimen/space_8"
-                                    android:text="去配置 ›"
+                                    android:text="@string/btn_go_configure"
                                     android:textColor="@color/brand"
                                     android:textSize="13sp"
                                     android:textStyle="bold"
@@ -407,7 +407,7 @@
                                     android:layout_height="48dp"
                                     android:gravity="center"
                                     android:paddingHorizontal="@dimen/space_8"
-                                    android:text="撤销替换"
+                                    android:text="@string/btn_undo_replacement"
                                     android:textColor="@color/brand"
                                     android:textSize="13sp"
                                     android:textStyle="bold"
@@ -428,7 +428,7 @@
                                 <TextView
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:text="AI 整理的背景（还没有用上）"
+                                    android:text="@string/interp_ai_preview_banner"
                                     android:textColor="@color/text_muted"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
@@ -454,7 +454,7 @@
                                         android:layout_height="48dp"
                                         android:layout_marginEnd="@dimen/space_8"
                                         android:layout_weight="1"
-                                        android:text="用于本次翻译" />
+                                        android:text="@string/btn_apply_analysis" />
 
                                     <com.google.android.material.button.MaterialButton
                                         android:id="@+id/btnVideoDiscardAnalysis"
@@ -462,7 +462,7 @@
                                         android:layout_width="0dp"
                                         android:layout_height="48dp"
                                         android:layout_weight="1"
-                                        android:text="放弃" />
+                                        android:text="@string/btn_discard_analysis" />
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
@@ -479,7 +479,7 @@
             android:layout_marginHorizontal="@dimen/page_margin"
             android:layout_marginTop="@dimen/space_8"
             android:layout_marginBottom="@dimen/space_16"
-            android:text="开始翻译"
+            android:text="@string/video_btn_start"
             app:icon="@drawable/ic_nav_video_24"
             app:iconGravity="textStart"
             app:iconPadding="@dimen/space_8"
@@ -502,7 +502,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView style="@style/PageTitle" android:text="视频字幕" />
+                <TextView style="@style/PageTitle" android:text="@string/video_running_badge" />
 
                 <TextView
                     android:id="@+id/tvVideoElapsed"
@@ -511,7 +511,7 @@
                     android:layout_weight="1"
                     android:fontFamily="monospace"
                     android:gravity="end"
-                    android:text="00:00"
+                    android:text="@string/default_time_zero"
                     android:textColor="@color/brand"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -545,7 +545,7 @@
                             android:id="@+id/tvHeroStatus"
                             style="@style/LuminousStatusText"
                             android:layout_marginStart="@dimen/space_8"
-                            android:text="准备连接" />
+                            android:text="@string/status_preparing_connection" />
 
                         <TextView
                             android:id="@+id/tvAudioLevel"
@@ -554,7 +554,7 @@
                             android:layout_weight="1"
                             android:fontFamily="monospace"
                             android:gravity="end"
-                            android:text="0%"
+                            android:text="@string/default_percentage_zero"
                             android:textColor="@color/brand"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -565,7 +565,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
-                        android:text="其他应用音频 · 悬浮字幕"
+                        android:text="@string/video_sub_status_running"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -585,7 +585,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
-                        android:text="自动 → 中文 · 通用视频"
+                        android:text="@string/video_running_meta_default"
                         android:textColor="@color/text_muted"
                         android:textSize="12sp" />
 
@@ -625,7 +625,7 @@
                     android:orientation="vertical"
                     android:padding="@dimen/space_16">
 
-                    <TextView style="@style/CardTitle" android:text="实时字幕" />
+                    <TextView style="@style/CardTitle" android:text="@string/label_live_subtitles" />
 
                     <LinearLayout
                         android:id="@+id/videoConfirmedList"
@@ -656,7 +656,7 @@
                                 android:id="@+id/tvVideoTargetLanguageLabel"
                                 style="@style/FieldLabel"
                                 android:layout_marginTop="0dp"
-                                android:text="中文" />
+                                android:text="@string/target_lang_chinese" />
 
                             <TextView
                                 android:id="@+id/tvLiveZh"
@@ -664,7 +664,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/grid_4"
                                 android:minHeight="56dp"
-                                android:text="等待译文…"
+                                android:text="@string/subtitle_waiting_translation"
                                 android:textColor="@color/text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
@@ -675,7 +675,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_8"
                                 android:minHeight="32dp"
-                                android:text="等待识别到语音…"
+                                android:text="@string/subtitle_waiting_speech"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="15sp" />
                         </LinearLayout>
@@ -692,7 +692,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="字幕自动保存"
+                            android:text="@string/label_subtitles_auto_saved"
                             android:textColor="@color/text_muted"
                             android:textSize="12sp" />
 
@@ -702,7 +702,7 @@
                             android:layout_height="48dp"
                             android:gravity="center"
                             android:paddingHorizontal="@dimen/space_8"
-                            android:text="查看本次记录 ›"
+                            android:text="@string/btn_view_current_session_record"
                             android:textColor="@color/brand"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -718,7 +718,7 @@
                 android:layout_height="@dimen/touch_target"
                 android:layout_gravity="bottom|center_horizontal"
                 android:layout_marginBottom="@dimen/space_8"
-                android:text="回到最新"
+                android:text="@string/btn_scroll_latest"
                 android:visibility="gone"
                 app:icon="@drawable/ic_arrow_down_24"
                 app:iconGravity="textStart"
@@ -737,18 +737,20 @@
                 android:id="@+id/btnVideoPause"
                 style="@style/LuminousSecondaryButton"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/primary_action_height"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/primary_action_height"
                 android:layout_marginEnd="@dimen/space_8"
                 android:layout_weight="1"
-                android:text="暂停" />
+                android:text="@string/btn_pause" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnVideoStop"
                 style="@style/LuminousDangerButton"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/primary_action_height"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/primary_action_height"
                 android:layout_weight="1"
-                android:text="停止视频字幕"
+                android:text="@string/video_btn_stop"
                 app:icon="@drawable/ic_stop_white_24"
                 app:iconGravity="textStart"
                 app:iconPadding="@dimen/space_8" />
