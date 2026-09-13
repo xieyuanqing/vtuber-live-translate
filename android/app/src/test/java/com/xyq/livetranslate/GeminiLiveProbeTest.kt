@@ -26,7 +26,9 @@ class GeminiLiveProbeTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        // 2026-09-13 CI 实测：资源紧张的 runner 上 shutdown() 可能抛 IOException，
+        // 把本体已通过的 WebSocket 用例标成失败；清理失败不应改变测试结论。
+        runCatching { server.shutdown() }
     }
 
     @Test
