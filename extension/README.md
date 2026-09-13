@@ -1,5 +1,7 @@
 # 流译 · YouTube 直播实时翻译（Chrome 扩展）
 
+> **本扩展已拆分为独立仓库 [live-translate-extension](https://github.com/xieyuanqing/live-translate-extension)**：后续开发、Issue 与安装包 Release 都在新仓库，README 以英文为主。此目录保留到 0.1.1 为止的历史快照，不再单独维护。
+
 抓 YouTube 直播的音频，经 Gemini Live Translate 实时翻译，字幕直接叠在播放器里，像原生 CC 一样看。
 
 从安卓版[流译](../README.md)移植而来：Live API 协议处理、PCM 重采样、字幕稳定、提示词组合都是同一套逻辑，采集和显示换成了浏览器的做法。

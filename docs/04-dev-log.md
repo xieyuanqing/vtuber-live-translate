@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-09-13 · Chrome 扩展拆分为独立仓库
+
+- 扩展从本仓库拆出，独立为 [live-translate-extension](https://github.com/xieyuanqing/live-translate-extension)：插件放仓库根目录，英文 README 为主、中文说明保留，独立的自检 / 回归 / 打包脚本与 GitHub Actions，以全新 Git 历史起始并发布 v0.1.1 Release 附安装包。拆分动机是两者混在一个仓库里，外人分不清 Android App 和浏览器扩展。
+- 本分支 `extension/` 保留到 0.1.1 为止的代码与说明作历史快照，README 顶部已指向新仓库；后续扩展的开发、Issue 与 Release 都在新仓库进行。
+
+**版本**：扩展 0.1.1（独立仓库）；本仓库 Android 仍为 2.4.1 / 36。
+
+**验证**：新仓库本地 `npm run check`（自检 + 10 项生命周期回归）与 `npm run package` 通过、zip 复现一致，GitHub Actions 首跑 success，Release 资产已核验上传。
+
+---
+
 ## 2026-09-13 · Chrome 扩展 0.1.1：会话稳定性与弹窗打磨
 
 - 修复启动中停止、切视频或重新开始时旧异步任务继续运行的问题。会话和音频挂载各自作废旧操作，迟到的成功或失败都不会影响新会话；保留原声音频通路。
