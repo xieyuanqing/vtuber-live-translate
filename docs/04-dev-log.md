@@ -2,6 +2,134 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · 悬浮窗控制条改点击切换，收起态改贴边小蓝条（v2.6.0 / 38）
+
+**改动**
+
+- **删掉控制条的定时自动隐藏**：`CONTROLS_AUTO_HIDE_MS`、`hideControlsRunnable`、
+  `revealControls()` 全部移除，改为 `setControlsVisible(visible)` + `onOverlayTap()`。
+  点面板空白处收起控制条，再点一下复原；字幕文本区、内边距都算空白，三个按钮各自消费自己的点击。
+- **收起态改小蓝条**：去掉「‹译」文字与白色描边，`COLLAPSED_HEIGHT_DP` 60 → 48。
+  宽度拆成两个常量：看得见的 `COLLAPSED_BAR_WIDTH_DP = 10`（贴屏幕边的实心蓝条）与
+  实际窗口宽 `COLLAPSED_TOUCH_WIDTH_DP = 28`。多出来的 18dp 朝屏幕内侧，用
+  `LayerDrawable`（底层渐隐半透明晕 + 上层实心条 `setLayerInset` 压到贴边那侧）画出来：
+  视觉上仍是一根细条，手指有得点。贴左时晕在右、贴右时晕在左。
+  同步删 `rt_overlay_handle_collapsed_left` / `_right` 两条字符串（中英）。
+- **顺带修好收起态纵向拖动**：`dragListener` 现在也挂到 `collapsedHandle` 上。
+
+**原因**：用户反馈「自动变小有时候灵有时候不灵，就一直停在那里」。
+
+**根因（值得记）**：`maybeReapplyStyle()` 挂在 `SubtitleStabilizer` 回调里
+（`CaptureService.kt:219`），**每条字幕更新都会调用一次**；旧实现里那句
+`else if (controlsRevealed) revealControls()` 每次都重排 3.5 秒倒计时。于是译文连续输出时
+倒计时被无限重置，控制条永远不收；只有字幕静默超过 3.5 秒才会隐藏——正好是用户没在看的时候。
+**教训：不要在「每帧都会被调用」的刷新函数里排程延时任务。**
+
+**第二个坑**：收起态的纵向拖动（08 计划 C8）此前是失效的。`collapsedHandle` 是 clickable
+TextView，会在 `onTouchEvent` 里吃掉 ACTION_DOWN，父容器 `shell` 上的 `OnTouchListener`
+根本收不到手势。现在把同一个 `dragListener` 也挂到胶囊上（`OnClickListener` 保留给无障碍的
+`performClick`）。新增测试 `collapsedBarCanStillBeDraggedVertically` 已反向验证：
+去掉那行监听该测试立刻失败。
+
+**真实验证**
+
+- 重写 `headerControlsAutoHideAndRevealOnTouch` 为 `headerControlsToggleWhenTappingBlankArea`
+  （点空白收起 → 再点复原）；新增 `headerControlsStayPutWhileSubtitlesKeepArriving`
+  （连打 5 轮 `maybeReapplyStyle` + `setLines` + 各推进 1 秒，控制条必须保持用户设定的收起态，
+  暂停态也不得顶回来）——直接锁住上面那个根因。
+- 收起尺寸断言同步改为 28dp（触摸宽） × 48dp；新增
+  `collapsedBarHugsTheDockedEdgeAndFadesInward` 断言蓝条那一层的 `layerInset` 随贴边方向翻转
+  （插反会变成蓝条悬空、晕贴边）。
+- `testDebugUnitTest` 142 个全过，`lintDebug` 无新增 UnusedResources，`assembleDebug` 通过，
+  `git diff --check` 干净。
+- 需真机确认：28dp 触摸区的点中率与半透明晕的观感，以及空白处点击与拖动的区分阈值（仍是 6dp）。
+- **已知代价**：收起态窗口 28dp 宽会挡住底下 App 在这一段的触摸（含系统返回手势边缘区）。
+  这是「视觉细、触摸大」的必然取舍——窗口收不收触摸是二选一，没有只让蓝条可点、晕透传的办法。
+
+## 2026-09-13 · 悬浮窗控制条做小，模型拉取改就地下拉、自检改小按钮（v2.6.0 / 38）
+
+**改动**
+
+- **悬浮窗**：控制按钮 `CONTROL_SIZE_DP` 44 → 28，图标内边距 10 → 5、圆角 12 → 8、
+  去掉描边并把底色压到 alpha 28，按钮间距 6 → 4；面板内边距 16/12/16/14 → 12/8/12/10。
+  删掉「流译 · 实时 / 已暂停」状态文字（`statusLabel` 与两条字符串），状态改由左侧圆点 +
+  暂停/播放图标本身表达，控制条变成「一个点 + 三个小图标」。
+- **模型选择**：`btnRefreshSecondAiModels` 从整行实底按钮改为模型输入框右侧的 40dp 刷新
+  图标（新增 `ic_refresh_24`、`IconActionButton` 样式）；点一下重新拉取，结果用
+  `ListPopupWindow` 锚在模型框上就地下拉（新增 `item_model_option.xml`），选一行即填入。
+  对话框式选择面板连同 `dialog_model_picker.xml` 一起删除。
+- **自检**：两页的测试按钮从整行 Tonal 改为 `wrap_content` 小按钮 + 行内结果文字；
+  两条按钮文案合并为一条 `btn_test_connection`「测试连接」。删掉 AI 页「拉到模型列表不代表
+  选中的模型能用…」那行说明（小按钮已经自解释）。
+- **Key 行**：两页的「粘贴 Key」从整行按钮改为贴在输入框右侧的小按钮；AI 页新增
+  `rowSecondAiKey` 包住「字段 + 粘贴」，Zen 模式整行收起（原 `rowSecondAiKeyActions` 并入）；
+  Gemini 专属的「免费申请」「用翻译服务的 Key」两条链接并进 `containerGeminiActions` 一行，
+  不再单独控制 `btnSecondAiTutorial` 的显隐。
+- 内联只剩单一调用方的 `setSecondAiButtonsBusy` / `clearSecondAiButtonsBusy`，
+  换成 `setSecondAiTestBusy(busy)`。删 `btn_refresh_free_models`、`settings_ai_check_desc`、
+  `dialog_model_picker_*`、`rt_dialog_model_picker_title`、`rt_action_close`、`rt_action_refetch`、
+  `rt_settings_fetching_models`、`rt_overlay_status_*` 等 12 条失效文案（中英同步）。
+
+**原因**：用户反馈悬浮窗按钮太大、盖在画面上碍事，要「几个小图标点一下就行」；以及上一版
+把「拉取模型列表」「测试」做成整行大按钮属于做过头，应当像 Cherry Studio 那样——模型框右边
+一个刷新图标就地展开下拉，底下一个小测试按钮。
+
+**踩到的坑**：第一版把模型输入框当搜索框（下拉开着时按框内文字筛选）。但框里本来就有当前
+模型名，一点刷新就会被它自己筛成空、下拉直接消失；即使匹配上也只看得到同名系列，永远换不到
+别的模型。改为**下拉一律列全部模型**，当前模型改用 `setSelection` 滚动定位。
+
+**真实验证**
+
+- 新增 `modelDropdownListsEveryModelAndFillsTheField`（注入 3 个模型 → 下拉列全 3 条 →
+  点第 2 条填入字段）与 `modelDropdownIsDismissedWhenLeavingTheSettingsPage`
+  （`persistDraftInputs` 是 onPause 与 `beforeSubPageClosed` 的共同钩子，页面走了必须收掉
+  下拉，否则窗口泄漏或悬在别的页面上）。
+- `testDebugUnitTest` 139 个全过，`lintDebug` 无新增 UnusedResources，`assembleDebug` 通过，
+  `git diff --check` 干净。
+- 需真机确认：悬浮窗 28dp 按钮的点中率、下拉在模型框上的锚定位置与滚动高度。
+
+## 2026-09-13 · 翻译服务 / 背景分析 AI 两个设置页统一骨架（v2.6.0 / 38）
+
+**改动**
+
+- 两页压成同一套结构：一句作用说明 → 一张连接卡（输入 → 唯一实底主按钮「测试…」→ 状态行）
+  → 可选项折叠 → 底部凭据存储说明。
+- `page_settings_ai.xml` 删掉顶部彩色 header 卡（Toolbar 已有页名，属漏做的 B0 双头部）、
+  删两个分节标签，「连通性检查」并入连接卡底部；服务 toggle 三项恢复等宽（`service_opencode_zen`
+  文案去掉「免费」后不再需要 `weight=1.2` 硬凑）。
+- 帮助类按钮收口：「免费申请 API Key」按钮与页面上的免费额度小字删除——教程对话框
+  （`showApiKeyTutorialDialog`）里本就有「前往申请」和同一句额度说明。两页各只留一个
+  链接「没有 API Key？免费申请 ›」（复用 `btnViewApiKeyTutorial` / `btnSecondAiTutorial`）。
+- 按钮权重分层：每页只有「测试翻译连接」/「测试分析服务」是实底 Tonal；粘贴 Key、
+  用翻译服务的 Key、拉取模型列表统一为 outlined（新样式 `FieldActionButton`）；
+  申请 / 恢复默认为文字链接（`FieldLinkButton`）。
+- 折叠行新样式 `DisclosureRow`：整行 + 行尾 chevron（新增 `ic_chevron_down_24`），
+  不再拼「· 展开」文案，与动作按钮形态区分开；`setupDisclosure` 随之去掉 `title` 参数。
+  字幕页的「高级断句参数」同步换用，并删掉展开后重复的小标题「断句节奏」。
+- AI 页新增 `rowSecondAiKeyActions`：Key 相关动作随 `tilSecondAiKey` 一起显隐，
+  Zen 模式（无需凭据）整组收起；「用翻译服务的 Gemini Key」仍只在 Gemini 分支出现。
+- 删死文案：`btn_apply_api_key`、`tv_free_quota_hint`、`settings_ai_title`、
+  `settings_ai_card_title`、两个 `settings_ai_section_*`、`settings_translate_title`、
+  `settings_translate_section_params`、`settings_subtitle_section_segmentation`（中英同步），
+  以及 8 条与 `strings.xml` 完全重复的 `rt_*`（`rt_btn_fetch_models`、`rt_btn_test_second_ai`、
+  `rt_settings_helper_manual_model_id`、3 条 `rt_settings_disclosure_*`、
+  `rt_action_expand_simple` / `rt_action_collapse_simple`）。
+
+**原因**：用户反馈这两页「看着有点乱」。两页干的是同一件事（配一个 AI 服务：Key + 地址 +
+模型 + 自检），却长成两种样子：AI 页 9 个同权重按钮 + 彩色头卡 + 两个分节标签，翻译页
+5 个按钮 3 种样式挤在一张卡里。根因是 `docs/08-ui-declutter-plan.md` 的 B 阶段只覆盖了主
+Tab 页和设置首页，设置二级页一个都没进清单。`helper_second_ai_model` 改为「点下方
+「拉取模型列表」选择」——用户明确要求拉取模型列表必须是主路径，不能指望手输模型 ID。
+
+**真实验证**
+
+- `stage1SettingsViewsAndSecondAiServiceSwitching` 扩展为覆盖 `rowSecondAiKeyActions` /
+  `btnSecondAiTutorial` 在三种服务下的显隐；新增 `fetchModelsButtonStaysVisibleForEveryService`
+  锁住「拉取模型列表」在 Gemini / Zen / 自定义下都可见可点；折叠测试加断言 chevron 真的换图标。
+- `testDebugUnitTest` 137 个全过，`lintDebug`（无新增 UnusedResources）、`assembleDebug` 通过，
+  `git diff --check` 干净。
+- 触摸与视觉效果需真机确认：折叠行 chevron、outlined/Tonal 的对比、Zen 模式下 Key 组收起。
+
 ## 2026-09-13 · 悬浮窗「打开主应用」按会话模式落页（v2.6.0 / 38）
 
 **改动**

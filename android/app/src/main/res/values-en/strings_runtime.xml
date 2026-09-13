@@ -30,32 +30,24 @@
     <string name="rt_action_cancel">Cancel</string>
     <string name="rt_action_delete">Delete</string>
     <string name="rt_action_save">Save</string>
-    <string name="rt_action_close">Close</string>
     <string name="rt_action_reset">Reset</string>
     <string name="rt_action_edit">Edit</string>
     <string name="rt_action_set_default">Set as default</string>
     <string name="rt_action_pause">Pause</string>
     <string name="rt_action_resume">Resume</string>
     <string name="rt_action_stop">Stop</string>
-    <string name="rt_action_expand_simple">Expand</string>
-    <string name="rt_action_collapse_simple">Collapse</string>
-    <string name="rt_action_refetch">Refetch</string>
     <string name="rt_unknown_error">Unknown error</string>
     <string name="rt_connection_failed">Connection failed</string>
     <string name="rt_testing_ellipsis">Testing…</string>
     <string name="rt_fetch_failed">Fetch failed</string>
 
     <!-- SubtitleOverlay -->
-    <string name="rt_overlay_status_live">LiveTranslate · Live</string>
-    <string name="rt_overlay_status_paused">LiveTranslate · Paused</string>
     <string name="rt_overlay_action_pause">Pause translation</string>
     <string name="rt_overlay_action_resume">Resume translation</string>
     <string name="rt_overlay_action_open">Open app</string>
     <string name="rt_overlay_action_collapse">Collapse subtitles to screen edge; translation continues</string>
     <string name="rt_overlay_action_expand">Expand subtitle overlay</string>
     <string name="rt_overlay_waiting_subtitles">Waiting for subtitles…</string>
-    <string name="rt_overlay_handle_collapsed_left">TL\n›</string>
-    <string name="rt_overlay_handle_collapsed_right">‹\nTL</string>
 
     <!-- CaptureService Notifications -->
     <string name="rt_notif_channel_name">Live Translation</string>
@@ -183,9 +175,6 @@
     <string name="rt_toast_overlay_permission_required">Please enable overlay permission; will resume automatically upon return</string>
 
     <!-- SettingsController -->
-    <string name="rt_settings_disclosure_custom_endpoint">Custom Service Address</string>
-    <string name="rt_settings_disclosure_translate_advanced">Advanced Translation Parameters</string>
-    <string name="rt_settings_disclosure_subtitle_advanced">Advanced Segmentation Parameters</string>
     <string name="rt_state_expanded">Expanded</string>
     <string name="rt_state_collapsed">Collapsed</string>
     <string name="rt_diag_status_running">● Running</string>
@@ -213,8 +202,6 @@
     <string name="rt_settings_hint_fill_gemini_key_first">Please enter Gemini API Key first</string>
     <string name="rt_live_probe_success">Live model connected successfully (audio translation not tested)</string>
     <string name="rt_test_failed_prefix">Test failed: %1$s</string>
-    <string name="rt_settings_helper_manual_model_id">You can enter model ID directly</string>
-    <string name="rt_btn_fetch_models">Fetch model list</string>
     <string name="rt_zen_client_restricted">Current free tier is restricted to OpenCode client, not verified in this app; retest or switch service</string>
     <string name="rt_zen_ready_status">Free model connected (public endpoint): use directly, or tap \"Test analysis service\" to confirm availability</string>
     <string name="rt_service_option_gemini">Gemini (Official, API Key required)</string>
@@ -224,19 +211,16 @@
     <string name="rt_format_gemini_native">Gemini Native</string>
     <string name="rt_format_openai_compatible">OpenAI Compatible</string>
     <string name="rt_settings_hint_fill_custom_url_first">Please enter custom service URL first</string>
-    <string name="rt_settings_fetching_models">Fetching model list…</string>
     <string name="rt_settings_fetching_zen_models">Fetching Zen free allowlist models…</string>
     <string name="rt_settings_fetching_models_from_service">Fetching available models from %1$s service…</string>
     <string name="rt_settings_zen_no_free_models">Remote returned no official free allowlist models; currently unavailable</string>
     <string name="rt_settings_no_models_returned">Remote returned no models; please enter model ID manually</string>
     <string name="rt_settings_models_fetched_count">Fetched %1$d available models</string>
     <string name="rt_settings_fetch_models_failed">Fetch failed: %1$s</string>
-    <string name="rt_dialog_model_picker_title">Select Analysis Model</string>
     <string name="rt_settings_model_selected">Selected model: %1$s</string>
     <string name="rt_settings_hint_custom_fill_url">Please enter service URL (Base URL) for custom service</string>
     <string name="rt_settings_hint_custom_fill_model">Please enter analysis model for custom service</string>
     <string name="rt_settings_testing_second_ai_with_model">Running a minimal test request with %1$s…</string>
-    <string name="rt_btn_test_second_ai">Test Analysis Service</string>
     <string name="rt_settings_second_ai_available">Available: %1$s returned results successfully; analysis function is ready to use.</string>
     <string name="rt_settings_check_config">Please check configuration</string>
     <string name="rt_settings_second_ai_unavailable">Unavailable: %1$s</string>

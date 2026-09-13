@@ -31,32 +31,24 @@
     <string name="rt_action_cancel">取消</string>
     <string name="rt_action_delete">删除</string>
     <string name="rt_action_save">保存</string>
-    <string name="rt_action_close">关闭</string>
     <string name="rt_action_reset">恢复</string>
     <string name="rt_action_edit">编辑</string>
     <string name="rt_action_set_default">设为默认</string>
     <string name="rt_action_pause">暂停</string>
     <string name="rt_action_resume">继续</string>
     <string name="rt_action_stop">停止</string>
-    <string name="rt_action_expand_simple">展开</string>
-    <string name="rt_action_collapse_simple">收起</string>
-    <string name="rt_action_refetch">重新拉取</string>
     <string name="rt_unknown_error">未知错误</string>
     <string name="rt_connection_failed">连接失败</string>
     <string name="rt_testing_ellipsis">正在测试…</string>
     <string name="rt_fetch_failed">获取失败</string>
 
     <!-- SubtitleOverlay -->
-    <string name="rt_overlay_status_live">流译 · 实时</string>
-    <string name="rt_overlay_status_paused">流译 · 已暂停</string>
     <string name="rt_overlay_action_pause">暂停翻译</string>
     <string name="rt_overlay_action_resume">继续翻译</string>
     <string name="rt_overlay_action_open">打开主应用</string>
     <string name="rt_overlay_action_collapse">收起字幕到屏幕侧边，翻译继续进行</string>
     <string name="rt_overlay_action_expand">展开悬浮字幕</string>
     <string name="rt_overlay_waiting_subtitles">等待字幕…</string>
-    <string name="rt_overlay_handle_collapsed_left">译\n›</string>
-    <string name="rt_overlay_handle_collapsed_right">‹\n译</string>
 
     <!-- CaptureService Notifications -->
     <string name="rt_notif_channel_name">实时翻译</string>
@@ -184,9 +176,6 @@
     <string name="rt_toast_overlay_permission_required">请开启悬浮窗权限，返回后将自动继续</string>
 
     <!-- SettingsController -->
-    <string name="rt_settings_disclosure_custom_endpoint">自定义服务地址</string>
-    <string name="rt_settings_disclosure_translate_advanced">高级翻译参数</string>
-    <string name="rt_settings_disclosure_subtitle_advanced">高级断句参数</string>
     <string name="rt_state_expanded">已展开</string>
     <string name="rt_state_collapsed">已折叠</string>
     <string name="rt_diag_status_running">● 运行中</string>
@@ -214,8 +203,6 @@
     <string name="rt_settings_hint_fill_gemini_key_first">请先填写 Gemini API Key</string>
     <string name="rt_live_probe_success">Live 模型连接通过（未测试音频翻译）</string>
     <string name="rt_test_failed_prefix">测试失败：%1$s</string>
-    <string name="rt_settings_helper_manual_model_id">可直接手动输入模型 ID</string>
-    <string name="rt_btn_fetch_models">拉取模型列表</string>
     <string name="rt_zen_client_restricted">当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务</string>
     <string name="rt_zen_ready_status">已接入免费模型（公开接入点）：可直接使用，或点「测试分析服务」确认当前可用性</string>
     <string name="rt_service_option_gemini">Gemini（官方，需自备 API Key）</string>
@@ -225,19 +212,16 @@
     <string name="rt_format_gemini_native">Gemini 原生</string>
     <string name="rt_format_openai_compatible">OpenAI 兼容</string>
     <string name="rt_settings_hint_fill_custom_url_first">请先填写自定义服务地址</string>
-    <string name="rt_settings_fetching_models">正在获取模型列表…</string>
     <string name="rt_settings_fetching_zen_models">正在拉取 Zen 免费白名单模型…</string>
     <string name="rt_settings_fetching_models_from_service">正在从 %1$s 服务获取可用模型…</string>
     <string name="rt_settings_zen_no_free_models">远端未返回任何官方免费白名单模型，当前不可用</string>
     <string name="rt_settings_no_models_returned">远端没有返回任何模型，请手动输入模型 ID</string>
     <string name="rt_settings_models_fetched_count">已获取 %1$d 个可用模型</string>
     <string name="rt_settings_fetch_models_failed">获取失败：%1$s</string>
-    <string name="rt_dialog_model_picker_title">选择分析模型</string>
     <string name="rt_settings_model_selected">已选择模型：%1$s</string>
     <string name="rt_settings_hint_custom_fill_url">自定义服务请先填写服务地址（Base URL）</string>
     <string name="rt_settings_hint_custom_fill_model">自定义服务请先填写分析模型</string>
     <string name="rt_settings_testing_second_ai_with_model">正在用 %1$s 跑一次最短请求…</string>
-    <string name="rt_btn_test_second_ai">测试分析服务</string>
     <string name="rt_settings_second_ai_available">可用：%1$s 已成功返回结果，分析功能可以使用。</string>
     <string name="rt_settings_check_config">请检查配置</string>
     <string name="rt_settings_second_ai_unavailable">不可用：%1$s</string>

@@ -2,6 +2,7 @@ package com.xyq.livetranslate
 
 import android.app.Application
 import android.content.Context
+import android.graphics.drawable.LayerDrawable
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
@@ -65,8 +66,9 @@ class SubtitleOverlayWindowTest {
 
             assertTrue(collapseButton.performClick())
 
-            assertEquals((44 * density).roundToInt(), params.width)
-            assertEquals((60 * density).roundToInt(), params.height)
+            // 收起后窗口按触摸宽度算：看得见的蓝条只有 10dp，其余是便于点击的半透明晕
+            assertEquals((28 * density).roundToInt(), params.width)
+            assertEquals((48 * density).roundToInt(), params.height)
             assertEquals(View.GONE, panel.visibility)
             assertEquals(View.VISIBLE, handle.visibility)
             assertFalse(StatusBus.paused)
@@ -89,33 +91,117 @@ class SubtitleOverlayWindowTest {
     }
 
     @Test
-    fun headerControlsAutoHideAndRevealOnTouch() {
+    fun headerControlsToggleWhenTappingBlankArea() {
         val overlay = SubtitleOverlay(appContext(), StatusBus.MODE_MIC)
         try {
             assertTrue(overlay.show())
             val header = overlay.field<View>("headerRow")
+            val root = overlay.field<ViewGroup>("root")
             assertEquals(View.VISIBLE, header.visibility)
 
-            // 无操作约 3.5 秒后控制条自动隐藏，字幕独占面板
-            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(4000))
+            // 点面板空白处收起控制条，字幕独占面板
+            root.tap()
             assertEquals(View.GONE, header.visibility)
 
-            // 触摸悬浮窗重新唤出控制条
-            val root = overlay.field<ViewGroup>("root")
-            val down = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0)
-            root.dispatchTouchEvent(down)
-            down.recycle()
+            // 再点一下复原
+            root.tap()
             assertEquals(View.VISIBLE, header.visibility)
+        } finally {
+            overlay.hide()
+        }
+    }
 
-            // 暂停态控制条常驻，不自动隐藏（真实链路：状态变化经 maybeReapplyStyle 进入悬浮窗）
+    /**
+     * 控制条不能再被任何计时器自动收起：`maybeReapplyStyle` 每条字幕都会调用一次，
+     * 旧实现在这里重排自动隐藏，导致译文连续输出时控制条永远不收。
+     */
+    @Test
+    fun headerControlsStayPutWhileSubtitlesKeepArriving() {
+        val overlay = SubtitleOverlay(appContext(), StatusBus.MODE_MIC)
+        try {
+            assertTrue(overlay.show())
+            val header = overlay.field<View>("headerRow")
+            overlay.field<ViewGroup>("root").tap()
+            assertEquals(View.GONE, header.visibility)
+
+            repeat(5) {
+                overlay.maybeReapplyStyle()
+                overlay.setLines("已确认", "当前行")
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
+            }
+
+            // 用户收起了就该一直收着，字幕刷新不得把它顶回来
+            assertEquals(View.GONE, header.visibility)
+
             StatusBus.paused = true
             overlay.maybeReapplyStyle()
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(5000))
-            assertEquals(View.VISIBLE, header.visibility)
+            assertEquals(View.GONE, header.visibility)
         } finally {
             overlay.hide()
             StatusBus.paused = false
         }
+    }
+
+    /**
+     * 看得见的蓝条必须压在贴屏幕边的那一侧，多出来的触摸宽度全部让给朝屏幕内侧的半透明晕。
+     * 贴左边时晕在右，贴右边时晕在左——插反了就会变成蓝条悬空、晕贴边。
+     */
+    @Test
+    fun collapsedBarHugsTheDockedEdgeAndFadesInward() {
+        assertCollapsedBarInsets(dockRight = false)
+        assertCollapsedBarInsets(dockRight = true)
+    }
+
+    private fun assertCollapsedBarInsets(dockRight: Boolean) {
+        val context = appContext()
+        val overlay = SubtitleOverlay(context, StatusBus.MODE_MIC)
+        try {
+            assertTrue(overlay.show())
+            val params = overlay.field<WindowManager.LayoutParams>("lp")
+            // 收起方向取自收起前面板中心落在哪半屏
+            if (dockRight) params.x = 10_000
+            assertTrue(overlay.field<ImageView>("collapseButton").performClick())
+
+            val inward = ((28 - 10) * context.resources.displayMetrics.density).roundToInt()
+            val background = overlay.field<ViewGroup>("root").background as LayerDrawable
+            assertEquals(if (dockRight) inward else 0, background.getLayerInsetLeft(BAR_LAYER))
+            assertEquals(if (dockRight) 0 else inward, background.getLayerInsetRight(BAR_LAYER))
+        } finally {
+            overlay.hide()
+        }
+    }
+
+    /** 收起态的小蓝条要能纵向拖动：触摸不能被胶囊自己吃掉。 */
+    @Test
+    fun collapsedBarCanStillBeDraggedVertically() {
+        val overlay = SubtitleOverlay(appContext(), StatusBus.MODE_MIC)
+        try {
+            assertTrue(overlay.show())
+            assertTrue(overlay.field<ImageView>("collapseButton").performClick())
+            val handle = overlay.field<TextView>("collapsedHandle")
+            val params = overlay.field<WindowManager.LayoutParams>("lp")
+            val startY = params.y
+
+            handle.dispatch(MotionEvent.ACTION_DOWN, 0f, 0f)
+            handle.dispatch(MotionEvent.ACTION_MOVE, 0f, 200f)
+            handle.dispatch(MotionEvent.ACTION_UP, 0f, 200f)
+
+            assertNotEquals(startY, params.y)
+        } finally {
+            overlay.hide()
+        }
+    }
+
+    private fun View.tap() {
+        dispatch(MotionEvent.ACTION_DOWN, 10f, 10f)
+        dispatch(MotionEvent.ACTION_UP, 10f, 10f)
+    }
+
+    private fun View.dispatch(action: Int, x: Float, y: Float) {
+        val event = MotionEvent.obtain(0L, 0L, action, x, y, 0)
+        dispatchTouchEvent(event)
+        event.recycle()
     }
 
     @Test
@@ -132,6 +218,11 @@ class SubtitleOverlayWindowTest {
         } finally {
             overlay.hide()
         }
+    }
+
+    private companion object {
+        /** LayerDrawable 里蓝条那一层的下标（0 是半透明晕）。 */
+        const val BAR_LAYER = 1
     }
 
     private fun appContext(): Context = ApplicationProvider.getApplicationContext()

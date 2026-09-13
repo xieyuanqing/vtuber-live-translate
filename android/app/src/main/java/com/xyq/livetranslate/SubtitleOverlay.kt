@@ -7,7 +7,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
@@ -23,8 +25,9 @@ import kotlin.math.roundToInt
  * 视频字幕悬浮层：默认是可拖动的小尺寸字幕面板；收起时贴在屏幕侧边成为小胶囊。
  * 收起仅改变悬浮层外观，不暂停录音、音频发送或翻译会话。
  *
- * 控制条（状态 + 暂停/打开/收起）默认不占空间：触摸悬浮窗临时出现，约 3.5 秒后自动隐藏，
- * 暂停态常驻方便恢复；字幕文本始终独占面板面积。
+ * 控制条（状态点 + 暂停/打开/收起三个小图标）由用户手动开关：点面板空白处收起，
+ * 再点一下复原。不做定时自动隐藏——字幕是持续刷新的，任何「无操作计时」都会被
+ * 每条新字幕重置，结果就是正在看的时候永远不收。
  */
 class SubtitleOverlay(
     private val context: Context,
@@ -35,7 +38,6 @@ class SubtitleOverlay(
     private var panel: LinearLayout? = null
     private var headerRow: LinearLayout? = null
     private var collapsedHandle: TextView? = null
-    private var statusLabel: TextView? = null
     private var pauseButton: ImageView? = null
     private var openButton: ImageView? = null
     private var collapseButton: ImageView? = null
@@ -51,9 +53,7 @@ class SubtitleOverlay(
     private var expandedY = 0
     private var latestConfirmed = ""
     private var latestCurrent = ""
-    private var controlsRevealed = false
-
-    private val hideControlsRunnable = Runnable { hideControls() }
+    private var controlsVisible = false
 
     private val density = context.resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).roundToInt()
@@ -66,7 +66,7 @@ class SubtitleOverlay(
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(14))
+            setPadding(dp(12), dp(8), dp(12), dp(10))
             elevation = dp(8).toFloat()
         }
         val header = LinearLayout(context).apply {
@@ -80,15 +80,10 @@ class SubtitleOverlay(
             stateDot,
             LinearLayout.LayoutParams(dp(8), dp(8)).apply { rightMargin = dp(8) },
         )
-        val stateText = TextView(context).apply {
-            text = context.getString(R.string.rt_overlay_status_live)
-            setTextColor(Color.parseColor("#D9E8FF"))
-            textSize = 12f
-            letterSpacing = 0.04f
-        }
+        // 状态只由左侧圆点表达；暂停由暂停图标翻成播放图标表达，不再占一行文字。
         header.addView(
-            stateText,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+            View(context),
+            LinearLayout.LayoutParams(0, dp(1), 1f),
         )
         val pause = controlButton(R.drawable.ic_overlay_pause_24, context.getString(R.string.rt_overlay_action_pause)).apply {
             setOnClickListener { togglePause() }
@@ -106,13 +101,13 @@ class SubtitleOverlay(
         header.addView(
             open,
             LinearLayout.LayoutParams(dp(CONTROL_SIZE_DP), dp(CONTROL_SIZE_DP)).apply {
-                leftMargin = dp(6)
+                leftMargin = dp(4)
             },
         )
         header.addView(
             collapse,
             LinearLayout.LayoutParams(dp(CONTROL_SIZE_DP), dp(CONTROL_SIZE_DP)).apply {
-                leftMargin = dp(6)
+                leftMargin = dp(4)
             },
         )
         container.addView(
@@ -160,12 +155,10 @@ class SubtitleOverlay(
         val shell = AccentFrameLayout(context, density).apply {
             elevation = dp(8).toFloat()
         }
+        // 收起后是一根贴边小蓝条，不放文字。胶囊本体铺满整个触摸宽度（含半透明晕），
+        // OnClickListener 只留给无障碍的 performClick，真实触摸走下面挂的 dragListener
+        // （否则胶囊会吃掉触摸，纵向拖不动）。
         val sideHandle = TextView(context).apply {
-            text = context.getString(R.string.rt_overlay_handle_collapsed_right)
-            gravity = Gravity.CENTER
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            setLineSpacing(0f, 0.9f)
             contentDescription = context.getString(R.string.rt_overlay_action_expand)
             visibility = View.GONE
             isClickable = true
@@ -181,7 +174,7 @@ class SubtitleOverlay(
         )
         shell.addView(
             sideHandle,
-            FrameLayout.LayoutParams(dp(COLLAPSED_WIDTH_DP), dp(COLLAPSED_HEIGHT_DP)).apply {
+            FrameLayout.LayoutParams(dp(COLLAPSED_TOUCH_WIDTH_DP), dp(COLLAPSED_HEIGHT_DP)).apply {
                 gravity = Gravity.CENTER
             },
         )
@@ -199,6 +192,7 @@ class SubtitleOverlay(
         }
 
         shell.setOnTouchListener(dragListener(shell, params))
+        sideHandle.setOnTouchListener(dragListener(shell, params))
         try {
             wm.addView(shell, params)
         } catch (_: SecurityException) {
@@ -212,7 +206,6 @@ class SubtitleOverlay(
         panel = container
         headerRow = header
         collapsedHandle = sideHandle
-        statusLabel = stateText
         pauseButton = pause
         openButton = open
         collapseButton = collapse
@@ -223,18 +216,16 @@ class SubtitleOverlay(
         expandedX = params.x
         expandedY = params.y
         applyStyleNow()
-        revealControls()
+        setControlsVisible(true)
         return true
     }
 
     fun hide() {
         root?.let { runCatching { wm.removeView(it) } }
-        headerRow?.removeCallbacks(hideControlsRunnable)
         root = null
         panel = null
         headerRow = null
         collapsedHandle = null
-        statusLabel = null
         pauseButton = null
         openButton = null
         collapseButton = null
@@ -243,7 +234,7 @@ class SubtitleOverlay(
         dot = null
         lp = null
         collapsed = false
-        controlsRevealed = false
+        controlsVisible = false
     }
 
     fun setLines(confirmed: String, current: String) {
@@ -269,35 +260,17 @@ class SubtitleOverlay(
         } else {
             context.getString(R.string.rt_overlay_action_pause)
         }
-        statusLabel?.text = if (isPaused) {
-            context.getString(R.string.rt_overlay_status_paused)
-        } else {
-            context.getString(R.string.rt_overlay_status_live)
-        }
-        if (isPaused) {
-            // 暂停态控制条常驻，方便找到「继续」；恢复后按常规节奏自动隐藏。
-            revealControls()
-        } else if (controlsRevealed) {
-            revealControls()
-        }
     }
 
-    /** 触摸或状态变化时临时唤出控制条；非暂停态排程自动隐藏。 */
-    private fun revealControls() {
-        val header = headerRow ?: return
-        header.removeCallbacks(hideControlsRunnable)
-        controlsRevealed = true
-        if (collapsed) return
-        header.visibility = View.VISIBLE
-        if (!StatusBus.paused) {
-            header.postDelayed(hideControlsRunnable, CONTROLS_AUTO_HIDE_MS)
-        }
+    /** 点面板空白处切换控制条；收起态则整体展开。 */
+    private fun onOverlayTap() {
+        if (collapsed) toggleCollapsed() else setControlsVisible(!controlsVisible)
     }
 
-    private fun hideControls() {
+    private fun setControlsVisible(visible: Boolean) {
+        controlsVisible = visible
         val header = headerRow ?: return
-        controlsRevealed = false
-        header.visibility = View.GONE
+        header.visibility = if (visible && !collapsed) View.VISIBLE else View.GONE
     }
 
     private fun togglePause() {
@@ -334,7 +307,7 @@ class SubtitleOverlay(
             params.y = expandedY
         }
         applyAppearance()
-        if (!collapsed) revealControls()
+        if (!collapsed) setControlsVisible(true)
         renderLines()
     }
 
@@ -375,18 +348,9 @@ class SubtitleOverlay(
         if (collapsed) {
             container.visibility = View.GONE
             handle.visibility = View.VISIBLE
-            handle.text = if (collapsedOnLeft) {
-                context.getString(R.string.rt_overlay_handle_collapsed_left)
-            } else {
-                context.getString(R.string.rt_overlay_handle_collapsed_right)
-            }
             window.accentVisible = false
-            window.background = roundedRect(
-                fill = Color.argb(232, 0, 88, 188),
-                stroke = Color.argb(80, 255, 255, 255),
-                radius = 18,
-            )
-            params.width = dp(COLLAPSED_WIDTH_DP)
+            window.background = collapsedBar(onLeft = collapsedOnLeft)
+            params.width = dp(COLLAPSED_TOUCH_WIDTH_DP)
             params.height = dp(COLLAPSED_HEIGHT_DP)
             params.x = SubtitleOverlayGeometry.collapsedX(
                 displayWidth = dm.widthPixels,
@@ -396,7 +360,7 @@ class SubtitleOverlay(
         } else {
             handle.visibility = View.GONE
             container.visibility = View.VISIBLE
-            container.setPadding(dp(16), dp(12), dp(16), dp(14))
+            container.setPadding(dp(12), dp(8), dp(12), dp(10))
             window.accentVisible = true
             val opacity = SettingsStore.bgOpacityPct(context).coerceIn(20, 100)
             window.background = roundedRect(
@@ -404,7 +368,7 @@ class SubtitleOverlay(
                 stroke = Color.argb(55, 255, 255, 255),
                 radius = 22,
             )
-            headerRow?.visibility = if (controlsRevealed) View.VISIBLE else View.GONE
+            headerRow?.visibility = if (controlsVisible) View.VISIBLE else View.GONE
             tvConfirmed?.apply {
                 setTextColor(Color.parseColor("#B8C5D6"))
                 setPadding(0, dp(8), 0, 0)
@@ -470,8 +434,6 @@ class SubtitleOverlay(
                     startX = params.x
                     startY = params.y
                     moved = false
-                    // 摸一下就唤出控制条；拖动与点击都不受影响。
-                    if (!collapsed) revealControls()
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - downX
@@ -488,9 +450,8 @@ class SubtitleOverlay(
                         runCatching { wm.updateViewLayout(container, params) }
                     }
                 }
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL,
-                -> if (moved) clampToDisplay(container, params)
+                MotionEvent.ACTION_UP -> if (moved) clampToDisplay(container, params) else onOverlayTap()
+                MotionEvent.ACTION_CANCEL -> if (moved) clampToDisplay(container, params)
             }
             return true
         }
@@ -499,13 +460,13 @@ class SubtitleOverlay(
     private fun controlButton(iconRes: Int, description: String) = ImageView(context).apply {
         setImageResource(iconRes)
         contentDescription = description
-        scaleType = ImageView.ScaleType.CENTER_INSIDE
-        val inset = dp(10)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        val inset = dp(5)
         setPadding(inset, inset, inset, inset)
         background = roundedRect(
-            fill = Color.argb(36, 255, 255, 255),
-            stroke = Color.argb(42, 255, 255, 255),
-            radius = 12,
+            fill = Color.argb(28, 255, 255, 255),
+            stroke = Color.TRANSPARENT,
+            radius = 8,
         )
         isClickable = true
         isFocusable = true
@@ -514,6 +475,31 @@ class SubtitleOverlay(
     private fun circle(color: Int) = GradientDrawable().apply {
         shape = GradientDrawable.OVAL
         setColor(color)
+    }
+
+    /**
+     * 收起态背景：贴边一根实心蓝条 + 朝屏幕内侧渐隐的半透明晕。
+     * 晕只为把触摸区做大，视觉上仍然只看得见那根细条。
+     */
+    private fun collapsedBar(onLeft: Boolean): Drawable {
+        val solid = Color.argb(232, 0, 88, 188)
+        val fadeColors = if (onLeft) {
+            intArrayOf(Color.argb(64, 0, 88, 188), Color.TRANSPARENT)
+        } else {
+            intArrayOf(Color.TRANSPARENT, Color.argb(64, 0, 88, 188))
+        }
+        val halo = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, fadeColors).apply {
+            cornerRadius = dp(COLLAPSED_BAR_WIDTH_DP).toFloat() / 2
+        }
+        val bar = GradientDrawable().apply {
+            cornerRadius = dp(COLLAPSED_BAR_WIDTH_DP).toFloat() / 2
+            setColor(solid)
+        }
+        val inward = dp(COLLAPSED_TOUCH_WIDTH_DP - COLLAPSED_BAR_WIDTH_DP)
+        return LayerDrawable(arrayOf(halo, bar)).apply {
+            // 蓝条永远压在贴屏幕边的那一侧，多出来的宽度全部让给内侧的晕。
+            setLayerInset(1, if (onLeft) 0 else inward, 0, if (onLeft) inward else 0, 0)
+        }
     }
 
     private fun roundedRect(fill: Int, stroke: Int, radius: Int) = GradientDrawable().apply {
@@ -555,14 +541,21 @@ class SubtitleOverlay(
     }
 
     private companion object {
-        const val COLLAPSED_WIDTH_DP = 44
-        const val COLLAPSED_HEIGHT_DP = 60
+        /** 收起后看得见的那根贴边小蓝条有多宽。 */
+        const val COLLAPSED_BAR_WIDTH_DP = 10
 
-        /** 头部三个控制按钮的触摸区；36dp 在悬浮窗上太容易点偏。 */
-        const val CONTROL_SIZE_DP = 44
+        /**
+         * 收起态窗口的实际宽度。比蓝条宽出来的部分朝屏幕内侧、画成渐隐的半透明晕：
+         * 看着还是一根细条，但手指有得点。代价是这段宽度会挡住底下 App 的触摸。
+         */
+        const val COLLAPSED_TOUCH_WIDTH_DP = 28
+        const val COLLAPSED_HEIGHT_DP = 48
 
-        /** 控制条唤出后无操作自动隐藏的等待时间。 */
-        const val CONTROLS_AUTO_HIDE_MS = 3500L
+        /**
+         * 头部三个控制按钮的触摸区。悬浮窗是盖在别人画面上的，按钮越大越碍事：
+         * 28dp 是「看得见、点得中、不抢画面」的折中，别再往 44dp 放大。
+         */
+        const val CONTROL_SIZE_DP = 28
     }
 }
 
