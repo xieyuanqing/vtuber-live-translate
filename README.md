@@ -167,7 +167,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 持续集成
 
-GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml)，会在涉及 `android/**` 或工作流文件的 `main` 推送 / Pull Request，以及手动触发时：
+GitHub Actions 工作流位于 [`.github/workflows/android-debug.yml`](.github/workflows/android-debug.yml)，**不随 push / Pull Request 自动运行**；交付以本地验证为准，需要远端构建产物（APK artifact）或独立复核时在 Actions 页手动触发（`workflow_dispatch`）。手动触发时执行：
 
 1. 校验 Gradle Wrapper；
 2. 配置 JDK 17 与 Android SDK；

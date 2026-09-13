@@ -103,8 +103,8 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 GitHub Actions 工作流：`.github/workflows/android-debug.yml`。
 
-- 涉及 `android/**` 或工作流文件的 `main` push / Pull Request 自动运行单元测试、Lint 和 `assembleDebug`。
-- `workflow_dispatch` 可对任意分支手动触发。
+- 工作流不随 push / Pull Request 自动运行；交付以本地验证（单测、Lint、`assembleDebug`）为准。
+- 需要远端 APK artifact 或独立复核时，用 `workflow_dispatch` 对任意分支手动触发。
 - 远端交付必须确认 Run 的 `headSha` 等于目标提交，并实际核验下载的 APK artifact。
 
 ## Debug 签名

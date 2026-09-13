@@ -2,6 +2,18 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · CI 改为仅手动触发（v2.6.0 / 38）
+
+**改动**：`android-debug.yml` 去掉 `push` / `pull_request` 自动触发，只保留 `workflow_dispatch`；
+README、CLAUDE.md 同步说明。
+
+**原因**：本分支合并前 CI 已形成「本地全绿 → 远端仍要再跑一遍」的重复验证，且 runner 排队
+（当日重跑排队近 40 分钟）和资源抖动（同日 tearDown 假失败）反而拖慢交付。个人自用项目，
+本地 `testDebugUnitTest + lintDebug + assembleDebug` 即为交付门槛；需要远端 APK artifact
+或独立复核时在 Actions 页手动触发。
+
+**验证**：改动仅触发条件与文档；本地未重新构建，随后合并 main 的 push 不再产生任何自动运行。
+
 ## 2026-09-13 · OpenCode Zen 免费接口实测打通（v2.6.0 / 38）
 
 **改动**
