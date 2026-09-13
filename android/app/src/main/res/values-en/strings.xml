@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 阶段1: 翻译服务与背景分析服务字符串 -->
-    <string name="btn_apply_api_key">Free API Key Application</string>
-    <string name="btn_view_api_key_tutorial">View Application Guide</string>
-    <string name="tv_free_quota_hint">Free quota provided; actual quota subject to Google</string>
+    <string name="btn_view_api_key_tutorial">No API key? Get one free ›</string>
     <string name="btn_paste_key">Paste Key</string>
-    <string name="btn_test_translate_connection">Test Translation Connection</string>
+    <string name="btn_test_connection">Test connection</string>
     <string name="live_model_test_testing">Testing Live model connection (%s)…</string>
     <string name="live_model_test_success">Live model connection verified (audio translation not tested)</string>
     <string name="dialog_tutorial_title">Gemini API Key Tutorial</string>
@@ -15,10 +13,9 @@
     <string name="dialog_btn_close">Close</string>
     <string name="service_label">Analysis Service</string>
     <string name="service_gemini">Gemini</string>
-    <string name="service_opencode_zen">OpenCode Zen Free</string>
+    <string name="service_opencode_zen">OpenCode Zen</string>
     <string name="service_custom">Custom</string>
     <string name="btn_use_translate_gemini_key">Use Translation Service\'s Gemini Key</string>
-    <string name="btn_refresh_free_models">Refresh Free Models</string>
     <string name="btn_switch_service">Switch Service</string>
     <string name="zen_info_title">OpenCode Zen Free Models</string>
     <string name="zen_privacy_notice">Free models may use submitted content to improve the model. Do not send sensitive data.</string>
@@ -56,8 +53,6 @@
     <string name="nav_video">Video</string>
     <string name="nav_history">History</string>
     <string name="nav_settings">Settings</string>
-    <string name="dialog_model_picker_search_hint">Search models</string>
-    <string name="dialog_model_picker_empty">No matching models found. You can close this panel and enter the model ID manually.</string>
     <string name="dialog_scene_name_hint">Scene name</string>
     <string name="dialog_scene_instruction_hint">Scene prompt</string>
     <string name="dialog_scene_instruction_helper">Only specify focus points for this scene; core translation rules are handled by the system</string>
@@ -120,10 +115,7 @@
     <string name="about_auto_check_update">Automatically check for updates on launch</string>
     <string name="btn_check_update">Check for updates</string>
     <string name="btn_github_repo">GitHub Project Homepage</string>
-    <string name="settings_ai_title">AI</string>
-    <string name="settings_ai_card_title">Background Analysis AI (Optional)</string>
-    <string name="settings_ai_card_desc">Organizes video info and adds background context. Real-time translation works without it.</string>
-    <string name="settings_ai_section_connection">Connection Settings</string>
+    <string name="settings_ai_card_desc">Optional. Organizes video info and adds background context; real-time translation works without it.</string>
     <string name="settings_ai_format_label">API Format</string>
     <string name="settings_ai_format_gemini">Gemini Native</string>
     <string name="settings_ai_format_openai">OpenAI Compatible</string>
@@ -131,10 +123,7 @@
     <string name="hint_base_url">Base URL</string>
     <string name="hint_analysis_model">Analysis model</string>
     <string name="btn_fetch_models">Fetch model list</string>
-    <string name="settings_ai_section_check">Connectivity Check</string>
-    <string name="settings_ai_check_desc">Fetching models doesn\'t guarantee the selected model works. This sends a minimal test request using the current config.</string>
-    <string name="btn_test_second_ai">Test analysis service</string>
-    <string name="settings_ai_privacy_note">Credentials are stored only in local app data</string>
+    <string name="settings_credentials_local_note">Credentials are stored only in local app data</string>
     <string name="btn_battery_whitelist">Add to battery whitelist</string>
     <string name="diagnostics_status_not_running">○ Not running</string>
     <string name="settings_subtitle_style_title">Floating Window Style</string>
@@ -147,18 +136,15 @@
     <string name="settings_subtitle_opacity_transparent">Transparent</string>
     <string name="settings_subtitle_opacity_opaque">Opaque</string>
     <string name="settings_subtitle_lines_default">Max lines 3</string>
-    <string name="settings_subtitle_btn_advanced_expand">Advanced segmentation · Expand</string>
-    <string name="settings_subtitle_section_segmentation">Segmentation Timing</string>
+    <string name="settings_subtitle_advanced">Advanced segmentation</string>
     <string name="settings_subtitle_idle_default">Finalize after 2.5s silence</string>
     <string name="settings_subtitle_max_chars_default">Max 42 chars per line</string>
     <string name="settings_subtitle_btn_reset">Restore subtitle default settings</string>
-    <string name="settings_translate_title">Translation API</string>
     <string name="settings_translate_desc">Enter Gemini API key to start. Settings are saved automatically.</string>
     <string name="hint_gemini_api_key">Gemini API Key</string>
-    <string name="settings_translate_btn_custom_address_expand">Custom service address · Expand</string>
+    <string name="settings_translate_custom_address">Custom service address</string>
     <string name="hint_api_base_url">API Base URL</string>
-    <string name="settings_translate_btn_advanced_expand">Advanced translation parameters · Expand</string>
-    <string name="settings_translate_section_params">Translation Parameters</string>
+    <string name="settings_translate_advanced">Advanced translation parameters</string>
     <string name="settings_translate_echo_target">Show subtitles even when source audio is already in target language</string>
     <string name="settings_translate_rotate_val_default">Reconnect periodically every 505s</string>
     <string name="video_title">Video</string>
@@ -184,5 +170,5 @@
     <string name="helper_interp_context">e.g. live event topic, speakers, terminology</string>
     <string name="helper_second_ai_key">Can use the same key as the translation service</string>
     <string name="helper_second_ai_url">Domain only; trailing /v1 will be ignored automatically</string>
-    <string name="helper_second_ai_model">You can enter the model ID manually</string>
+    <string name="helper_second_ai_model">Tap Fetch model list below, or enter an ID manually</string>
 </resources>

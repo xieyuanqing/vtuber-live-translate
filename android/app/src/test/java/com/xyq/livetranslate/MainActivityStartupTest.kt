@@ -14,6 +14,7 @@ import com.xyq.livetranslate.ui.UiRuntimeStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -633,11 +634,14 @@ class MainActivityStartupTest {
             R.id.btnTranslateAdvanced to R.id.translateAdvanced,
             R.id.btnSubtitleAdvanced to R.id.subtitleAdvanced,
         ).forEach { (buttonId, contentId) ->
-            val button = activity.findViewById<View>(buttonId)
+            val button = activity.findViewById<com.google.android.material.button.MaterialButton>(buttonId)
             val content = activity.findViewById<View>(contentId)
+            // 折叠行不再拼「· 展开」文案，状态只由行尾 chevron 表达，图标必须真的换。
+            val collapsedIcon = button.icon
             assertEquals(View.GONE, content.visibility)
             button.performClick()
             assertEquals(View.VISIBLE, content.visibility)
+            assertTrue("展开后 chevron 未切换", button.icon !== collapsedIcon)
             button.performClick()
             assertEquals(View.GONE, content.visibility)
         }
@@ -793,15 +797,13 @@ class MainActivityStartupTest {
 
     @Test
     fun stage1SettingsViewsAndSecondAiServiceSwitching() = withActivity { activity ->
-        // 验证翻译服务新增控件绑定
-        val btnApply = activity.findViewById<View>(R.id.btnApplyApiKey)
+        // 验证翻译服务控件绑定：申请入口已并入教程对话框，页面只剩教程链接 + 粘贴 + 测试。
         val btnTutorial = activity.findViewById<View>(R.id.btnViewApiKeyTutorial)
         val btnPaste = activity.findViewById<View>(R.id.btnPasteApiKey)
         val btnTestTranslate = activity.findViewById<View>(R.id.btnTestTranslateConnection)
         val tvStatus = activity.findViewById<View>(R.id.tvTranslateTestStatus)
-        val tvQuotaHint = activity.findViewById<View>(R.id.tvFreeQuotaHint)
 
-        assertTrue(btnApply != null && btnTutorial != null && btnPaste != null && btnTestTranslate != null && tvStatus != null && tvQuotaHint != null)
+        assertTrue(btnTutorial != null && btnPaste != null && btnTestTranslate != null && tvStatus != null)
 
         // 验证第二 AI 服务切换
         val btnZen = activity.findViewById<View>(R.id.btnSecondAiServiceZen)
@@ -810,6 +812,7 @@ class MainActivityStartupTest {
         val containerGemini = activity.findViewById<View>(R.id.containerGeminiActions)
         val containerZen = activity.findViewById<View>(R.id.containerZenInfo)
         val containerCustom = activity.findViewById<View>(R.id.containerCustomFormat)
+        val rowKey = activity.findViewById<View>(R.id.rowSecondAiKey)
         val tilKey = activity.findViewById<View>(R.id.tilSecondAiKey)
         val tilUrl = activity.findViewById<View>(R.id.tilSecondAiUrl)
 
@@ -819,23 +822,26 @@ class MainActivityStartupTest {
         assertEquals(View.GONE, containerCustom.visibility)
         assertEquals(View.VISIBLE, tilKey.visibility)
         assertEquals(View.VISIBLE, tilUrl.visibility)
+        assertEquals(View.VISIBLE, rowKey.visibility)
 
-        // 切换到 Zen 模式
+        // 切换到 Zen 模式：无需凭据，Key 整行与 Gemini 专属链接都收起
         btnZen.performClick()
         assertEquals(View.GONE, containerGemini.visibility)
         assertEquals(View.VISIBLE, containerZen.visibility)
         assertEquals(View.GONE, containerCustom.visibility)
         assertEquals(View.GONE, tilKey.visibility)
         assertEquals(View.GONE, tilUrl.visibility)
+        assertEquals(View.GONE, rowKey.visibility)
         assertEquals(SettingsStore.SERVICE_OPENCODE_ZEN, SettingsStore.secondAiService(activity))
 
-        // 切换到自定义模式
+        // 切换到自定义模式：仍要填 Key，但 Gemini 专属的申请/复用链接隐藏
         btnCustom.performClick()
         assertEquals(View.GONE, containerGemini.visibility)
         assertEquals(View.GONE, containerZen.visibility)
         assertEquals(View.VISIBLE, containerCustom.visibility)
         assertEquals(View.VISIBLE, tilKey.visibility)
         assertEquals(View.VISIBLE, tilUrl.visibility)
+        assertEquals(View.VISIBLE, rowKey.visibility)
         assertEquals(SettingsStore.SERVICE_CUSTOM, SettingsStore.secondAiService(activity))
 
         // 切回 Gemini 模式
@@ -844,6 +850,79 @@ class MainActivityStartupTest {
         assertEquals(View.GONE, containerZen.visibility)
         assertEquals(View.GONE, containerCustom.visibility)
         assertEquals(SettingsStore.SERVICE_GEMINI, SettingsStore.secondAiService(activity))
+    }
+
+    /** 模型不指望手输：模型框右侧的刷新图标在三种服务下都必须可见可点。 */
+    @Test
+    fun fetchModelsButtonStaysVisibleForEveryService() = withActivity { activity ->
+        val btnFetch = activity.findViewById<View>(R.id.btnRefreshSecondAiModels)
+        listOf(
+            R.id.btnSecondAiServiceGemini,
+            R.id.btnSecondAiServiceZen,
+            R.id.btnSecondAiServiceCustom,
+        ).forEach { serviceId ->
+            activity.findViewById<View>(serviceId).performClick()
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.tilSecondAiModel).visibility)
+            assertEquals(View.VISIBLE, btnFetch.visibility)
+            assertTrue(btnFetch.isEnabled)
+        }
+    }
+
+    /**
+     * 拉到模型后就地下拉：必须列出全部模型（不能被输入框里已有的模型名筛掉，
+     * 否则永远换不到别的系列），点一行即填入字段。
+     */
+    @Test
+    fun modelDropdownListsEveryModelAndFillsTheField() = withActivity { activity ->
+        val controller = activity.settingsControllerForTest()
+        val models = listOf("gemini-flash-latest", "gpt-4o-mini", "claude-haiku")
+        controller.setPrivate("cachedSecondAiModels", models)
+        activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).setText("gemini-flash-latest")
+
+        controller.invokePrivate("showModelPicker")
+
+        val popup = controller.getPrivate<android.widget.ListPopupWindow>("modelPopup")
+        assertTrue(popup.isShowing)
+        assertEquals(models.size, requireNotNull(popup.listView).adapter.count)
+
+        popup.performItemClick(1)
+        assertEquals(
+            "gpt-4o-mini",
+            activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).text.toString(),
+        )
+        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+    }
+
+    /** 离开设置页必须收掉下拉，否则它会挂在 WindowManager 上悬在别的页面。 */
+    @Test
+    fun modelDropdownIsDismissedWhenLeavingTheSettingsPage() = withActivity { activity ->
+        val controller = activity.settingsControllerForTest()
+        controller.setPrivate("cachedSecondAiModels", listOf("gemini-flash-latest"))
+        controller.invokePrivate("showModelPicker")
+        assertTrue(controller.getPrivate<android.widget.ListPopupWindow>("modelPopup").isShowing)
+
+        controller.persistDraftInputs()
+
+        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+    }
+
+    private fun MainActivity.settingsControllerForTest(): com.xyq.livetranslate.ui.SettingsController {
+        val field = MainActivity::class.java.getDeclaredField("settingsController").apply {
+            isAccessible = true
+        }
+        return field.get(this) as com.xyq.livetranslate.ui.SettingsController
+    }
+
+    private fun Any.setPrivate(name: String, value: Any?) {
+        javaClass.getDeclaredField(name).apply { isAccessible = true }.set(this, value)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> Any.getPrivate(name: String): T =
+        javaClass.getDeclaredField(name).apply { isAccessible = true }.get(this) as T
+
+    private fun Any.invokePrivate(name: String) {
+        javaClass.getDeclaredMethod(name).apply { isAccessible = true }.invoke(this)
     }
 
     private fun refreshHomeScenes(

@@ -10,12 +10,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
+import android.widget.ListPopupWindow
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -50,17 +49,15 @@ internal data class SettingsViews(
     val rowSetProfileAi: View,
     val rowSetDiagnostics: View,
     val rowSetAbout: View,
-    val btnApplyApiKey: Button,
     val btnViewApiKeyTutorial: Button,
-    val tvFreeQuotaHint: TextView,
     val btnPasteApiKey: Button,
     val btnTestTranslateConnection: Button,
     val tvTranslateTestStatus: TextView,
-    val btnConnectionOptions: Button,
+    val btnConnectionOptions: MaterialButton,
     val connectionOptions: View,
-    val btnTranslateAdvanced: Button,
+    val btnTranslateAdvanced: MaterialButton,
     val translateAdvanced: View,
-    val btnSubtitleAdvanced: Button,
+    val btnSubtitleAdvanced: MaterialButton,
     val subtitleAdvanced: View,
     val tvSubtitlePreview: TextView,
     val subtitlePreviewStage: View,
@@ -79,8 +76,8 @@ internal data class SettingsViews(
     val btnSecondAiServiceZen: MaterialButton,
     val btnSecondAiServiceCustom: MaterialButton,
     val containerGeminiActions: View,
+    val rowSecondAiKey: View,
     val btnUseTranslateKeyForSecondAi: Button,
-    val btnSecondAiApplyKey: Button,
     val btnSecondAiTutorial: Button,
     val btnPasteSecondAiKey: Button,
     val containerZenInfo: View,
@@ -93,7 +90,7 @@ internal data class SettingsViews(
     val etSecondAiKey: EditText,
     val etSecondAiUrl: EditText,
     val etSecondAiModel: EditText,
-    val btnRefreshSecondAiModels: Button,
+    val btnRefreshSecondAiModels: MaterialButton,
     val tvSecondAiModelsHint: TextView,
     val secondAiFormatToggle: MaterialButtonToggleGroup,
     val btnSecondAiFormatGemini: MaterialButton,
@@ -134,9 +131,7 @@ internal data class SettingsViews(
                 rowSetProfileAi = root.findViewById(R.id.rowSetProfileAi),
                 rowSetDiagnostics = root.findViewById(R.id.rowSetDiagnostics),
                 rowSetAbout = root.findViewById(R.id.rowSetAbout),
-                btnApplyApiKey = root.findViewById(R.id.btnApplyApiKey),
                 btnViewApiKeyTutorial = root.findViewById(R.id.btnViewApiKeyTutorial),
-                tvFreeQuotaHint = root.findViewById(R.id.tvFreeQuotaHint),
                 btnPasteApiKey = root.findViewById(R.id.btnPasteApiKey),
                 btnTestTranslateConnection = root.findViewById(R.id.btnTestTranslateConnection),
                 tvTranslateTestStatus = root.findViewById(R.id.tvTranslateTestStatus),
@@ -163,8 +158,8 @@ internal data class SettingsViews(
                 btnSecondAiServiceZen = root.findViewById(R.id.btnSecondAiServiceZen),
                 btnSecondAiServiceCustom = root.findViewById(R.id.btnSecondAiServiceCustom),
                 containerGeminiActions = root.findViewById(R.id.containerGeminiActions),
+                rowSecondAiKey = root.findViewById(R.id.rowSecondAiKey),
                 btnUseTranslateKeyForSecondAi = root.findViewById(R.id.btnUseTranslateKeyForSecondAi),
-                btnSecondAiApplyKey = root.findViewById(R.id.btnSecondAiApplyKey),
                 btnSecondAiTutorial = root.findViewById(R.id.btnSecondAiTutorial),
                 btnPasteSecondAiKey = root.findViewById(R.id.btnPasteSecondAiKey),
                 containerZenInfo = root.findViewById(R.id.containerZenInfo),
@@ -233,7 +228,6 @@ internal class SettingsController(
         // 翻译服务
         views.etApiKeys.setText(SettingsStore.apiKeysRaw(context))
         views.etBaseUrl.setText(SettingsStore.baseUrl(context))
-        views.btnApplyApiKey.setOnClickListener { openExternalUrl("https://aistudio.google.com/apikey") }
         views.btnViewApiKeyTutorial.setOnClickListener { showApiKeyTutorialDialog() }
         views.btnPasteApiKey.setOnClickListener { pasteTranslateApiKey() }
         views.btnTestTranslateConnection.setOnClickListener { testTranslateConnection() }
@@ -245,27 +239,26 @@ internal class SettingsController(
         setupSecondAiFormatToggle()
         setupSecondAiModelPicker()
         views.btnUseTranslateKeyForSecondAi.setOnClickListener { useTranslateKeyForSecondAi() }
-        views.btnSecondAiApplyKey.setOnClickListener { openExternalUrl("https://aistudio.google.com/apikey") }
         views.btnSecondAiTutorial.setOnClickListener { showApiKeyTutorialDialog() }
         views.btnPasteSecondAiKey.setOnClickListener { pasteSecondAiKey() }
         views.btnZenDocLink.setOnClickListener { openExternalUrl(OpenCodeZenCatalog.DOCS_URL) }
         views.btnSecondAiSwitchService.setOnClickListener { showSwitchServiceDialog() }
         views.btnTestSecondAi.setOnClickListener { testSecondAi() }
 
-        setupDisclosure(views.btnConnectionOptions, views.connectionOptions, context.getString(R.string.rt_settings_disclosure_custom_endpoint))
-        setupDisclosure(views.btnTranslateAdvanced, views.translateAdvanced, context.getString(R.string.rt_settings_disclosure_translate_advanced))
-        setupDisclosure(views.btnSubtitleAdvanced, views.subtitleAdvanced, context.getString(R.string.rt_settings_disclosure_subtitle_advanced))
+        setupDisclosure(views.btnConnectionOptions, views.connectionOptions)
+        setupDisclosure(views.btnTranslateAdvanced, views.translateAdvanced)
+        setupDisclosure(views.btnSubtitleAdvanced, views.subtitleAdvanced)
         setupStyleSliders()
         setupParamControls()
         setupAbout()
         views.btnBattery.setOnClickListener { requestBatteryWhitelist() }
     }
 
-    private fun setupDisclosure(button: Button, content: View, title: String) {
+    /** 折叠行只靠行尾 chevron 表达状态，标题写在布局里。 */
+    private fun setupDisclosure(button: MaterialButton, content: View) {
         fun render() {
             val expanded = content.visibility == View.VISIBLE
-            val stateText = if (expanded) context.getString(R.string.rt_action_collapse_simple) else context.getString(R.string.rt_action_expand_simple)
-            button.text = "$title · $stateText"
+            button.setIconResource(if (expanded) R.drawable.ic_chevron_down_24 else R.drawable.ic_chevron_right_24)
             ViewCompat.setStateDescription(button, if (expanded) context.getString(R.string.rt_state_expanded) else context.getString(R.string.rt_state_collapsed))
         }
         render()
@@ -315,6 +308,9 @@ internal class SettingsController(
     }
 
     fun persistDraftInputs() {
+        // 这同时是「离开这两个设置页」的钩子（onPause 与 beforeSubPageClosed）：
+        // 模型下拉是挂在 WindowManager 上的，页面走了必须收掉，否则悬在别的页面上或泄漏窗口。
+        dismissModelPopup()
         SettingsStore.saveApiKeys(context, views.etApiKeys.text?.toString().orEmpty())
         SettingsStore.saveBaseUrl(
             context,
@@ -478,7 +474,7 @@ internal class SettingsController(
 
     private fun setTranslateTestBusy(busy: Boolean) {
         views.btnTestTranslateConnection.isEnabled = !busy
-        views.btnTestTranslateConnection.text = if (busy) context.getString(R.string.rt_testing_ellipsis) else context.getString(R.string.btn_test_translate_connection)
+        views.btnTestTranslateConnection.text = if (busy) context.getString(R.string.rt_testing_ellipsis) else context.getString(R.string.btn_test_connection)
     }
 
     private fun renderTranslateTestStatus(warn: Boolean, message: String) {
@@ -500,6 +496,7 @@ internal class SettingsController(
     private var secondAiModelsFetching = false
     private var secondAiModelsRevision = 0
     private var secondAiTesting = false
+    private var modelPopup: ListPopupWindow? = null
 
     private fun setupSecondAiServiceToggle() {
         renderSecondAiServiceUi(SettingsStore.secondAiService(context))
@@ -533,14 +530,14 @@ internal class SettingsController(
         when (service) {
             SettingsStore.SERVICE_GEMINI -> {
                 views.containerGeminiActions.visibility = View.VISIBLE
+                views.rowSecondAiKey.visibility = View.VISIBLE
                 views.containerZenInfo.visibility = View.GONE
                 views.containerCustomFormat.visibility = View.GONE
                 views.tilSecondAiKey.visibility = View.VISIBLE
                 views.tilSecondAiUrl.visibility = View.VISIBLE
                 views.tilSecondAiModel.visibility = View.VISIBLE
-                views.tilSecondAiModel.helperText = context.getString(R.string.rt_settings_helper_manual_model_id)
+                views.tilSecondAiModel.helperText = context.getString(R.string.helper_second_ai_model)
                 views.etSecondAiModel.isEnabled = true
-                views.btnRefreshSecondAiModels.text = context.getString(R.string.rt_btn_fetch_models)
 
                 views.etSecondAiKey.setText(SettingsStore.secondAiGeminiApiKey(context))
                 views.etSecondAiUrl.setText(SettingsStore.secondAiGeminiBaseUrl(context))
@@ -548,6 +545,7 @@ internal class SettingsController(
             }
             SettingsStore.SERVICE_OPENCODE_ZEN -> {
                 views.containerGeminiActions.visibility = View.GONE
+                views.rowSecondAiKey.visibility = View.GONE
                 views.containerZenInfo.visibility = View.VISIBLE
                 views.containerCustomFormat.visibility = View.GONE
                 views.tilSecondAiKey.visibility = View.GONE
@@ -555,7 +553,6 @@ internal class SettingsController(
                 views.tilSecondAiModel.visibility = View.VISIBLE
                 views.tilSecondAiModel.helperText = context.getString(R.string.zen_model_restricted, OpenCodeZenCatalog.CANDIDATE_MODEL)
                 views.etSecondAiModel.isEnabled = false
-                views.btnRefreshSecondAiModels.text = context.getString(R.string.btn_refresh_free_models)
 
                 views.etSecondAiKey.setText(OpenCodeZenCatalog.PUBLIC_KEY)
                 views.etSecondAiUrl.setText(OpenCodeZenCatalog.BASE_URL)
@@ -564,14 +561,14 @@ internal class SettingsController(
             }
             SettingsStore.SERVICE_CUSTOM -> {
                 views.containerGeminiActions.visibility = View.GONE
+                views.rowSecondAiKey.visibility = View.VISIBLE
                 views.containerZenInfo.visibility = View.GONE
                 views.containerCustomFormat.visibility = View.VISIBLE
                 views.tilSecondAiKey.visibility = View.VISIBLE
                 views.tilSecondAiUrl.visibility = View.VISIBLE
                 views.tilSecondAiModel.visibility = View.VISIBLE
-                views.tilSecondAiModel.helperText = context.getString(R.string.rt_settings_helper_manual_model_id)
+                views.tilSecondAiModel.helperText = context.getString(R.string.helper_second_ai_model)
                 views.etSecondAiModel.isEnabled = true
-                views.btnRefreshSecondAiModels.text = context.getString(R.string.rt_btn_fetch_models)
 
                 views.etSecondAiKey.setText(SettingsStore.secondAiCustomApiKey(context))
                 views.etSecondAiUrl.setText(SettingsStore.secondAiCustomBaseUrl(context))
@@ -651,10 +648,8 @@ internal class SettingsController(
         views.etSecondAiKey.doAfterTextChanged { invalidateSecondAiModels() }
         views.etSecondAiUrl.doAfterTextChanged { invalidateSecondAiModels() }
         views.etSecondAiModel.doAfterTextChanged { renderSecondAiTestStatus(false, "") }
-        views.btnRefreshSecondAiModels.setOnClickListener {
-            // 已经拉过就直接开面板；面板里还留着「重新拉取」。
-            if (cachedSecondAiModels.isNotEmpty()) showModelPicker() else fetchSecondAiModels()
-        }
+        // 刷新图标就该刷新：每次都重新拉，避免服务端加了模型这边还是旧列表。
+        views.btnRefreshSecondAiModels.setOnClickListener { fetchSecondAiModels() }
     }
 
     private fun fetchSecondAiModels() {
@@ -678,12 +673,7 @@ internal class SettingsController(
 
         val revision = secondAiModelsRevision
         secondAiModelsFetching = true
-        val btnText = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
-            context.getString(R.string.btn_refresh_free_models)
-        } else {
-            context.getString(R.string.rt_btn_fetch_models)
-        }
-        setSecondAiButtonsBusy(views.btnRefreshSecondAiModels, context.getString(R.string.rt_settings_fetching_models))
+        views.btnRefreshSecondAiModels.isEnabled = false
         val hintText = if (service == SettingsStore.SERVICE_OPENCODE_ZEN) {
             context.getString(R.string.rt_settings_fetching_zen_models)
         } else {
@@ -707,7 +697,7 @@ internal class SettingsController(
             postToUi {
                 secondAiModelsFetching = false
                 if (!isHostActive()) return@postToUi
-                clearSecondAiButtonsBusy(views.btnRefreshSecondAiModels, btnText)
+                views.btnRefreshSecondAiModels.isEnabled = true
                 if (revision != secondAiModelsRevision) return@postToUi
                 result.onSuccess { models ->
                     cachedSecondAiModels = models
@@ -737,61 +727,51 @@ internal class SettingsController(
         }, "ai-models-fetch").start()
     }
 
-    /** 可搜索的模型选择面板：长模型名在窄下拉里根本看不清。 */
+    /**
+     * 模型就地下拉：锚在模型输入框上，选一行即填入，不弹全屏面板。
+     * 列表一律给全的——不能拿输入框里已有的模型名去筛，否则永远只看得到同名系列，
+     * 换不到别的模型；当前模型改为滚动定位。
+     */
     private fun showModelPicker() {
-        val content = LayoutInflater.from(context).inflate(R.layout.dialog_model_picker, null, false)
-        val list = content.findViewById<LinearLayout>(R.id.modelPickerList)
-        val empty = content.findViewById<TextView>(R.id.tvModelPickerEmpty)
-        val search = content.findViewById<EditText>(R.id.etModelPickerSearch)
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setTitle(context.getString(R.string.rt_dialog_model_picker_title))
-            .setView(content)
-            .setNegativeButton(context.getString(R.string.rt_action_close), null)
-            .setNeutralButton(context.getString(R.string.rt_action_refetch), null)
-            .create()
-
-        fun render(keyword: String) {
-            val matched = cachedSecondAiModels.filter { it.contains(keyword.trim(), ignoreCase = true) }
-            list.removeAllViews()
-            empty.visibility = if (matched.isEmpty()) View.VISIBLE else View.GONE
-            matched.forEach { model ->
-                list.addView(
-                    TextView(context).apply {
-                        text = model
-                        textSize = 14f
-                        minHeight = resources.getDimensionPixelSize(R.dimen.touch_target)
-                        gravity = android.view.Gravity.CENTER_VERTICAL
-                        setTextColor(context.getColor(R.color.text_primary))
-                        val padding = resources.getDimensionPixelSize(R.dimen.space_12)
-                        setPadding(padding, padding, padding, padding)
-                        isClickable = true
-                        isFocusable = true
-                        setBackgroundResource(R.drawable.bg_history_context)
-                        layoutParams = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ).apply { topMargin = resources.getDimensionPixelSize(R.dimen.grid_4) }
-                        setOnClickListener {
-                            views.etSecondAiModel.setText(model)
-                            persistSecondAiInputs()
-                            renderSecondAiModelsHint(false, context.getString(R.string.rt_settings_model_selected, model))
-                            dialog.dismiss()
-                        }
-                    },
-                )
+        if (cachedSecondAiModels.isEmpty()) return
+        dismissModelPopup()
+        val anchor = views.tilSecondAiModel
+        val popup = ListPopupWindow(context).apply {
+            anchorView = anchor
+            width = anchor.width.takeIf { it > 0 } ?: ListPopupWindow.WRAP_CONTENT
+            isModal = true
+            setAdapter(ArrayAdapter(context, R.layout.item_model_option, cachedSecondAiModels))
+            // 列表长的时候固定高度让它自己滚，而不是顶满整屏。
+            height = if (cachedSecondAiModels.size > MODEL_POPUP_MAX_ROWS) {
+                (MODEL_POPUP_MAX_ROWS * MODEL_POPUP_ROW_DP * context.resources.displayMetrics.density).toInt()
+            } else {
+                ListPopupWindow.WRAP_CONTENT
             }
-        }
-
-        search.doAfterTextChanged { render(it?.toString().orEmpty()) }
-        render("")
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                dialog.dismiss()
-                cachedSecondAiModels = emptyList()
-                fetchSecondAiModels()
+            setOnItemClickListener { _, _, position, _ ->
+                val model = cachedSecondAiModels.getOrNull(position).orEmpty()
+                if (model.isNotEmpty()) {
+                    views.etSecondAiModel.setText(model)
+                    persistSecondAiInputs()
+                    renderSecondAiModelsHint(false, context.getString(R.string.rt_settings_model_selected, model))
+                }
+                dismissModelPopup()
             }
+            setOnDismissListener { modelPopup = null }
         }
-        dialog.show()
+        modelPopup = popup
+        popup.show()
+        // 已选中的模型直接滚到可见位置，省得在几十行里找。
+        cachedSecondAiModels.indexOf(views.etSecondAiModel.text?.toString()?.trim().orEmpty())
+            .takeIf { it >= 0 }
+            ?.let { popup.setSelection(it) }
+    }
+
+    private fun dismissModelPopup() {
+        modelPopup?.let {
+            it.setOnDismissListener(null)
+            it.dismiss()
+        }
+        modelPopup = null
     }
 
     /** 测试当前 Key + 地址 + 模型能否真的完成一次分析。 */
@@ -823,7 +803,7 @@ internal class SettingsController(
         }
 
         secondAiTesting = true
-        setSecondAiButtonsBusy(views.btnTestSecondAi, context.getString(R.string.rt_testing_ellipsis))
+        setSecondAiTestBusy(true)
         renderSecondAiTestStatus(false, context.getString(R.string.rt_settings_testing_second_ai_with_model, model))
         Thread({
             val result = runCatching {
@@ -838,7 +818,7 @@ internal class SettingsController(
             postToUi {
                 secondAiTesting = false
                 if (!isHostActive()) return@postToUi
-                clearSecondAiButtonsBusy(views.btnTestSecondAi, context.getString(R.string.rt_btn_test_second_ai))
+                setSecondAiTestBusy(false)
                 result.onSuccess {
                     renderSecondAiTestStatus(false, context.getString(R.string.rt_settings_second_ai_available, model))
                 }.onFailure { error ->
@@ -863,14 +843,13 @@ internal class SettingsController(
         views.etSecondAiKey.requestFocus()
     }
 
-    private fun setSecondAiButtonsBusy(button: Button, busyText: String) {
-        button.isEnabled = false
-        button.text = busyText
-    }
-
-    private fun clearSecondAiButtonsBusy(button: Button, idleText: String) {
-        button.isEnabled = true
-        button.text = idleText
+    private fun setSecondAiTestBusy(busy: Boolean) {
+        views.btnTestSecondAi.isEnabled = !busy
+        views.btnTestSecondAi.text = if (busy) {
+            context.getString(R.string.rt_testing_ellipsis)
+        } else {
+            context.getString(R.string.btn_test_connection)
+        }
     }
 
     private fun renderSecondAiModelsHint(warn: Boolean, message: String) {
@@ -1040,6 +1019,12 @@ internal class SettingsController(
             views.tvUpdateStatus.visibility = View.VISIBLE
             views.tvUpdateStatus.text = message
         }
+    }
+
+    private companion object {
+        /** 模型下拉最多铺几行，再多就让它自己滚，别顶满整屏。 */
+        const val MODEL_POPUP_MAX_ROWS = 6
+        const val MODEL_POPUP_ROW_DP = 44
     }
 
     @SuppressLint("BatteryLife")

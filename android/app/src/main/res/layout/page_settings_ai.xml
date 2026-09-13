@@ -14,59 +14,18 @@
         android:paddingHorizontal="@dimen/page_margin"
         android:paddingTop="@dimen/space_16"
         android:paddingBottom="@dimen/page_bottom_padding">
-        <com.google.android.material.card.MaterialCardView
+        <!-- 页名由 Toolbar 承担，这里只留一句作用说明。 -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/primary_fixed"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="@dimen/space_16">
-                <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_history_badge"
-                    android:gravity="center"
-                    android:text="@string/settings_ai_title"
-                    android:textColor="@color/brand"
-                    android:textStyle="bold"/>
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_12"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_ai_card_title"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:text="@string/settings_ai_card_desc"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp"/>
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <TextView
-            style="@style/LuminousSectionLabel"
-            android:layout_marginTop="@dimen/space_24"
-            android:text="@string/settings_ai_section_connection"/>
+            android:text="@string/settings_ai_card_desc"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/LuminousCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8">
+            android:layout_marginTop="@dimen/space_16">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -98,7 +57,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:minHeight="@dimen/touch_target"
-                        android:layout_weight="1.2"
+                        android:layout_weight="1"
                         android:text="@string/service_opencode_zen"
                         android:textAllCaps="false"/>
                     <com.google.android.material.button.MaterialButton
@@ -111,59 +70,7 @@
                         android:text="@string/service_custom"
                         android:textAllCaps="false"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
-                <LinearLayout
-                    android:id="@+id/containerGeminiActions"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:orientation="vertical">
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnUseTranslateKeyForSecondAi"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="40dp"
-                        android:text="@string/btn_use_translate_gemini_key"
-                        android:textSize="13sp"/>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSecondAiApplyKey"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:minHeight="40dp"
-                            android:text="@string/btn_apply_api_key"
-                            android:textSize="13sp"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSecondAiTutorial"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:minHeight="40dp"
-                            android:text="@string/btn_view_api_key_tutorial"
-                            android:textSize="13sp"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPasteSecondAiKey"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:minHeight="40dp"
-                            android:text="@string/btn_paste_key"
-                            android:textSize="13sp"/>
-                    </LinearLayout>
-                    <TextView
-                        style="@style/FieldLabel"
-                        android:layout_marginTop="@dimen/grid_4"
-                        android:text="@string/tv_free_quota_hint"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"/>
-                </LinearLayout>
+                <!-- Zen 分支：无需凭据，只说明这是公开免费接入点。 -->
                 <LinearLayout
                     android:id="@+id/containerZenInfo"
                     android:layout_width="match_parent"
@@ -190,27 +97,20 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
                         android:orientation="horizontal">
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnZenDocLink"
-                            style="@style/Widget.Material3.Button.TextButton"
+                            style="@style/FieldLinkButton"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:minHeight="40dp"
-                            android:text="@string/zen_view_docs"
-                            android:textSize="12sp"/>
+                            android:text="@string/zen_view_docs"/>
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSecondAiSwitchService"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:minHeight="40dp"
-                            android:text="@string/btn_switch_service"
-                            android:textSize="12sp"/>
+                            style="@style/FieldLinkButton"
+                            android:text="@string/btn_switch_service"/>
                     </LinearLayout>
                 </LinearLayout>
+                <!-- 自定义分支：先定接口格式，再填地址。 -->
                 <LinearLayout
                     android:id="@+id/containerCustomFormat"
                     android:layout_width="match_parent"
@@ -249,25 +149,60 @@
                             android:textAllCaps="false"/>
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilSecondAiKey"
-                    style="@style/Field"
+                <!-- Key 行：字段 + 行内粘贴，整行随凭据需求显隐（Zen 不需要凭据）。 -->
+                <LinearLayout
+                    android:id="@+id/rowSecondAiKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_12"
-                    android:hint="@string/hint_api_key"
-                    app:endIconMode="password_toggle"
-                    app:helperText="@string/helper_second_ai_key">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etSecondAiKey"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="textPassword"
-                        android:maxLines="1"/>
-                </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilSecondAiKey"
+                        style="@style/Field"
+                        android:layout_width="0dp"
+                        android:layout_marginTop="0dp"
+                        android:layout_weight="1"
+                        android:hint="@string/hint_api_key"
+                        app:endIconMode="password_toggle"
+                        app:helperText="@string/helper_second_ai_key">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSecondAiKey"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="textPassword"
+                            android:maxLines="1"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPasteSecondAiKey"
+                        style="@style/FieldActionButton"
+                        android:layout_width="wrap_content"
+                        android:layout_gravity="top"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:minHeight="40dp"
+                        android:text="@string/btn_paste_key"/>
+                </LinearLayout>
+                <!-- Gemini 专属的两个链接：申请官方 Key、复用翻译服务已填的 Key。 -->
+                <LinearLayout
+                    android:id="@+id/containerGeminiActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSecondAiTutorial"
+                        style="@style/FieldLinkButton"
+                        android:text="@string/btn_view_api_key_tutorial"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUseTranslateKeyForSecondAi"
+                        style="@style/FieldLinkButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/btn_use_translate_gemini_key"/>
+                </LinearLayout>
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilSecondAiUrl"
                     style="@style/Field"
-                    android:layout_marginTop="@dimen/space_12"
+                    android:layout_marginTop="@dimen/space_8"
                     android:hint="@string/hint_base_url"
                     app:helperText="@string/helper_second_ai_url">
                     <com.google.android.material.textfield.TextInputEditText
@@ -278,72 +213,67 @@
                         android:inputType="textUri"
                         android:maxLines="2"/>
                 </com.google.android.material.textfield.TextInputLayout>
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilSecondAiModel"
-                    style="@style/Field"
-                    android:layout_marginTop="@dimen/space_12"
-                    android:hint="@string/hint_analysis_model"
-                    app:helperText="@string/helper_second_ai_model">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etSecondAiModel"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="text"
-                        android:maxLines="1"/>
-                </com.google.android.material.textfield.TextInputLayout>
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRefreshSecondAiModels"
-                    style="@style/LuminousSecondaryButton"
+                <!-- 模型行：右侧刷新图标拉取模型，结果就地下拉选择，不弹全屏面板。 -->
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="@string/btn_fetch_models"/>
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilSecondAiModel"
+                        style="@style/Field"
+                        android:layout_width="0dp"
+                        android:layout_marginTop="0dp"
+                        android:layout_weight="1"
+                        android:hint="@string/hint_analysis_model"
+                        app:helperText="@string/helper_second_ai_model">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSecondAiModel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="text"
+                            android:maxLines="1"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRefreshSecondAiModels"
+                        style="@style/IconActionButton"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:contentDescription="@string/btn_fetch_models"
+                        app:icon="@drawable/ic_refresh_24"/>
+                </LinearLayout>
                 <TextView
                     android:id="@+id/tvSecondAiModelsHint"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
+                    android:layout_marginTop="@dimen/grid_4"
                     android:textColor="@color/text_muted"
                     android:textSize="12sp"
                     android:visibility="gone"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <TextView
-            style="@style/LuminousSectionLabel"
-            android:layout_marginTop="@dimen/space_24"
-            android:text="@string/settings_ai_section_check"/>
-        <com.google.android.material.card.MaterialCardView
-            style="@style/LuminousCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/space_16">
-                <TextView
+                <!-- 自检：一个小按钮 + 行内结果，不占整行实底。 -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_ai_check_desc"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"/>
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTestSecondAi"
-                    style="@style/LuminousSecondaryButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/touch_target"
                     android:layout_marginTop="@dimen/space_12"
-                    android:text="@string/btn_test_second_ai"/>
-                <TextView
-                    android:id="@+id/tvSecondAiTestStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp"
-                    android:visibility="gone"/>
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTestSecondAi"
+                        style="@style/FieldActionButton"
+                        android:layout_width="wrap_content"
+                        android:minHeight="40dp"
+                        android:text="@string/btn_test_connection"/>
+                    <TextView
+                        android:id="@+id/tvSecondAiTestStatus"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:layout_weight="1"
+                        android:maxLines="3"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp"
+                        android:visibility="gone"/>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
         <TextView
@@ -351,7 +281,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
             android:gravity="center"
-            android:text="@string/settings_ai_privacy_note"
+            android:text="@string/settings_credentials_local_note"
             android:textColor="@color/text_muted"
             android:textSize="12sp"/>
     </LinearLayout>

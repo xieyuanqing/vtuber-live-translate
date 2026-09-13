@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 模型下拉的单行；模型 ID 可能很长，单行省略优于换行撑高下拉。 -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:ellipsize="middle"
+    android:gravity="center_vertical"
+    android:minHeight="44dp"
+    android:paddingHorizontal="@dimen/space_12"
+    android:singleLine="true"
+    android:textColor="@color/text_primary"
+    android:textSize="14sp"/>

@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 阶段1: 翻译服务与背景分析服务字符串 -->
-    <string name="btn_apply_api_key">免费申请 API Key</string>
-    <string name="btn_view_api_key_tutorial">查看申请教程</string>
-    <string name="tv_free_quota_hint">提供免费额度，实际额度以 Google 为准</string>
+    <string name="btn_view_api_key_tutorial">没有 API Key？免费申请 ›</string>
     <string name="btn_paste_key">粘贴 Key</string>
-    <string name="btn_test_translate_connection">测试翻译连接</string>
+    <string name="btn_test_connection">测试连接</string>
     <string name="live_model_test_testing">正在测试 Live 模型连接（%s）…</string>
     <string name="live_model_test_success">Live 模型连接通过（未测试音频翻译）</string>
     <string name="dialog_tutorial_title">Gemini API Key 申请教程</string>
@@ -15,10 +13,9 @@
     <string name="dialog_btn_close">关闭</string>
     <string name="service_label">分析服务</string>
     <string name="service_gemini">Gemini</string>
-    <string name="service_opencode_zen">OpenCode Zen 免费</string>
+    <string name="service_opencode_zen">OpenCode Zen</string>
     <string name="service_custom">自定义</string>
     <string name="btn_use_translate_gemini_key">使用翻译服务的 Gemini Key</string>
-    <string name="btn_refresh_free_models">刷新免费模型</string>
     <string name="btn_switch_service">切换服务</string>
     <string name="zen_info_title">OpenCode Zen 免费模型</string>
     <string name="zen_privacy_notice">免费模型可能使用提交内容改进模型，请勿发送敏感资料</string>
@@ -56,8 +53,6 @@
     <string name="nav_video">视频</string>
     <string name="nav_history">历史</string>
     <string name="nav_settings">设置</string>
-    <string name="dialog_model_picker_search_hint">搜索模型</string>
-    <string name="dialog_model_picker_empty">没有匹配的模型，可关闭面板后手动输入模型 ID。</string>
     <string name="dialog_scene_name_hint">场景名称</string>
     <string name="dialog_scene_instruction_hint">场景提示词</string>
     <string name="dialog_scene_instruction_helper">只写该场景需要特别关注的内容，核心翻译规则已由系统处理</string>
@@ -120,10 +115,7 @@
     <string name="about_auto_check_update">启动时自动检查更新</string>
     <string name="btn_check_update">检查更新</string>
     <string name="btn_github_repo">GitHub 项目主页</string>
-    <string name="settings_ai_title">AI</string>
-    <string name="settings_ai_card_title">背景分析 AI（可选）</string>
-    <string name="settings_ai_card_desc">用于整理视频资料和补充背景。不配置也能使用实时翻译。</string>
-    <string name="settings_ai_section_connection">连接配置</string>
+    <string name="settings_ai_card_desc">可选。用于整理视频资料和补充背景，不配置也能使用实时翻译。</string>
     <string name="settings_ai_format_label">API 格式</string>
     <string name="settings_ai_format_gemini">Gemini 原生</string>
     <string name="settings_ai_format_openai">OpenAI 兼容</string>
@@ -131,10 +123,7 @@
     <string name="hint_base_url">服务地址（Base URL）</string>
     <string name="hint_analysis_model">分析模型</string>
     <string name="btn_fetch_models">拉取模型列表</string>
-    <string name="settings_ai_section_check">连通性检查</string>
-    <string name="settings_ai_check_desc">拉到模型列表不等于选中的模型能用。这里会用当前配置真跑一次最短请求。</string>
-    <string name="btn_test_second_ai">测试分析服务</string>
-    <string name="settings_ai_privacy_note">凭据仅保存在本机应用数据中</string>
+    <string name="settings_credentials_local_note">凭据仅保存在本机应用数据中</string>
     <string name="btn_battery_whitelist">加入电池白名单</string>
     <string name="diagnostics_status_not_running">○ 未运行</string>
     <string name="settings_subtitle_style_title">悬浮窗样式</string>
@@ -147,18 +136,15 @@
     <string name="settings_subtitle_opacity_transparent">透明</string>
     <string name="settings_subtitle_opacity_opaque">不透明</string>
     <string name="settings_subtitle_lines_default">最多行数 3</string>
-    <string name="settings_subtitle_btn_advanced_expand">高级断句参数 · 展开</string>
-    <string name="settings_subtitle_section_segmentation">断句节奏</string>
+    <string name="settings_subtitle_advanced">高级断句参数</string>
     <string name="settings_subtitle_idle_default">静默 2.5 秒转正</string>
     <string name="settings_subtitle_max_chars_default">当前行最长 42 字</string>
     <string name="settings_subtitle_btn_reset">恢复字幕默认设置</string>
-    <string name="settings_translate_title">翻译 API</string>
     <string name="settings_translate_desc">填写 Gemini API Key 即可开始，设置会自动保存。</string>
     <string name="hint_gemini_api_key">Gemini API Key</string>
-    <string name="settings_translate_btn_custom_address_expand">自定义服务地址 · 展开</string>
+    <string name="settings_translate_custom_address">自定义服务地址</string>
     <string name="hint_api_base_url">API Base URL</string>
-    <string name="settings_translate_btn_advanced_expand">高级翻译参数 · 展开</string>
-    <string name="settings_translate_section_params">翻译参数</string>
+    <string name="settings_translate_advanced">高级翻译参数</string>
     <string name="settings_translate_echo_target">源音频已是目标语言时照常出字幕</string>
     <string name="settings_translate_rotate_val_default">每 505 秒定期重新连接</string>
     <string name="video_title">视频</string>
@@ -184,5 +170,5 @@
     <string name="helper_interp_context">例如现场主题、说话人、专名提示</string>
     <string name="helper_second_ai_key">可与翻译服务使用相同 Key</string>
     <string name="helper_second_ai_url">填到域名即可，末尾多写的 /v1 会自动忽略</string>
-    <string name="helper_second_ai_model">可直接手动输入模型 ID</string>
+    <string name="helper_second_ai_model">点下方「拉取模型列表」选择，也可手动输入 ID</string>
 </resources>

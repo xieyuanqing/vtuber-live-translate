@@ -148,24 +148,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_16">
+                android:paddingVertical="@dimen/space_8">
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSubtitleAdvanced"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings_subtitle_btn_advanced_expand"
-                    android:minHeight="48dp"
-                    style="@style/Widget.Material3.Button.TextButton"/>
+                    style="@style/DisclosureRow"
+                    android:text="@string/settings_subtitle_advanced"/>
                 <LinearLayout
                     android:id="@+id/subtitleAdvanced"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/space_16"
+                    android:paddingBottom="@dimen/space_8"
                     android:visibility="gone">
-                    <TextView style="@style/CardTitle" android:text="@string/settings_subtitle_section_segmentation"/>
                     <TextView
                         style="@style/FieldLabel"
-                        android:layout_marginTop="@dimen/grid_4"
+                        android:layout_marginTop="0dp"
                         android:text="@string/settings_effect_next_time"/>
                     <TextView
                         android:id="@+id/tvIdleVal"
@@ -199,11 +197,8 @@
         </com.google.android.material.card.MaterialCardView>
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetSubtitle"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_subtitle_btn_reset"
-            android:textSize="13sp"
-            android:layout_marginTop="8dp"/>
+            style="@style/FieldLinkButton"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/settings_subtitle_btn_reset"/>
     </LinearLayout>
 </ScrollView>

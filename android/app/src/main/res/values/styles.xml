@@ -56,6 +56,64 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
+    <!-- 卡内折叠行：整行点击展开，行尾 chevron 指示状态，不与动作按钮同形。 -->
+    <style name="DisclosureRow" parent="Widget.Material3.Button.TextButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:paddingLeft">@dimen/space_16</item>
+        <item name="android:paddingRight">@dimen/space_16</item>
+        <item name="icon">@drawable/ic_chevron_right_24</item>
+        <item name="iconGravity">end</item>
+        <item name="iconSize">20dp</item>
+        <item name="iconTint">@color/text_muted</item>
+        <item name="cornerRadius">0dp</item>
+    </style>
+
+    <!-- 输入框正下方的轻量动作（粘贴 Key、拉取模型列表、复用翻译 Key）。 -->
+    <style name="FieldActionButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">13sp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <!-- 贴在输入框右侧的方形图标按钮（拉取模型），与 Dense 输入框同高。 -->
+    <style name="IconActionButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_gravity">top</item>
+        <item name="android:layout_marginTop">@dimen/grid_4</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
+        <item name="android:paddingRight">0dp</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconSize">20dp</item>
+        <item name="iconTint">@color/brand</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <!-- 卡内的说明式链接（去申请 Key、恢复默认），不与动作按钮抢权重。 -->
+    <style name="FieldLinkButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
     <!-- 每页顶部大标题 -->
     <style name="PageTitle">
         <item name="android:layout_width">wrap_content</item>
