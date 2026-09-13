@@ -7,11 +7,20 @@ import java.util.UUID
 
 /**
  * 用户可编辑的场景库。同传与视频分别存储，默认模板只在首次使用或手动恢复时写入。
+ *
+ * 存储里的 `label` 只保存**用户改过的名字**：没改过的内置场景存空串，读取时与
+ * [DefaultSceneCatalog] 模板合并，于是展示名跟随界面语言、`promptLabel` 保持固定中文。
+ * 早期版本把「当前界面语言下解析出来的名字」直接写进了存储，首次初始化时用的是哪种
+ * 语言，场景名就被冻在哪种语言，还会顺着 `promptLabel` 漏进发给模型的 prompt；
+ * [hydrate] 会把这种存量值识别回「没改过」。
  */
 object SceneLibraryStore {
     private const val PREFS = "scene_library_v1"
     private const val KEY_ITEMS_PREFIX = "items_"
     private const val KEY_DEFAULT_PREFIX = "default_"
+
+    /** string resource 在运行时不会变，模板名的各语言写法缓存一次即可。 */
+    private val labelVariantCache = mutableMapOf<Int, Set<String>>()
 
     @Synchronized
     fun list(context: Context, mode: TranslationMode): List<ScenePromptPreset> {
@@ -20,7 +29,7 @@ object SceneLibraryStore {
         if (!storage.contains(key)) {
             write(context, mode, DefaultSceneCatalog.defaults(mode), DefaultSceneCatalog.fallbackId(mode))
         }
-        val decoded = decodeList(storage.getString(key, null))
+        val decoded = decodeList(context, mode, storage.getString(key, null))
         // 已有数据损坏时只提供内存回退；只有用户明确恢复模板时才覆盖原始列表。
         return decoded.ifEmpty { DefaultSceneCatalog.defaults(mode) }
     }
@@ -66,14 +75,12 @@ object SceneLibraryStore {
         mode: TranslationMode,
         item: ScenePromptPreset,
     ): Boolean {
-        val normalized = item.copy(
-            id = item.id.trim(),
-            labelText = item.label.trim(),
-            instruction = item.instruction.trim(),
-        )
-        if (normalized.id.isEmpty() || normalized.label.isEmpty() || normalized.instruction.isEmpty()) {
-            return false
-        }
+        val id = item.id.trim()
+        val label = item.label.trim()
+        val instruction = item.instruction.trim()
+        if (id.isEmpty() || label.isEmpty() || instruction.isEmpty()) return false
+        // 改回模板默认名（任一界面语言的写法）就当作没覆盖，重新跟随界面语言。
+        val normalized = hydrate(context, mode, id, label, instruction) ?: return false
         val items = readItemsForMutation(context, mode)?.toMutableList() ?: return false
         val index = items.indexOfFirst { it.id == normalized.id }
         if (index < 0) return false
@@ -121,6 +128,7 @@ object SceneLibraryStore {
         items.forEach { item ->
             array.put(JSONObject().apply {
                 put("id", item.id)
+                // 只存用户覆盖；空串表示「没改过，跟随界面语言」。
                 put("label", item.label)
                 put("instruction", item.instruction)
             })
@@ -131,7 +139,11 @@ object SceneLibraryStore {
             .apply()
     }
 
-    private fun decodeList(raw: String?): List<ScenePromptPreset> {
+    private fun decodeList(
+        context: Context,
+        mode: TranslationMode,
+        raw: String?,
+    ): List<ScenePromptPreset> {
         val array = runCatching { JSONArray(raw ?: return emptyList()) }.getOrNull()
             ?: return emptyList()
         return buildList {
@@ -140,11 +152,55 @@ object SceneLibraryStore {
                 val id = json.optString("id").trim()
                 val label = json.optString("label").trim()
                 val instruction = json.optString("instruction").trim()
-                if (id.isNotEmpty() && label.isNotEmpty() && instruction.isNotEmpty() && none { it.id == id }) {
-                    add(ScenePromptPreset(id, label, instruction))
-                }
+                if (id.isEmpty() || instruction.isEmpty() || any { it.id == id }) continue
+                val item = hydrate(context, mode, id, label, instruction) ?: continue
+                add(item)
             }
         }
+    }
+
+    /**
+     * 把一条存储记录还原成运行时场景。
+     *
+     * `storedLabel` 为空、或等于该模板在任一支持界面语言下的默认名，都算「用户没改过」：
+     * 回落到模板，展示名跟随界面语言，`promptLabel` 仍是固定中文。用户自建场景没有模板，
+     * 名字为空时视为损坏记录。
+     */
+    private fun hydrate(
+        context: Context,
+        mode: TranslationMode,
+        id: String,
+        storedLabel: String,
+        instruction: String,
+    ): ScenePromptPreset? {
+        val template = DefaultSceneCatalog.defaults(mode).firstOrNull { it.id == id }
+            ?: return if (storedLabel.isEmpty()) null else ScenePromptPreset(id, storedLabel, instruction)
+        val untouched = storedLabel.isEmpty() || storedLabel in defaultLabelVariants(context, template)
+        return template.copy(
+            instruction = instruction,
+            labelText = if (untouched) null else storedLabel,
+        )
+    }
+
+    /** 模板名在所有支持界面语言下的写法，用来识别「没改过的默认名」。 */
+    private fun defaultLabelVariants(context: Context, template: ScenePromptPreset): Set<String> {
+        val resId = template.labelRes
+        if (resId == 0) return emptySet()
+        synchronized(labelVariantCache) {
+            labelVariantCache[resId]?.let { return it }
+        }
+        val variants = listOf(AppLocale.TAG_ZH_HANS, AppLocale.TAG_EN)
+            .mapNotNull { tag ->
+                runCatching {
+                    AppLocale.getLocalizedContext(context, tag).getString(resId).trim()
+                }.getOrNull()
+            }
+            .filter { it.isNotEmpty() }
+            .toSet()
+        synchronized(labelVariantCache) {
+            labelVariantCache[resId] = variants
+        }
+        return variants
     }
 
     /** 普通 CRUD 只接受完整、非空且无重复 ID 的原始列表，避免把容错视图覆盖回存储。 */
@@ -166,10 +222,8 @@ object SceneLibraryStore {
             val id = json.optString("id").trim()
             val label = json.optString("label").trim()
             val instruction = json.optString("instruction").trim()
-            if (id.isEmpty() || label.isEmpty() || instruction.isEmpty() || !seenIds.add(id)) {
-                return null
-            }
-            items += ScenePromptPreset(id, label, instruction)
+            if (id.isEmpty() || instruction.isEmpty() || !seenIds.add(id)) return null
+            items += hydrate(context, mode, id, label, instruction) ?: return null
         }
         return items
     }

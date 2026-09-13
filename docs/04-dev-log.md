@@ -2,6 +2,43 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · 修复内置场景名被首次运行语言冻住（v2.6.0 / 38）
+
+**现象**：用户反馈「英文界面打开场景库，里面还是中文」。模拟器上是反向的同一个 bug——
+库在英文 locale 下初始化，之后切回中文，条目名仍是 General / Meeting。
+
+**根因**：`ScenePromptPreset` 本来就分好了 `labelText`（用户覆盖）/ `labelRes`（跟随界面
+语言的展示名）/ `promptLabelText`（写进 prompt 的固定中文），但 `SceneLibraryStore.write()`
+存的是 `item.label`——**已经按当前界面语言解析完的字符串**。首次初始化时是什么语言，
+名字就被冻成什么语言，之后切语言再也不动。
+
+**更严重的一层**：`promptLabel = labelText ?: promptLabelText`。被冻进去的展示名占住了
+`labelText`，于是英文界面下初始化过的机器，**systemInstruction 里的场景名变成了英文**——
+首次运行的界面语言漏进了发给模型的 prompt，正是 CLAUDE.md 明令禁止的那条。
+`PromptLocaleIndependenceTest` 没抓到，因为它直接用 `DefaultSceneCatalog.resolve`，
+绕开了真正的运行时真源 `SceneLibraryStore`。
+
+**改动**
+
+- `write()` 只存用户覆盖（没改过存空串）。
+- 新增 `hydrate()`：读取时按 id 找回模板，`label` 为空**或等于该模板在任一支持界面语言下的
+  默认名**，都判定为「用户没改过」，回落到模板 → 展示名跟随界面语言、`promptLabel` 恢复固定中文。
+  这条同时充当存量数据迁移，不需要单独的迁移代码。
+- `update()` 改走同一个 `hydrate()`：把名字改回模板默认名（任一语言的写法）就当作取消覆盖，
+  重新跟随界面语言。
+- 模板名的各语言写法缓存在 `labelVariantCache`，避免每次 `list()` 都 createConfigurationContext。
+
+**真实验证**
+
+- 新增 4 条测试：默认名跟随界面语言、改过的名字不被覆盖、改回默认名恢复跟随、
+  首次运行语言不得漏进 prompt，外加一条存量冻结数据的识别。
+- **反向验证**：把 `SceneLibraryStore.kt` 还原成修复前版本，这 4 条全部 FAILED；恢复修复后全绿。
+- `testDebugUnitTest` + `lintDebug` + `assembleDebug` 全过；装进模拟器（正好是英文 locale
+  初始化的存量数据）复核：切中文后条目名变成通用 / 会议 / 课堂。
+
+**未处理**：场景**描述**（即提示词正文）仍固定中文，两种界面语言下都一样。把它做成跟随界面
+语言意味着发给模型的 systemInstruction 会随界面语言改变，与 CLAUDE.md 的边界冲突，需产品决策。
+
 ## 2026-09-13 · 开源许可证、双语 README 与发布准备（v2.6.0 / 38）
 
 **改动**

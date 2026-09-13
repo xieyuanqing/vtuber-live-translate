@@ -153,6 +153,99 @@ class SceneLibraryStoreTest {
         assertFalse(SceneLibraryStore.delete(context, mode, SceneLibraryStore.list(context, mode).single().id))
     }
 
+    /**
+     * 没改过的内置场景名必须跟随界面语言。
+     *
+     * 旧实现把「当前语言下解析出的名字」写进存储，首次初始化用的什么语言就冻在什么语言，
+     * 之后切界面语言再也不变。
+     */
+    @Test
+    fun defaultSceneNamesFollowAppLanguageUntilRenamed() {
+        val mode = TranslationMode.INTERPRETATION
+        // 先在中文界面下完成首次初始化（@Before 已切中文）
+        assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").label)
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        assertEquals(
+            "没改过的内置场景名必须跟随界面语言",
+            "Meeting",
+            SceneLibraryStore.resolve(context, mode, "meeting").label,
+        )
+
+        AppLocale.save(context, AppLocale.TAG_ZH_HANS)
+        AppLocale.apply(AppLocale.TAG_ZH_HANS)
+        assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").label)
+    }
+
+    /** 用户改过名字就固定下来，切界面语言不得覆盖。 */
+    @Test
+    fun renamedSceneKeepsUserTextAcrossLanguages() {
+        val mode = TranslationMode.INTERPRETATION
+        val renamed = SceneLibraryStore.resolve(context, mode, "meeting").copy(labelText = "周会")
+        assertTrue(SceneLibraryStore.update(context, mode, renamed))
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        assertEquals("周会", SceneLibraryStore.resolve(context, mode, "meeting").label)
+    }
+
+    /** 改回模板默认名（任一界面语言的写法）就当作没覆盖，重新跟随界面语言。 */
+    @Test
+    fun renamingBackToATemplateNameResumesFollowingAppLanguage() {
+        val mode = TranslationMode.INTERPRETATION
+        val renamed = SceneLibraryStore.resolve(context, mode, "meeting").copy(labelText = "周会")
+        assertTrue(SceneLibraryStore.update(context, mode, renamed))
+
+        val restored = SceneLibraryStore.resolve(context, mode, "meeting").copy(labelText = "会议")
+        assertTrue(SceneLibraryStore.update(context, mode, restored))
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        assertEquals("Meeting", SceneLibraryStore.resolve(context, mode, "meeting").label)
+    }
+
+    /**
+     * 首次初始化时的界面语言绝不能漏进发给模型的 prompt。
+     *
+     * 旧实现把英文展示名存成了 labelText，而 `promptLabel = labelText ?: promptLabelText`，
+     * 于是英文界面下初始化过的机器，systemInstruction 里的场景名变成了英文。
+     */
+    @Test
+    fun firstRunLanguageNeverLeaksIntoTheModelPrompt() {
+        val mode = TranslationMode.INTERPRETATION
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+
+        // 在英文界面下完成首次初始化
+        assertEquals("Meeting", SceneLibraryStore.resolve(context, mode, "meeting").label)
+        assertEquals(
+            "发给模型的场景名必须固定中文",
+            "会议",
+            SceneLibraryStore.resolve(context, mode, "meeting").promptLabel,
+        )
+
+        AppLocale.save(context, AppLocale.TAG_ZH_HANS)
+        AppLocale.apply(AppLocale.TAG_ZH_HANS)
+        assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").promptLabel)
+    }
+
+    /** 存量数据：早期版本冻进去的英文名要被识别回「没改过」，而不是当成用户自定义。 */
+    @Test
+    fun legacyFrozenLabelsAreRecognizedAsUntouched() {
+        val mode = TranslationMode.INTERPRETATION
+        context.getSharedPreferences("scene_library_v1", Context.MODE_PRIVATE).edit()
+            .putString(
+                "items_interpretation",
+                """[{"id":"meeting","label":"Meeting","instruction":"这是会议或商务讨论。"}]""",
+            )
+            .putString("default_interpretation", "meeting")
+            .commit()
+
+        assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").label)
+        assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").promptLabel)
+    }
+
     /** 只比较业务字段：内部的 labelRes / promptLabelText 不属于断言目标。 */
     private fun assertSameScenes(
         expected: List<ScenePromptPreset>,
