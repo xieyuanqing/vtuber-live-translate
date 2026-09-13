@@ -94,7 +94,7 @@ class SceneLibraryStoreTest {
         val original = SceneLibraryStore.resolve(context, TranslationMode.INTERPRETATION, "meeting")
         val changed = original.copy(
             labelText = "内部会议",
-            instruction = "只关注决策、数字和待办事项。",
+            instructionText = "只关注决策、数字和待办事项。",
         )
 
         assertTrue(SceneLibraryStore.update(context, TranslationMode.INTERPRETATION, changed))
@@ -127,7 +127,7 @@ class SceneLibraryStoreTest {
         SceneLibraryStore.update(
             context,
             mode,
-            original.copy(labelText = "已修改", instruction = "已修改的提示词"),
+            original.copy(labelText = "已修改", instructionText = "已修改的提示词"),
         )
         SceneLibraryStore.create(context, mode, "临时场景", "临时提示词")
 
@@ -244,6 +244,44 @@ class SceneLibraryStoreTest {
 
         assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").label)
         assertEquals("会议", SceneLibraryStore.resolve(context, mode, "meeting").promptLabel)
+    }
+
+    /** 没改过的内置场景描述也跟随界面语言。 */
+    @Test
+    fun defaultSceneInstructionsFollowAppLanguage() {
+        val mode = TranslationMode.INTERPRETATION
+        assertTrue(
+            SceneLibraryStore.resolve(context, mode, "meeting").instruction
+                .startsWith("这是会议或商务讨论"),
+        )
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        assertTrue(
+            "没改过的场景描述必须跟随界面语言",
+            SceneLibraryStore.resolve(context, mode, "meeting").instruction
+                .startsWith("This is a meeting or business discussion"),
+        )
+    }
+
+    /** 存量数据：早期版本冻进去的中文描述要被识别回「没改过」。 */
+    @Test
+    fun legacyFrozenInstructionsAreRecognizedAsUntouched() {
+        val mode = TranslationMode.INTERPRETATION
+        context.getSharedPreferences("scene_library_v1", Context.MODE_PRIVATE).edit()
+            .putString(
+                "items_interpretation",
+                """[{"id":"meeting","label":"Meeting",""" +
+                    """"instruction":"这是会议或商务讨论。准确处理议题、结论、数字、职责和行动项，保持专业、简洁。"}]""",
+            )
+            .putString("default_interpretation", "meeting")
+            .commit()
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        val scene = SceneLibraryStore.resolve(context, mode, "meeting")
+        assertEquals("Meeting", scene.label)
+        assertTrue(scene.instruction.startsWith("This is a meeting or business discussion"))
     }
 
     /** 只比较业务字段：内部的 labelRes / promptLabelText 不属于断言目标。 */

@@ -250,7 +250,7 @@ internal class SceneLibraryController(
                     if (SceneLibraryStore.update(
                             context,
                             mode,
-                            existing.copy(labelText = label, instruction = instruction),
+                            existing.copy(labelText = label, instructionText = instruction),
                         )
                     ) {
                         existing

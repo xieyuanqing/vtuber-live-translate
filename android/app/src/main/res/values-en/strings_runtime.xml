@@ -269,4 +269,18 @@
     <string name="rt_update_source_mirror">Mirror %1$d·mirror</string>
     <string name="rt_update_source_github">Source %1$d·GitHub</string>
     <string name="rt_update_source_direct">Source %1$d</string>
+    <!-- 内置场景描述：跟随界面语言，用户改过则以用户文本为准 -->
+    <string name="rt_scene_general_instruction">For everyday conversation and general on-site exchanges. Prioritise accurate meaning and natural phrasing; avoid a stiff written tone.</string>
+    <string name="rt_scene_meeting_instruction">This is a meeting or business discussion. Handle agenda items, conclusions, numbers, responsibilities and action items accurately; stay professional and concise.</string>
+    <string name="rt_scene_classroom_instruction">This is a class or lecture. Keep subject terminology, definitions, examples and the chain of reasoning so the translation is easy to follow along with.</string>
+    <string name="rt_scene_interview_instruction">This is an interview. Separate questions from answers, keep the tone, stance and exact wording of each speaker, and never polish their position for them.</string>
+    <string name="rt_scene_travel_instruction">This is on-site conversation while travelling. Prioritise accuracy for places, times, prices, routes, rules and polite expressions.</string>
+    <string name="rt_scene_general_video_instruction">For general video content. Keep consecutive subtitles coherent and handle titles, people, organisations and topic terms accurately.</string>
+    <string name="rt_scene_livestream_instruction">This is a live stream. Handle colloquial speech, ellipsis, interaction and topic jumps; translate chat messages and audience nicknames naturally from context.</string>
+    <string name="rt_scene_vtuber_instruction">This is a VTuber stream. Prefer the renderings the community commonly uses for names, group names and streaming jargon; keep uncertain proper nouns in the original.</string>
+    <string name="rt_scene_anime_instruction">This is anime content. Keep the voice of each character and the honorific relationships; prefer established renderings for titles, character names, special moves and setting terms.</string>
+    <string name="rt_scene_game_instruction">This is gaming content. Handle game titles, characters, skills, items, maps and mechanic terms accurately, and keep the colloquial rhythm of the players.</string>
+    <string name="rt_scene_news_instruction">This is news content. Stay objective and information-dense; translate names, places, organisations, numbers, dates and quotations accurately.</string>
+    <string name="rt_scene_course_instruction">This is a course or tutorial video. Keep technical terms, steps, definitions and causal relationships; be clear without adding explanations.</string>
+
 </resources>

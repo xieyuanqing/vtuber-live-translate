@@ -14,10 +14,16 @@
 当前版本：`2.6.0` / versionCode `38`。
 
 界面语言与翻译方向是两件独立的事：`AppLocale` 控制界面语言（跟随系统 / 简体中文 / English），
-翻译方向由每模式的 `TranslationPlan` 独立保存。**切换界面语言绝不能改变发给模型的 prompt**——
-`TranslationLanguage.promptLabel`、`TranslationMode.promptLabel`、`ScenePromptPreset.promptLabel`
-是写进 systemInstruction 的固定中文名，`label` 才是跟随界面语言的展示名，两者不可混用。
-`PromptLocaleIndependenceTest` 锁住这条边界。
+翻译方向由每模式的 `TranslationPlan` 独立保存。**切换界面语言只允许改变 prompt 的一处**：
+内置场景的描述正文（`ScenePromptPreset.instruction`，2026-09-13 放宽，理由是英文界面的用户
+读不懂也改不了中文提示词）。除此之外 prompt 全部固定中文——`TranslationLanguage.promptLabel`、
+`TranslationMode.promptLabel`、`ScenePromptPreset.promptLabel`、提示词底座与模式说明都不跟随
+界面语言，`label` 才是跟随界面语言的展示名，两者不可混用。`PromptLocaleIndependenceTest`
+逐条锁住这条边界（包括「两种语言的 prompt 差异只能来自场景描述」）。
+
+场景库的 `label` / `instruction` 只持久化**用户改过的内容**，没改过的存空串，读取时由
+`SceneLibraryStore.hydrate()` 与模板合并。别再把「当前界面语言下解析出来的字符串」写进存储——
+那会把首次运行的语言冻死，还会顺着 `promptLabel` 漏进发给模型的 prompt。
 
 ## 不可破坏的产品边界
 

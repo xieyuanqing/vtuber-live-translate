@@ -270,4 +270,18 @@
     <string name="rt_update_source_mirror">镜像 %1$d·mirror</string>
     <string name="rt_update_source_github">源 %1$d·GitHub</string>
     <string name="rt_update_source_direct">源 %1$d</string>
+    <!-- 内置场景描述：跟随界面语言，用户改过则以用户文本为准 -->
+    <string name="rt_scene_general_instruction">适用于日常对话和一般现场交流。优先保证意思准确、表达自然，避免书面腔。</string>
+    <string name="rt_scene_meeting_instruction">这是会议或商务讨论。准确处理议题、结论、数字、职责和行动项，保持专业、简洁。</string>
+    <string name="rt_scene_classroom_instruction">这是课堂或讲座。保留学科术语、定义、例子和推导关系，让译文便于跟随讲解。</string>
+    <string name="rt_scene_interview_instruction">这是采访。区分提问与回答，保留人物语气、观点和措辞边界，不替说话人润色立场。</string>
+    <string name="rt_scene_travel_instruction">这是旅行中的现场交流。优先准确处理地点、时间、价格、路线、规则和礼貌表达。</string>
+    <string name="rt_scene_general_video_instruction">适用于一般视频内容。保持前后字幕连贯，准确处理标题、人物、组织和主题词。</string>
+    <string name="rt_scene_livestream_instruction">这是实时直播。适应口语、省略、互动和话题跳转，弹幕或观众称呼按上下文自然翻译。</string>
+    <string name="rt_scene_vtuber_instruction">这是 VTuber 直播。优先使用圈内常见的人名、组合名和直播术语译法；不确定的专名保留原文。</string>
+    <string name="rt_scene_anime_instruction">这是动漫内容。保持角色口吻和称谓关系，作品名、角色名、招式与设定优先采用通行译名。</string>
+    <string name="rt_scene_game_instruction">这是游戏内容。准确处理游戏名、角色、技能、道具、地图和机制术语，保留玩家口语节奏。</string>
+    <string name="rt_scene_news_instruction">这是新闻内容。保持客观和信息密度，准确翻译人名、地名、机构、数字、日期与引语。</string>
+    <string name="rt_scene_course_instruction">这是课程或教学视频。保留专业术语、步骤、定义和因果关系，译文清楚但不额外解释。</string>
+
 </resources>

@@ -81,20 +81,32 @@ object TranslationLanguageCatalog {
  * 界面语言生成，但一旦写入场景库就固化为用户数据，切换界面语言不会覆盖它。
  *
  * [promptLabel] 是写进 systemInstruction 的名字：用户自定义场景用其原名，
- * 内置模板用固定中文名（[promptLabelText]），保证切换界面语言不改变发给模型的 prompt。
+ * 内置模板用固定中文名（[promptLabelText]）。
+ * [instruction] 是唯一跟随界面语言的 prompt 成分，见其自身注释。
  */
 data class ScenePromptPreset(
     val id: String,
-    val instruction: String,
+    internal val instructionText: String? = null,
+    internal val instructionRes: Int = 0,
     internal val labelText: String? = null,
     internal val labelRes: Int = 0,
     internal val promptLabelText: String? = null,
 ) {
     constructor(id: String, label: String, instruction: String) :
-        this(id = id, instruction = instruction, labelText = label)
+        this(id = id, instructionText = instruction, labelText = label)
 
     val label: String
         get() = labelText ?: if (labelRes != 0) AppStrings.get(labelRes) else id
+
+    /**
+     * 场景描述，同时也是写进 systemInstruction 的场景正文。
+     *
+     * 用户改过就用用户文本；没改过的内置模板取资源，**跟随界面语言**——英文界面下的
+     * 用户读不懂也改不了中文提示词，这比「两种界面语言下翻译行为完全一致」更要紧。
+     * 提示词其余部分（底座、翻译方向、输入模式、场景名）仍是固定中文。
+     */
+    val instruction: String
+        get() = instructionText ?: if (instructionRes != 0) AppStrings.get(instructionRes) else ""
 
     /** 发给模型时使用；绝不跟随界面语言。 */
     val promptLabel: String
@@ -108,31 +120,31 @@ object DefaultSceneCatalog {
             id = "general",
             labelRes = R.string.rt_scene_general,
             promptLabelText = "通用",
-            instruction = "适用于日常对话和一般现场交流。优先保证意思准确、表达自然，避免书面腔。",
+            instructionRes = R.string.rt_scene_general_instruction,
         ),
         ScenePromptPreset(
             id = "meeting",
             labelRes = R.string.rt_scene_meeting,
             promptLabelText = "会议",
-            instruction = "这是会议或商务讨论。准确处理议题、结论、数字、职责和行动项，保持专业、简洁。",
+            instructionRes = R.string.rt_scene_meeting_instruction,
         ),
         ScenePromptPreset(
             id = "classroom",
             labelRes = R.string.rt_scene_classroom,
             promptLabelText = "课堂",
-            instruction = "这是课堂或讲座。保留学科术语、定义、例子和推导关系，让译文便于跟随讲解。",
+            instructionRes = R.string.rt_scene_classroom_instruction,
         ),
         ScenePromptPreset(
             id = "interview",
             labelRes = R.string.rt_scene_interview,
             promptLabelText = "采访",
-            instruction = "这是采访。区分提问与回答，保留人物语气、观点和措辞边界，不替说话人润色立场。",
+            instructionRes = R.string.rt_scene_interview_instruction,
         ),
         ScenePromptPreset(
             id = "travel",
             labelRes = R.string.rt_scene_travel,
             promptLabelText = "旅行交流",
-            instruction = "这是旅行中的现场交流。优先准确处理地点、时间、价格、路线、规则和礼貌表达。",
+            instructionRes = R.string.rt_scene_travel_instruction,
         ),
     )
 
@@ -141,43 +153,43 @@ object DefaultSceneCatalog {
             id = "general_video",
             labelRes = R.string.rt_scene_general_video,
             promptLabelText = "通用视频",
-            instruction = "适用于一般视频内容。保持前后字幕连贯，准确处理标题、人物、组织和主题词。",
+            instructionRes = R.string.rt_scene_general_video_instruction,
         ),
         ScenePromptPreset(
             id = "livestream",
             labelRes = R.string.rt_scene_livestream,
             promptLabelText = "直播",
-            instruction = "这是实时直播。适应口语、省略、互动和话题跳转，弹幕或观众称呼按上下文自然翻译。",
+            instructionRes = R.string.rt_scene_livestream_instruction,
         ),
         ScenePromptPreset(
             id = "vtuber",
             labelRes = R.string.rt_scene_vtuber,
             promptLabelText = "VTuber",
-            instruction = "这是 VTuber 直播。优先使用圈内常见的人名、组合名和直播术语译法；不确定的专名保留原文。",
+            instructionRes = R.string.rt_scene_vtuber_instruction,
         ),
         ScenePromptPreset(
             id = "anime",
             labelRes = R.string.rt_scene_anime,
             promptLabelText = "动漫",
-            instruction = "这是动漫内容。保持角色口吻和称谓关系，作品名、角色名、招式与设定优先采用通行译名。",
+            instructionRes = R.string.rt_scene_anime_instruction,
         ),
         ScenePromptPreset(
             id = "game",
             labelRes = R.string.rt_scene_game,
             promptLabelText = "游戏",
-            instruction = "这是游戏内容。准确处理游戏名、角色、技能、道具、地图和机制术语，保留玩家口语节奏。",
+            instructionRes = R.string.rt_scene_game_instruction,
         ),
         ScenePromptPreset(
             id = "news",
             labelRes = R.string.rt_scene_news,
             promptLabelText = "新闻",
-            instruction = "这是新闻内容。保持客观和信息密度，准确翻译人名、地名、机构、数字、日期与引语。",
+            instructionRes = R.string.rt_scene_news_instruction,
         ),
         ScenePromptPreset(
             id = "course",
             labelRes = R.string.rt_scene_course,
             promptLabelText = "课程",
-            instruction = "这是课程或教学视频。保留专业术语、步骤、定义和因果关系，译文清楚但不额外解释。",
+            instructionRes = R.string.rt_scene_course_instruction,
         ),
     )
 

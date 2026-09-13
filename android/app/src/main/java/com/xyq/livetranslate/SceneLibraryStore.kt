@@ -8,8 +8,9 @@ import java.util.UUID
 /**
  * 用户可编辑的场景库。同传与视频分别存储，默认模板只在首次使用或手动恢复时写入。
  *
- * 存储里的 `label` 只保存**用户改过的名字**：没改过的内置场景存空串，读取时与
- * [DefaultSceneCatalog] 模板合并，于是展示名跟随界面语言、`promptLabel` 保持固定中文。
+ * 存储里的 `label` / `instruction` 只保存**用户改过的内容**：没改过的内置场景存空串，
+ * 读取时与 [DefaultSceneCatalog] 模板合并，于是展示名和场景描述都跟随界面语言，
+ * `promptLabel` 仍保持固定中文。
  * 早期版本把「当前界面语言下解析出来的名字」直接写进了存储，首次初始化时用的是哪种
  * 语言，场景名就被冻在哪种语言，还会顺着 `promptLabel` 漏进发给模型的 prompt；
  * [hydrate] 会把这种存量值识别回「没改过」。
@@ -19,8 +20,8 @@ object SceneLibraryStore {
     private const val KEY_ITEMS_PREFIX = "items_"
     private const val KEY_DEFAULT_PREFIX = "default_"
 
-    /** string resource 在运行时不会变，模板名的各语言写法缓存一次即可。 */
-    private val labelVariantCache = mutableMapOf<Int, Set<String>>()
+    /** string resource 在运行时不会变，模板文案的各语言写法缓存一次即可。 */
+    private val variantCache = mutableMapOf<Int, Set<String>>()
 
     @Synchronized
     fun list(context: Context, mode: TranslationMode): List<ScenePromptPreset> {
@@ -129,8 +130,8 @@ object SceneLibraryStore {
             array.put(JSONObject().apply {
                 put("id", item.id)
                 // 只存用户覆盖；空串表示「没改过，跟随界面语言」。
-                put("label", item.label)
-                put("instruction", item.instruction)
+                put("label", item.labelText.orEmpty())
+                put("instruction", item.instructionText.orEmpty())
             })
         }
         prefs(context).edit()
@@ -152,7 +153,7 @@ object SceneLibraryStore {
                 val id = json.optString("id").trim()
                 val label = json.optString("label").trim()
                 val instruction = json.optString("instruction").trim()
-                if (id.isEmpty() || instruction.isEmpty() || any { it.id == id }) continue
+                if (id.isEmpty() || any { it.id == id }) continue
                 val item = hydrate(context, mode, id, label, instruction) ?: continue
                 add(item)
             }
@@ -171,23 +172,29 @@ object SceneLibraryStore {
         mode: TranslationMode,
         id: String,
         storedLabel: String,
-        instruction: String,
+        storedInstruction: String,
     ): ScenePromptPreset? {
         val template = DefaultSceneCatalog.defaults(mode).firstOrNull { it.id == id }
-            ?: return if (storedLabel.isEmpty()) null else ScenePromptPreset(id, storedLabel, instruction)
-        val untouched = storedLabel.isEmpty() || storedLabel in defaultLabelVariants(context, template)
+            ?: return if (storedLabel.isEmpty() || storedInstruction.isEmpty()) {
+                null
+            } else {
+                ScenePromptPreset(id, storedLabel, storedInstruction)
+            }
+        val labelUntouched =
+            storedLabel.isEmpty() || storedLabel in localizedVariants(context, template.labelRes)
+        val instructionUntouched = storedInstruction.isEmpty() ||
+            storedInstruction in localizedVariants(context, template.instructionRes)
         return template.copy(
-            instruction = instruction,
-            labelText = if (untouched) null else storedLabel,
+            labelText = if (labelUntouched) null else storedLabel,
+            instructionText = if (instructionUntouched) null else storedInstruction,
         )
     }
 
-    /** 模板名在所有支持界面语言下的写法，用来识别「没改过的默认名」。 */
-    private fun defaultLabelVariants(context: Context, template: ScenePromptPreset): Set<String> {
-        val resId = template.labelRes
+    /** 某条模板文案在所有支持界面语言下的写法，用来识别「用户没改过」。 */
+    private fun localizedVariants(context: Context, resId: Int): Set<String> {
         if (resId == 0) return emptySet()
-        synchronized(labelVariantCache) {
-            labelVariantCache[resId]?.let { return it }
+        synchronized(variantCache) {
+            variantCache[resId]?.let { return it }
         }
         val variants = listOf(AppLocale.TAG_ZH_HANS, AppLocale.TAG_EN)
             .mapNotNull { tag ->
@@ -197,8 +204,8 @@ object SceneLibraryStore {
             }
             .filter { it.isNotEmpty() }
             .toSet()
-        synchronized(labelVariantCache) {
-            labelVariantCache[resId] = variants
+        synchronized(variantCache) {
+            variantCache[resId] = variants
         }
         return variants
     }
@@ -222,7 +229,7 @@ object SceneLibraryStore {
             val id = json.optString("id").trim()
             val label = json.optString("label").trim()
             val instruction = json.optString("instruction").trim()
-            if (id.isEmpty() || instruction.isEmpty() || !seenIds.add(id)) return null
+            if (id.isEmpty() || !seenIds.add(id)) return null
             items += hydrate(context, mode, id, label, instruction) ?: return null
         }
         return items

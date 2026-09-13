@@ -11,10 +11,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * 锁住「界面语言与翻译行为相互独立」这条边界。
+ * 锁住 prompt 的语言边界。
  *
- * 阶段2 把 UI 显示名做成了资源（跟随界面语言），但发给模型的 systemInstruction
- * 必须保持恒定。否则用户把界面切成英文，翻译 prompt 也跟着变，等于悄悄改了翻译行为。
+ * 原规则是「systemInstruction 必须完全恒定」。2026-09-13 放宽了**一处**：内置场景的
+ * 描述正文（[ScenePromptPreset.instruction]）跟随界面语言——英文界面的用户读不懂也改不了
+ * 中文提示词，可用性比「两种界面语言下翻译行为完全一致」更要紧。
+ *
+ * 其余成分仍然固定中文，本测试逐条锁住：提示词底座、翻译方向、输入模式、场景名。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -40,7 +43,7 @@ class PromptLocaleIndependenceTest {
     }
 
     @Test
-    fun systemInstructionStaysIdenticalAcrossAppLanguages() {
+    fun onlyTheSceneBodyFollowsAppLanguage() {
         AppLocale.save(context, AppLocale.TAG_ZH_HANS)
         AppLocale.apply(AppLocale.TAG_ZH_HANS)
         val zhPrompt = buildPrompt()
@@ -49,10 +52,34 @@ class PromptLocaleIndependenceTest {
         AppLocale.apply(AppLocale.TAG_EN)
         val enPrompt = buildPrompt()
 
-        assertEquals("界面语言不得改变发给模型的 prompt", zhPrompt, enPrompt)
-        assertTrue("翻译方向必须保持固定中文标签", zhPrompt.contains("【翻译方向：英语 → 简体中文】"))
-        assertTrue("输入模式必须保持固定中文标签", zhPrompt.contains("【输入模式：同传】"))
+        // 唯一允许跟随界面语言的成分：场景描述正文
+        assertTrue("英文界面下场景描述应为英文", enPrompt.contains("This is a meeting or business discussion"))
+        assertTrue("中文界面下场景描述应为中文", zhPrompt.contains("这是会议或商务讨论"))
+
+        // 其余成分逐条固定中文
+        listOf(
+            "【翻译方向：英语 → 简体中文】",
+            "【输入模式：同传】",
+            "【场景：会议】",
+            "你是实时语音翻译引擎：",
+            "输入来自麦克风现场语音",
+        ).forEach { fixed ->
+            assertTrue("「$fixed」必须固定中文", zhPrompt.contains(fixed))
+            assertTrue("「$fixed」必须固定中文，不得跟随界面语言", enPrompt.contains(fixed))
+        }
+
+        // 两份 prompt 的差异必须**只**来自场景描述那一段
+        assertEquals(
+            "除场景描述外，prompt 不得随界面语言变化",
+            zhPrompt.replace(zhSceneBody(), ""),
+            enPrompt.replace(enSceneBody(), ""),
+        )
     }
+
+    private fun zhSceneBody(): String =
+        "这是会议或商务讨论。准确处理议题、结论、数字、职责和行动项，保持专业、简洁。"
+
+    private fun enSceneBody(): String = context.getString(R.string.rt_scene_meeting_instruction)
 
     @Test
     fun languageCodesNeverChangeWithAppLanguage() {
@@ -70,6 +97,19 @@ class PromptLocaleIndependenceTest {
         // label 是界面展示名，英文界面下应为英文
         assertEquals("Auto detect", TranslationLanguageCatalog.source("auto").label)
         assertEquals("Simplified Chinese", TranslationLanguageCatalog.target("zh-Hans").label)
+    }
+
+    /** 用户改过的描述是用户数据，任何界面语言下都原样发给模型。 */
+    @Test
+    fun userEditedSceneInstructionNeverFollowsAppLanguage() {
+        val mode = TranslationMode.INTERPRETATION
+        val mine = "这是我自己的会议提示词，别动它。"
+        val edited = SceneLibraryStore.resolve(context, mode, "meeting").copy(instructionText = mine)
+        assertTrue(SceneLibraryStore.update(context, mode, edited))
+
+        AppLocale.save(context, AppLocale.TAG_EN)
+        AppLocale.apply(AppLocale.TAG_EN)
+        assertEquals(mine, SceneLibraryStore.resolve(context, mode, "meeting").instruction)
     }
 
     @Test
