@@ -2,6 +2,27 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · 悬浮窗「打开主应用」按会话模式落页（v2.6.0 / 38）
+
+**改动**
+
+- `SubtitleOverlay` 构造时接收 `sessionMode`；「打开主应用」意图携带
+  `MainActivity.EXTRA_OPEN_SESSION_TAB`（值为 StatusBus 会话模式），并加
+  `FLAG_ACTIVITY_SINGLE_TOP`，保证已在前台栈顶的实例经 `onNewIntent` 收到意图。
+- `MainActivity` 新增 `onNewIntent` 与 `applySessionTabIntent`：video → 视频主页、
+  mic → 同传主页；冷启动在 `navigator.setup` 之后应用，Activity 重建
+  （`savedInstanceState != null`）时不覆盖已恢复的页面。
+- `CaptureService` 创建悬浮窗时传入当前会话模式。
+
+**原因**：用户反馈从视频翻译会话点悬浮窗「打开主应用」，落回的是同传页——
+原实现只带 `NEW_TASK` 把已有实例提到前台，永远停在默认页，且不带 `SINGLE_TOP`
+时意图不会送达已存在的实例。
+
+**真实验证**
+
+- 新增 3 个单测：悬浮窗意图携带会话模式；冷启动落视频页；`onNewIntent` 切到视频页。
+- `testDebugUnitTest` + `lintDebug` + `assembleDebug` 全过，`git diff --check` 干净。
+
 ## 2026-09-13 · 悬浮窗控制条自动隐藏 + 模型选择说明精简（v2.6.0 / 38）
 
 **改动**

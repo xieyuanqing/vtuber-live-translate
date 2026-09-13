@@ -172,9 +172,29 @@ class MainActivity : AppCompatActivity() {
 
         renderStatus()
         navigator.setup(savedInstanceState)
+        // 悬浮窗「打开主应用」的冷启动落点；重建时已有状态恢复，不重复覆盖。
+        if (savedInstanceState == null) applySessionTabIntent(intent)
         bindLanguageSettings(root)
         // 启动自动检查更新（可在关于页关闭）。
         updateController.autoCheckOnLaunch()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        applySessionTabIntent(intent)
+    }
+
+    /**
+     * 悬浮窗「打开主应用」按发起会话的模式落到对应主页（视频会话 → 视频页，
+     * 同传会话 → 同传页），而不是永远停在默认的同传页。
+     */
+    private fun applySessionTabIntent(intent: Intent?) {
+        val tabId = when (intent?.getStringExtra(EXTRA_OPEN_SESSION_TAB)) {
+            StatusBus.MODE_VIDEO -> R.id.nav_video
+            StatusBus.MODE_MIC -> R.id.nav_interp
+            else -> return
+        }
+        navigator.showMain(tabId)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -329,4 +349,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+
+    companion object {
+        /** 悬浮窗「打开主应用」意图携带的目标模式，值为 StatusBus 会话模式（mic / video）。 */
+        const val EXTRA_OPEN_SESSION_TAB = "extraOpenSessionTab"
+    }
 }

@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 class SubtitleOverlayWindowTest {
     @Test
     fun expandedWindowWrapsContentWithoutFullHeightChildren() {
-        val overlay = SubtitleOverlay(appContext())
+        val overlay = SubtitleOverlay(appContext(), StatusBus.MODE_MIC)
         try {
             assertTrue(overlay.show())
             val params = overlay.field<WindowManager.LayoutParams>("lp")
@@ -50,7 +50,7 @@ class SubtitleOverlayWindowTest {
     @Test
     fun collapseCreatesASideHandleWithoutPausingTranslation() {
         val context = appContext()
-        val overlay = SubtitleOverlay(context)
+        val overlay = SubtitleOverlay(context, StatusBus.MODE_MIC)
         StatusBus.paused = false
         try {
             assertTrue(overlay.show())
@@ -90,7 +90,7 @@ class SubtitleOverlayWindowTest {
 
     @Test
     fun headerControlsAutoHideAndRevealOnTouch() {
-        val overlay = SubtitleOverlay(appContext())
+        val overlay = SubtitleOverlay(appContext(), StatusBus.MODE_MIC)
         try {
             assertTrue(overlay.show())
             val header = overlay.field<View>("headerRow")
@@ -115,6 +115,22 @@ class SubtitleOverlayWindowTest {
         } finally {
             overlay.hide()
             StatusBus.paused = false
+        }
+    }
+
+    @Test
+    fun openMainAppCarriesSessionModeForLandingPage() {
+        val context = appContext()
+        val overlay = SubtitleOverlay(context, StatusBus.MODE_VIDEO)
+        try {
+            assertTrue(overlay.show())
+            overlay.field<ImageView>("openButton").performClick()
+            val intent = shadowOf(context as Application).nextStartedActivity
+            assertEquals(MainActivity::class.java.name, intent.component?.className)
+            // 主应用按会话模式落到对应主页：视频会话必须落视频页，而不是默认同传页。
+            assertEquals(StatusBus.MODE_VIDEO, intent.getStringExtra(MainActivity.EXTRA_OPEN_SESSION_TAB))
+        } finally {
+            overlay.hide()
         }
     }
 

@@ -678,6 +678,42 @@ class MainActivityStartupTest {
         }
     }
 
+    @Test
+    fun overlayOpenIntentColdStartLandsOnSessionHomePage() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
+        val intent = Intent(context, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_OPEN_SESSION_TAB, StatusBus.MODE_VIDEO)
+        val controller = Robolectric.buildActivity(MainActivity::class.java, intent).setup()
+        try {
+            val activity = controller.get()
+            // 视频会话的悬浮窗点「打开主应用」应落视频页，而不是默认同传页。
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageVideo).visibility)
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.pageInterp).visibility)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun overlayOpenIntentSwitchesHomePageOnNewIntent() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<Context>()
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            val activity = controller.get()
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageInterp).visibility)
+
+            // 通过 controller 投递新意图（onNewIntent 为 protected，真实系统由框架调用）。
+            controller.newIntent(
+                Intent(context, MainActivity::class.java)
+                    .putExtra(MainActivity.EXTRA_OPEN_SESSION_TAB, StatusBus.MODE_VIDEO),
+            )
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageVideo).visibility)
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.pageInterp).visibility)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
     private fun withActivity(block: (MainActivity) -> Unit) {
         val controller: ActivityController<MainActivity> =
             Robolectric.buildActivity(MainActivity::class.java).setup()

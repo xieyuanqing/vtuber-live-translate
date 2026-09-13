@@ -26,7 +26,10 @@ import kotlin.math.roundToInt
  * 控制条（状态 + 暂停/打开/收起）默认不占空间：触摸悬浮窗临时出现，约 3.5 秒后自动隐藏，
  * 暂停态常驻方便恢复；字幕文本始终独占面板面积。
  */
-class SubtitleOverlay(private val context: Context) {
+class SubtitleOverlay(
+    private val context: Context,
+    private val sessionMode: String,
+) {
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var root: AccentFrameLayout? = null
     private var panel: LinearLayout? = null
@@ -306,7 +309,9 @@ class SubtitleOverlay(private val context: Context) {
 
     private fun openMainApp() {
         val intent = Intent(context, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // SINGLE_TOP 让已在前台栈顶的实例经 onNewIntent 收到落点并切页，否则意图会被丢弃。
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(MainActivity.EXTRA_OPEN_SESSION_TAB, sessionMode)
         }
         context.startActivity(intent)
     }

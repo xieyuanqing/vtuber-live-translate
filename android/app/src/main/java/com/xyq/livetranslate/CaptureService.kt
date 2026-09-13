@@ -209,7 +209,7 @@ class CaptureService : Service() {
 
         val useOverlay = mode == StatusBus.MODE_VIDEO || Settings.canDrawOverlays(this)
         if (useOverlay) {
-            overlay = SubtitleOverlay(this)
+            overlay = SubtitleOverlay(this, mode)
         }
         stabilizer = SubtitleStabilizer(
             mainHandler,
