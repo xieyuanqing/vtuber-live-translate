@@ -49,6 +49,17 @@ button:hover {
   background: #343434;
 }
 
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  filter: none;
+}
+
+:is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);

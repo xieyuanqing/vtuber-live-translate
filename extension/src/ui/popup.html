@@ -10,12 +10,13 @@
     <header>
       <span class="dot" id="dot"></span>
       <span class="title">流译</span>
+      <span class="muted small" id="version"></span>
       <span class="grow"></span>
       <button class="ghost small" id="openOptions">设置</button>
     </header>
 
     <section id="body">
-      <div id="banner" class="banner hidden"></div>
+      <div id="banner" class="banner hidden" role="status"></div>
 
       <div class="video">
         <div id="videoTitle" class="video-title">未在 YouTube 视频页</div>
@@ -23,9 +24,10 @@
       </div>
 
       <button class="primary toggle" id="toggle">开始翻译</button>
+      <button class="toggle hidden" id="reloadPage">刷新页面，重新连接插件</button>
 
       <div class="stats">
-        <div class="stat"><span class="muted">状态</span><span id="stConn">—</span></div>
+        <div class="stat connection"><span class="muted">状态</span><span id="stConn" aria-live="polite">—</span></div>
         <div class="stat"><span class="muted">方向</span><span id="stDir">—</span></div>
         <div class="stat"><span class="muted">场景</span><span id="stScene">—</span></div>
         <div class="stat"><span class="muted">已运行</span><span id="stTime">—</span></div>
@@ -38,27 +40,28 @@
 
       <div class="quick">
         <div class="field">
-          <span class="label">源语言</span>
+          <label class="label" for="sourceLang">听什么</label>
           <select id="sourceLang"></select>
         </div>
         <div class="field">
-          <span class="label">目标语言</span>
+          <label class="label" for="targetLang">翻译成</label>
           <select id="targetLang"></select>
         </div>
         <div class="field">
-          <span class="label">场景</span>
+          <label class="label" for="scene">场景</label>
           <select id="scene"></select>
         </div>
       </div>
 
       <div class="field temp">
-        <span class="label">本场临时补充</span>
-        <textarea id="tempContext" rows="3"
-          placeholder="标题简介不够用时补这里：人名对照、当前游戏、活动名…"></textarea>
+        <label class="label" for="tempContext">本场补充 · 可选</label>
+        <textarea id="tempContext" rows="2"
+          placeholder="补一句背景：今天玩的游戏、人名译法…"></textarea>
         <div id="tempHint" class="muted small"></div>
       </div>
 
       <div id="hint" class="muted small"></div>
+      <button class="ghost small hidden" id="restart">应用当前设置并重新开始</button>
     </section>
 
     <script src="../common/constants.js"></script>

@@ -42,8 +42,7 @@ globalThis.LT = globalThis.LT || {};
 
   class AudioTap {
     /**
-     * @param {{onChunk:(u8:Uint8Array)=>void, onLevel:(pct:number)=>void,
-     *          onError:(msg:string)=>void}} handlers
+     * @param {{onChunk:(u8:Uint8Array)=>void, onLevel:(pct:number)=>void}} handlers
      */
     constructor(handlers) {
       this.handlers = handlers;
@@ -52,10 +51,7 @@ globalThis.LT = globalThis.LT || {};
       this.graph = null;
       this.mode = '';
       this.gate = true; // false 时丢弃采集到的块（广告 / 暂停 / 静音）
-    }
-
-    get active() {
-      return !!this.node;
+      this.generation = 0;
     }
 
     setGate(open) {
@@ -63,16 +59,18 @@ globalThis.LT = globalThis.LT || {};
     }
 
     async attach(video) {
-      if (this.node) this.detach();
+      this.detach();
+      const generation = this.generation;
       this.video = video;
       const graph = ensureGraph(video);
       this.graph = graph;
       if (graph.ctx.state === 'suspended') {
         await graph.ctx.resume().catch(() => {});
+        if (generation !== this.generation) return '';
       }
 
       const onBuf = (buf) => {
-        if (!this.gate) return;
+        if (generation !== this.generation || !this.gate) return;
         const u8 = new Uint8Array(buf);
         this.handlers.onChunk(u8);
         this.#reportLevel(buf);
@@ -84,6 +82,7 @@ globalThis.LT = globalThis.LT || {};
         await graph.ctx.audioWorklet.addModule(
           chrome.runtime.getURL('src/audio/pcm16k.js')
         );
+        if (generation !== this.generation) return '';
         const node = new AudioWorkletNode(graph.ctx, 'lt-pcm16k', {
           numberOfInputs: 1,
           numberOfOutputs: 1,
@@ -97,6 +96,7 @@ globalThis.LT = globalThis.LT || {};
         this.node = node;
         this.mode = 'worklet';
       } catch (err) {
+        if (generation !== this.generation) return '';
         console.warn('[流译] AudioWorklet 不可用，回退 ScriptProcessor：', err);
         const bufferSize = 2048; // ≈43ms @48k，主线程处理，延迟可接受
         const node = graph.ctx.createScriptProcessor(bufferSize, 2, 1);
@@ -116,14 +116,16 @@ globalThis.LT = globalThis.LT || {};
     }
 
     detach() {
+      this.generation++;
       const node = this.node;
       this.node = null;
-      if (!node) return;
       try {
-        if (node.port) node.port.postMessage({ type: 'stop' });
-        node.onaudioprocess = null;
-        node.disconnect();
-        if (this.graph) this.graph.source.disconnect(node);
+        if (node) {
+          if (node.port) { node.port.onmessage = null; node.port.postMessage({ type: 'stop' }); }
+          node.onaudioprocess = null;
+          node.disconnect();
+          if (this.graph) this.graph.source.disconnect(node);
+        }
       } catch (_) {
         /* 节点已经不在图里，忽略 */
       }

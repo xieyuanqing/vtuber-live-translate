@@ -3,7 +3,7 @@
   "name": "流译 · YouTube 直播实时翻译",
   "short_name": "流译",
   "description": "抓取 YouTube 直播音频，经 Gemini Live Translate 实时翻译，字幕直接叠在播放器里。",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "permissions": [
     "storage"
   ],

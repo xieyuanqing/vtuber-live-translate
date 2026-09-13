@@ -67,7 +67,7 @@ globalThis.LT = globalThis.LT || {};
       if (this.running) return;
       this.running = true;
       this.drainTimer = setInterval(() => this.#drain(), 100);
-      this.#connect();
+      this.#connect('connecting');
     }
 
     stop() {
@@ -101,12 +101,17 @@ globalThis.LT = globalThis.LT || {};
 
     // ---------- 连接管理 ----------
 
-    #connect() {
+    #connect(state = 'reconnecting') {
       if (!this.running) return;
       this.ready = false;
       clearTimeout(this.rotateTimer);
+      clearTimeout(this.reconnectTimer);
+      clearTimeout(this.watchdogTimer);
       const gen = ++this.generation;
-      this.#state(gen === 1 ? 'connecting' : 'reconnecting');
+      const old = this.ws;
+      this.ws = null;
+      try { if (old) old.close(1000, 'replace'); } catch (_) { /* 已关闭 */ }
+      this.#state(state);
 
       const key = this.opts.keyProvider();
       if (!key) {
@@ -183,22 +188,17 @@ globalThis.LT = globalThis.LT || {};
      */
     #rotate(fromGen) {
       if (!this.running || this.generation !== fromGen) return;
-      this.#state('rotating');
-      const old = this.ws;
-      this.#connect(); // generation++ 之后旧连接回调全部作废
-      try {
-        if (old) old.close(1000, 'rotate');
-      } catch (_) {
-        /* ignore */
-      }
+      this.#connect('rotating'); // 统一作废旧回调、取消旧定时器并关闭旧连接
     }
 
     #scheduleReconnect(abrupt) {
       if (!this.running) return;
       this.ready = false;
+      clearTimeout(this.rotateTimer);
       clearTimeout(this.watchdogTimer);
       clearTimeout(this.reconnectTimer);
       if (abrupt) this.#prependOverlap();
+      if (this.failedHandshakes < 2) this.#state('reconnecting');
       const delay = this.reconnectDelayMs;
       this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 2, 15000);
       this.reconnectTimer = setTimeout(() => {

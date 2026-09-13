@@ -6,6 +6,8 @@
   let settings = LT.DEFAULTS;
   let status = null;
   let timer = null;
+  let busy = false;
+  let settingsSave = Promise.resolve();
 
   const CONN_LABEL = {
     '': '未开始',
@@ -65,15 +67,27 @@
             : '';
     dot.className = dotKind ? `dot ${dotKind}` : 'dot';
 
-    $('toggle').textContent = running ? '停止翻译' : '开始翻译';
+    $('toggle').textContent = status?.phase === 'starting' ? '取消启动' : running ? '停止翻译' : '开始翻译';
     $('toggle').classList.toggle('on', running);
-    $('toggle').disabled = !status || !status.onWatchPage;
+    $('toggle').disabled = busy || !status || !status.onWatchPage;
+    $('reloadPage').classList.toggle('hidden', !!status || tabId == null);
+    $('restart').classList.toggle('hidden', !running);
+    $('restart').disabled = busy;
+
+    $('stConn').textContent = status?.error || CONN_LABEL[status?.conn || ''] || status.conn;
+    $('stConn').style.color = status?.error ? '#ffb4ab' : '';
+    $('stDir').textContent = status?.direction || `${LT.sourceLabel(settings.sourceLang)} → ${LT.targetLabel(settings.targetLang)}`;
+    $('stScene').textContent = status?.sceneLabel || LT.Settings.scene(settings).label;
+    $('stTime').textContent = fmtTime(status?.elapsedMs);
+    $('level').style.width = `${running ? status.level : 0}%`;
 
     if (!status) {
-      $('videoTitle').textContent = '请在 YouTube 视频页打开';
-      $('videoMeta').textContent = '装好扩展后需要刷新一次已打开的页面';
+      $('videoTitle').textContent = tabId == null ? '打开一场 YouTube 直播' : '当前页面尚未连接';
+      $('videoMeta').textContent = tabId == null ? '字幕会直接显示在播放器里' : '安装或更新插件后，刷新页面即可恢复';
       $('tempContext').disabled = true;
       $('tempHint').textContent = '';
+      $('hint').textContent = 'Alt+T · 开始 / 停止翻译';
+      banner('', '');
       return;
     }
     if (!status.onWatchPage) {
@@ -91,24 +105,13 @@
         .join(' · ');
     }
 
-    $('stConn').textContent = status.error
-      ? status.error
-      : CONN_LABEL[status.conn] !== undefined
-        ? CONN_LABEL[status.conn]
-        : status.conn;
-    $('stConn').style.color = status.error ? 'var(--err)' : '';
-    $('stDir').textContent = status.direction || '—';
-    $('stScene').textContent = status.sceneLabel || '—';
-    $('stTime').textContent = fmtTime(status.elapsedMs);
-    $('level').style.width = `${running ? status.level : 0}%`;
-
     // 临时补充输入框：状态里存的是内容脚本的当前值，没在打字时才回填，避免打断输入
     const ta = $('tempContext');
     const temp = status.tempContext || '';
     if (document.activeElement !== ta && ta.value !== temp) ta.value = temp;
-    ta.disabled = false;
+    ta.disabled = !status.onWatchPage;
     $('tempHint').textContent = running
-      ? '本场已冻结：停止再开始后生效。'
+      ? '修改后点下方「应用当前设置」即可生效。'
       : '开始翻译时生效；换视频或刷新后清空。';
 
     if (LT.Settings.keyList(settings).length === 0) {
@@ -122,8 +125,8 @@
     }
 
     $('hint').textContent = running
-      ? '改语言或场景要重开一场才生效（停止再开始）。'
-      : '快捷键 Alt+T 可以直接开始 / 停止。';
+      ? ''
+      : 'Alt+T · 开始 / 停止翻译';
   }
 
   async function refresh() {
@@ -132,6 +135,7 @@
   }
 
   async function init() {
+    $('version').textContent = chrome.runtime.getManifest().version;
     settings = await LT.Settings.load();
     fillSelect($('sourceLang'), LT.SOURCE_LANGS, settings.sourceLang);
     fillSelect($('targetLang'), LT.TARGET_LANGS, settings.targetLang);
@@ -145,15 +149,31 @@
     timer = setInterval(refresh, 1000);
   }
 
-  $('toggle').addEventListener('click', async () => {
-    const running = !!status && status.phase !== 'idle';
-    if (!running) {
-      // 启动前先把手头没发出去的临时补充落进去，否则快照冻不住刚打完的字
-      clearTimeout(tempSaveTimer);
-      await send(LT.MSG.SET_TEMP_CONTEXT, $('tempContext').value);
+  async function changeSession(restart = false) {
+    if (busy) return;
+    const context = $('tempContext').value;
+    busy = true;
+    renderStatus();
+    try {
+      await settingsSave;
+      const running = !!status && status.phase !== 'idle';
+      if (running) await send(LT.MSG.STOP);
+      if (!running || restart) {
+        await send(LT.MSG.SET_TEMP_CONTEXT, context);
+        await send(LT.MSG.START);
+      }
+      await refresh();
+    } finally {
+      busy = false;
+      renderStatus();
     }
-    await send(running ? LT.MSG.STOP : LT.MSG.START);
-    setTimeout(refresh, 150);
+  }
+  $('toggle').addEventListener('click', () => changeSession());
+  $('restart').addEventListener('click', () => changeSession(true));
+  $('reloadPage').addEventListener('click', async () => {
+    if (tabId == null) return;
+    await chrome.tabs.reload(tabId);
+    window.close();
   });
 
   $('openOptions').addEventListener('click', () => chrome.runtime.openOptionsPage());
@@ -163,22 +183,19 @@
     ['targetLang', 'targetLang'],
     ['scene', 'sceneId'],
   ]) {
-    $(id).addEventListener('change', async (e) => {
-      settings = await LT.Settings.save({ [key]: e.target.value });
-      if (tabId != null) {
-        chrome.tabs.sendMessage(tabId, { type: LT.MSG.SETTINGS_CHANGED }).catch(() => {});
-      }
-      renderStatus();
+    $(id).addEventListener('change', (e) => {
+      const value = e.target.value;
+      settingsSave = settingsSave.then(async () => {
+        settings = await LT.Settings.save({ [key]: value });
+        await send(LT.MSG.SETTINGS_CHANGED);
+        renderStatus();
+      }).catch(() => banner('设置保存失败，请重新打开弹窗后重试。', ''));
     });
   }
 
-  // 临时补充：输入即存（防抖），只发给内容脚本内存，不落 storage
-  let tempSaveTimer = null;
+  // 输入直接送到页面内存，避免立即关掉弹窗时防抖任务来不及执行。
   $('tempContext').addEventListener('input', (e) => {
-    clearTimeout(tempSaveTimer);
-    tempSaveTimer = setTimeout(() => {
-      send(LT.MSG.SET_TEMP_CONTEXT, e.target.value);
-    }, 400);
+    send(LT.MSG.SET_TEMP_CONTEXT, e.target.value);
   });
 
   window.addEventListener('unload', () => clearInterval(timer));

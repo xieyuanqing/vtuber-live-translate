@@ -32,6 +32,7 @@ globalThis.LT = globalThis.LT || {};
   let autoStartedFor = '';
   let userStoppedFor = '';
   let gateHint = ''; // applyGate 自己挂上去的提示，条件消失后要由它负责收掉
+  let sessionGeneration = 0; // 停止后作废仍在等待播放器 / 音频挂载的启动操作
   // 本场临时补充（弹窗输入）：只活在内容脚本内存里，不进 storage，
   // 换视频 / 刷新页面即消失。开始翻译时冻结进快照，运行中改动要重开一场才生效。
   let tempContext = '';
@@ -109,12 +110,18 @@ globalThis.LT = globalThis.LT || {};
 
   async function start(reason) {
     if (session.phase !== 'idle') return;
+    const generation = ++sessionGeneration;
+    const videoId = LT.YouTube.videoIdFromUrl();
+    const runTempContext = tempContext;
+    const isCurrent = () => generation === sessionGeneration && videoId === LT.YouTube.videoIdFromUrl();
     session.phase = 'starting';
     session.error = '';
     pushStatus();
 
     try {
-      settings = await LT.Settings.load();
+      const runSettings = await LT.Settings.load();
+      if (!isCurrent()) return;
+      settings = runSettings;
 
       const key = LT.Settings.pickKey(settings);
       if (!key) {
@@ -123,8 +130,9 @@ globalThis.LT = globalThis.LT || {};
         return;
       }
 
-      const player = LT.YouTube.player();
       const video = await LT.YouTube.waitForVideo();
+      if (!isCurrent()) return;
+      const player = LT.YouTube.player();
       if (!player || !video) {
         onConnState('error:没有找到播放器');
         session.phase = 'idle';
@@ -136,44 +144,47 @@ globalThis.LT = globalThis.LT || {};
 
       // ---- 冻结本场快照 ----
       let meta = currentMeta;
-      if (settings.useMetadata && (!meta || meta.videoId !== LT.YouTube.videoIdFromUrl())) {
+      if (runSettings.useMetadata && (!meta || meta.videoId !== videoId)) {
         meta = await LT.YouTube.waitForMeta({ videoId: LT.YouTube.videoIdFromUrl(), tries: 4 });
+        if (!isCurrent()) return;
         if (meta) currentMeta = meta;
       }
-      const scene = LT.Settings.scene(settings);
-      const metadataText = settings.useMetadata
-        ? LT.Prompt.formatMetadata(meta, settings.metadataLimit)
+      // 等待期间设置页可能发来新配置，本场继续使用启动时读取的那一份。
+      const scene = LT.Settings.scene(runSettings);
+      const metadataText = runSettings.useMetadata
+        ? LT.Prompt.formatMetadata(meta, runSettings.metadataLimit)
         : '';
       const prompt = LT.Prompt.build({
         scene,
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
+        sourceLang: runSettings.sourceLang,
+        targetLang: runSettings.targetLang,
         metadataText,
-        manualContext: settings.manualContext,
-        tempContext,
+        manualContext: runSettings.manualContext,
+        tempContext: runTempContext,
       });
       session.snapshot = {
         prompt,
         sceneLabel: scene.label,
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
+        sourceLang: runSettings.sourceLang,
+        targetLang: runSettings.targetLang,
         metaUsed: !!metadataText,
-        tempUsed: !!tempContext,
+        tempUsed: !!runTempContext,
         videoId: LT.YouTube.videoIdFromUrl(),
       };
       console.info(
         `[流译] 开始（${reason}）｜场景 ${scene.label}｜${LT.sourceLabel(
-          settings.sourceLang
-        )} → ${LT.targetLabel(settings.targetLang)}｜元数据 ${
+          runSettings.sourceLang
+        )} → ${LT.targetLabel(runSettings.targetLang)}｜元数据 ${
           metadataText ? '已注入' : '未使用'
-        }｜临时补充 ${tempContext ? '已注入' : '未使用'}`
+        }｜临时补充 ${runTempContext ? '已注入' : '未使用'}`
       );
 
       // ---- 字幕稳定器 ----
       session.stabilizer = new LT.SubtitleStabilizer({
-        idleCommitMs: settings.stabIdleMs,
-        maxCurrentChars: settings.stabMaxChars,
+        idleCommitMs: runSettings.stabIdleMs,
+        maxCurrentChars: runSettings.stabMaxChars,
         onRender: (current, committed) => {
+          if (!isCurrent()) return;
           caption.pushCommitted(committed);
           caption.setCurrent(current);
           caption.render();
@@ -182,20 +193,21 @@ globalThis.LT = globalThis.LT || {};
 
       // ---- Live 客户端 ----
       session.client = new LT.GeminiLiveClient({
-        keyProvider: () => LT.Settings.pickKey(settings),
-        baseUrl: settings.baseUrl,
+        keyProvider: () => LT.Settings.pickKey(runSettings),
+        baseUrl: runSettings.baseUrl,
         prompt,
-        targetLang: settings.targetLang,
-        echoTargetLanguage: settings.echoTargetLanguage,
-        rotateAfterMs: settings.rotateSeconds * 1000,
+        targetLang: runSettings.targetLang,
+        echoTargetLanguage: runSettings.echoTargetLanguage,
+        rotateAfterMs: runSettings.rotateSeconds * 1000,
         listener: {
-          onState: onConnState,
+          onState: (state) => { if (isCurrent()) onConnState(state); },
           onInputText: (t) => {
-            if (!settings.showSource) return;
+            if (!isCurrent() || !settings.showSource) return;
             caption.setSource(t);
             caption.render();
           },
           onOutputText: (t) => {
+            if (!isCurrent()) return;
             session.lastOutputAt = Date.now();
             session.stabilizer.onFragment(t);
           },
@@ -203,15 +215,17 @@ globalThis.LT = globalThis.LT || {};
       });
 
       // ---- 音频旁路 ----
-      session.tap = new LT.AudioTap({
-        onChunk: (u8) => session.client && session.client.feedChunk(u8),
+      const tap = new LT.AudioTap({
+        onChunk: (u8) => isCurrent() && session.client && session.client.feedChunk(u8),
         onLevel: (pct) => {
+          if (!isCurrent()) return;
           session.level = pct;
         },
-        onError: (msg) => onConnState(`error:${msg}`),
       });
-
-      session.mode = await session.tap.attach(video);
+      session.tap = tap;
+      const mode = await tap.attach(video);
+      if (!isCurrent()) { tap.detach(); return; }
+      session.mode = mode;
       session.startedAt = Date.now();
       session.lastOutputAt = 0;
       session.phase = 'running';
@@ -219,6 +233,7 @@ globalThis.LT = globalThis.LT || {};
       applyGate();
       pushStatus();
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('[流译] 启动失败', err);
       // 先把半成品拆干净，再报错——client.stop() 会发 'stopped'，
       // 顺序反了的话报错提示会立刻被它清掉，用户什么都看不到。
@@ -226,6 +241,11 @@ globalThis.LT = globalThis.LT || {};
       session.phase = 'idle';
       onConnState(`error:${err && err.message ? err.message : '启动失败'}`);
       pushStatus();
+    } finally {
+      if (generation === sessionGeneration) {
+        if (session.phase === 'starting') session.phase = 'idle';
+        pushStatus();
+      }
     }
   }
 
@@ -244,9 +264,12 @@ globalThis.LT = globalThis.LT || {};
   }
 
   async function stop() {
+    sessionGeneration++;
     if (session.phase === 'idle') return;
     teardown();
     session.phase = 'idle';
+    session.conn = 'stopped';
+    session.error = '';
     caption.clear();
     caption.setStatus('', 'ok', false);
     pushStatus();
@@ -261,6 +284,7 @@ globalThis.LT = globalThis.LT || {};
     const paused = !video || video.paused;
     const silent = !!video && (video.muted || video.volume === 0);
     session.tap.setGate(!ad && !paused && !silent);
+    if (ad || paused || silent) session.level = 0;
     caption.setVisible(!ad);
 
     // 连接本身有问题时以连接状态为准，不抢它的提示位
@@ -309,7 +333,9 @@ globalThis.LT = globalThis.LT || {};
       pushStatus();
       return;
     }
-    currentMeta = await LT.YouTube.waitForMeta({ videoId: id, tries: 8 });
+    const meta = await LT.YouTube.waitForMeta({ videoId: id, tries: 8 });
+    if (id !== currentVideoId || id !== LT.YouTube.videoIdFromUrl()) return;
+    currentMeta = meta;
     pushStatus();
     maybeAutoStart();
   }
@@ -356,6 +382,7 @@ globalThis.LT = globalThis.LT || {};
         break;
       case LT.MSG.SET_TEMP_CONTEXT:
         tempContext = String(msg.payload || '').trim();
+        sendResponse({ ok: true });
         break;
       default:
         break;
@@ -368,7 +395,7 @@ globalThis.LT = globalThis.LT || {};
   });
 
   LT.YouTube.onMetaPush((meta) => {
-    if (meta && meta.videoId) {
+    if (meta && meta.videoId === currentVideoId && meta.videoId === LT.YouTube.videoIdFromUrl()) {
       currentMeta = meta;
       if (meta.videoId === LT.YouTube.videoIdFromUrl()) maybeAutoStart();
     }
