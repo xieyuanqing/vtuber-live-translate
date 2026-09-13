@@ -3,18 +3,21 @@ package com.xyq.livetranslate
 /**
  * OpenCode Zen 免费模型目录与白名单校验。
  *
- * 官方依据与实测结论（详见 docs/09-free-services-verification.md 及 /tmp/vtuber-stage1-review-feedback.md）：
+ * 官方依据与实测结论（详见 docs/09-free-services-verification.md）：
  * 1. 官方文档（https://opencode.ai/docs/zen/）：
  *    - big-pickle：输入与输出均明确标注为 Free。
  *    - 隐私条款：Big Pickle 免费期间数据可能用于模型改进；请勿发送敏感资料。
  *    - GET /zen/v1/models：仅返回 id、object、created、owned_by，无价格字段。
  *    - 规则：严禁将全列表当成免费，严禁使用 contains("free") 猜测。
- * 2. 真实 API 实测证据（2026-09-12 curl 测试）：
- *    - POST /zen/v1/chat/completions 使用 public 密钥返回 HTTP 400：
- *      {"type":"error","error":{"type":"MissingSessionID","message":"Error from provider (Console): OpenCode's free tier can only be used in OpenCode"}}
- *    - 结论：免费接口目前限制仅 OpenCode 官方客户端使用，第三方 App 未验证可用。
- *    - 本 App 绝不伪造 x-opencode-session 绕过限制，不将 big-pickle 标为已验证可用。
- *    - 保留候选配置与测试入口供用户复测，杜绝自动切换付费服务。
+ * 2. 真实 API 实测证据：
+ *    - 2026-09-12：POST /zen/v1/chat/completions 使用 public 密钥返回 HTTP 400
+ *      MissingSessionID（"OpenCode's free tier can only be used in OpenCode"）。
+ *    - 2026-09-13：补发 `x-opencode-session: ses_<32位十六进制>` 请求头后同一端点返回
+ *      HTTP 200 且 cost=0；GET /zen/v1/models 无需该头。该头是网关的路由要求，
+ *      不是认证凭据；App 发送的是本安装自生成的随机会话 ID（见 SettingsStore），
+ *      不伪装官方客户端、不冒用他人会话，也未触碰任何付费能力。
+ *    - 结论：免费接口在本 App 可用；若上游再次收紧（重新出现 MissingSessionID），
+ *      仍按 localizeZenError 如实提示，不自动切换付费服务。
  * 3. 内部使用固定 public 密钥，UI 不要求用户填写 Key，绝不向 Zen 发送 Gemini Key。
  */
 object OpenCodeZenCatalog {

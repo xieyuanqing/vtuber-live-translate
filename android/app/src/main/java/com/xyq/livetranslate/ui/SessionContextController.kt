@@ -407,6 +407,7 @@ internal class SessionContextController(
                     apiKey = apiKey,
                     model = model,
                     format = format,
+                    extraHeaders = SettingsStore.secondAiExtraHeaders(context),
                 )
             }.onSuccess { result ->
                 postToUi success@{

@@ -46,6 +46,7 @@ object AiTextClient {
         model: String,
         format: Format,
         enableSearch: Boolean = false,
+        extraHeaders: Map<String, String> = emptyMap(),
     ): JSONObject {
         when (format) {
             Format.GEMINI -> return generateGemini(
@@ -55,6 +56,7 @@ object AiTextClient {
                 apiKey,
                 model,
                 enableSearch,
+                extraHeaders,
             )
             Format.OPENAI -> return generateOpenAI(
                 systemPrompt,
@@ -62,6 +64,7 @@ object AiTextClient {
                 baseUrl,
                 apiKey,
                 model,
+                extraHeaders,
             )
         }
     }
@@ -81,6 +84,7 @@ object AiTextClient {
         apiKey: String,
         model: String,
         format: Format,
+        extraHeaders: Map<String, String> = emptyMap(),
     ): String {
         val response = generate(
             systemPrompt = "你是连通性自检端点。只返回严格JSON，格式如下：{\"sessionContext\":\"自检通过\",\"note\":\"分析服务正常\"}",
@@ -90,6 +94,7 @@ object AiTextClient {
             model = model,
             format = format,
             enableSearch = false,
+            extraHeaders = extraHeaders,
         )
         val sessionContext = if (response.has("sessionContext") && !response.isNull("sessionContext")) {
             response.optString("sessionContext", "").trim()
@@ -230,6 +235,7 @@ object AiTextClient {
         apiKey: String,
         model: String,
         enableSearch: Boolean = false,
+        extraHeaders: Map<String, String> = emptyMap(),
     ): JSONObject {
         val modelId = model.removePrefix("models/")
         val url = normalizeBaseUrl(baseUrl) + "/v1beta/models/${modelId}:generateContent?key=$apiKey"
@@ -271,6 +277,7 @@ object AiTextClient {
         val req = Request.Builder()
             .url(url)
             .post(bodyBytes.toRequestBody(jsonMedia))
+            .apply { extraHeaders.forEach { (k, v) -> if (k.isNotBlank() && v.isNotBlank()) header(k, v) } }
             .build()
 
         http.newCall(req).execute().use { resp ->
@@ -313,6 +320,7 @@ object AiTextClient {
         baseUrl: String,
         apiKey: String,
         model: String,
+        extraHeaders: Map<String, String> = emptyMap(),
     ): JSONObject {
         val url = normalizeBaseUrl(baseUrl) + "/v1/chat/completions"
 
@@ -343,6 +351,7 @@ object AiTextClient {
         val req = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $apiKey")
+            .apply { extraHeaders.forEach { (k, v) -> if (k.isNotBlank() && v.isNotBlank()) header(k, v) } }
             .post(bodyObj.toString().toRequestBody(jsonMedia))
             .build()
 

@@ -7,6 +7,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -122,6 +123,23 @@ class SecondAiServiceTest {
         assertEquals(OpenCodeZenCatalog.CANDIDATE_MODEL, SettingsStore.secondAiZenModel(context))
     }
 
+    @Test
+    fun secondAiExtraHeadersOnlyForZenAndStable() {
+        // 非 Zen 服务不需要额外请求头
+        SettingsStore.saveSecondAiService(context, SettingsStore.SERVICE_GEMINI)
+        assertTrue(SettingsStore.secondAiExtraHeaders(context).isEmpty())
+        SettingsStore.saveSecondAiService(context, SettingsStore.SERVICE_CUSTOM)
+        assertTrue(SettingsStore.secondAiExtraHeaders(context).isEmpty())
+
+        // Zen 服务返回会话头：同一安装保持稳定，且符合网关要求的格式（ses_ + 32 位十六进制）
+        SettingsStore.saveSecondAiService(context, SettingsStore.SERVICE_OPENCODE_ZEN)
+        val headers1 = SettingsStore.secondAiExtraHeaders(context)
+        val headers2 = SettingsStore.secondAiExtraHeaders(context)
+        assertEquals(headers1, headers2)
+        val sessionId = headers1["x-opencode-session"]
+        assertTrue("会话 ID 必须匹配 ses_ + 32 位十六进制", sessionId?.matches(Regex("ses_[0-9a-f]{32}")) == true)
+    }
+
     // ---------- OpenCodeZenCatalog 白名单与错误本地化 ----------
 
     @Test
@@ -180,6 +198,27 @@ class SecondAiServiceTest {
             format = AiTextClient.Format.OPENAI,
         )
         assertEquals("分析服务正常", result)
+        // 未传入额外头时不得携带 Zen 会话头
+        assertNull(server.takeRequest().getHeader("x-opencode-session"))
+    }
+
+    @Test
+    fun aiTextProbeForwardsExtraHeaders() {
+        val contentJson = """{"sessionContext":"自检通过","note":"分析服务正常"}"""
+        val openAiEnvelope = """{"choices":[{"message":{"content":${org.json.JSONObject.quote(contentJson)}}}]}"""
+        server.enqueue(MockResponse().setBody(openAiEnvelope))
+
+        AiTextClient.probe(
+            baseUrl = server.url("/").toString(),
+            apiKey = "test-key",
+            model = "test-model",
+            format = AiTextClient.Format.OPENAI,
+            extraHeaders = mapOf("x-opencode-session" to "ses_0123456789abcdef0123456789abcdef"),
+        )
+        assertEquals(
+            "ses_0123456789abcdef0123456789abcdef",
+            server.takeRequest().getHeader("x-opencode-session"),
+        )
     }
 
     @Test

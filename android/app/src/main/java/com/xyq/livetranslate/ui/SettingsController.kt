@@ -560,7 +560,7 @@ internal class SettingsController(
                 views.etSecondAiKey.setText(OpenCodeZenCatalog.PUBLIC_KEY)
                 views.etSecondAiUrl.setText(OpenCodeZenCatalog.BASE_URL)
                 views.etSecondAiModel.setText(SettingsStore.secondAiZenModel(context))
-                renderSecondAiTestStatus(true, context.getString(R.string.rt_zen_client_restricted_full))
+                renderSecondAiTestStatus(false, context.getString(R.string.rt_zen_ready_status))
             }
             SettingsStore.SERVICE_CUSTOM -> {
                 views.containerGeminiActions.visibility = View.GONE
@@ -832,6 +832,7 @@ internal class SettingsController(
                     apiKey = apiKey,
                     model = model,
                     format = format,
+                    extraHeaders = SettingsStore.secondAiExtraHeaders(context),
                 )
             }
             postToUi {

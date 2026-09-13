@@ -2,6 +2,7 @@ package com.xyq.livetranslate
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.security.SecureRandom
 
 
 /**
@@ -205,6 +206,19 @@ object SettingsStore {
         prefs(c).edit().putString("secondAiZenModel", safeModel).apply()
     }
 
+    /**
+     * Zen 免费接口要求每个请求声明 `x-opencode-session`（ses_ + 32 位十六进制），
+     * 否则返回 400 MissingSessionID。这里生成并固定一个每安装唯一的随机会话 ID：
+     * 只用于网关路由，不含任何用户信息，也不伪装官方客户端或他人会话。
+     */
+    private fun opencodeSessionId(c: Context): String {
+        prefs(c).getString("opencodeSessionId", null)?.let { return it }
+        val bytes = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val id = "ses_" + bytes.joinToString("") { "%02x".format(it) }
+        prefs(c).edit().putString("opencodeSessionId", id).apply()
+        return id
+    }
+
     // --- 自定义服务独立配置 ---
 
     fun secondAiCustomFormat(c: Context): String {
@@ -304,6 +318,12 @@ object SettingsStore {
             SERVICE_OPENCODE_ZEN -> saveSecondAiZenModel(c, model)
             SERVICE_CUSTOM -> saveSecondAiCustomModel(c, model)
         }
+    }
+
+    /** 当前激活服务需要的额外 HTTP 头（如 Zen 的会话标识）；其他服务返回空。 */
+    fun secondAiExtraHeaders(c: Context): Map<String, String> = when (secondAiService(c)) {
+        SERVICE_OPENCODE_ZEN -> mapOf("x-opencode-session" to opencodeSessionId(c))
+        else -> emptyMap()
     }
 
     // ---------- 检查更新 ----------

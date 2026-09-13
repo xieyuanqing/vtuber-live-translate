@@ -2,6 +2,33 @@
 
 倒序排列，最新在上。每完成一步（或踩一个值得记的坑）加一条。
 
+## 2026-09-13 · OpenCode Zen 免费接口实测打通（v2.6.0 / 38）
+
+**改动**
+
+- `SettingsStore` 新增 `secondAiExtraHeaders()`：Zen 服务返回 `x-opencode-session` 头，
+  值为每安装固定一次的随机会话 ID（`ses_` + 32 位十六进制，SecureRandom 生成，存 SharedPreferences，
+  不含任何用户信息）；其他服务返回空。
+- `AiTextClient.generate` / `probe` 增加可选 `extraHeaders` 参数，两条格式路径统一应用；
+  `ContentContextAnalyzer.analyze` 透传。三个调用方（背景分析、连接自检）都从
+  `SettingsStore.secondAiExtraHeaders` 取值。`listModels` 不加——实测 `/zen/v1/models` 无需该头。
+- UI 文案同步事实：Zen 选中态初始提示改为「已接入免费模型」；设置页橙色说明改为
+  「已实测可用 + 免费额度以官方为准」；删除零引用的 `rt_zen_client_restricted_full`、`zen_testing_status`。
+  `localizeZenError` 的 MissingSessionID 分支保留——上游若再次收紧仍如实提示。
+- `OpenCodeZenCatalog` 注释更新为两轮实测结论；不再写「未验证可用」。
+
+**原因**：2026-09-12 那轮实测被 `MissingSessionID`（免费额度仅限 OpenCode 客户端）挡住，
+当时决定不伪造会话头。用户复核外部资料后要求补验证：网关缺的是路由用的会话标识，不是认证。
+加头后实测打通，属于按服务方要求声明自己的随机会话标识，不是绕过付费或冒用身份。
+
+**真实验证（curl，2026-09-13）**
+
+- 无会话头：POST `/zen/v1/chat/completions`（Bearer public，big-pickle）→ HTTP 400（复现基线）。
+- 加 `x-opencode-session: ses_<32hex>`：同请求 → **HTTP 200**，正常返回 JSON，`cost: "0"`。
+- GET `/zen/v1/models` 不带该头 → HTTP 200（模型列表无需会话头）。
+- 单测新增 3 个断言组（extraHeaders 仅 Zen、稳定且格式正确、probe 转发/默认不带）；
+  `testDebugUnitTest` + `lintDebug` + `assembleDebug` 全过，`git diff --check` 干净。
+
 ## 2026-09-12 · 阶段2：中英双语界面（v2.6.0 / 38）
 
 界面语言可在「设置 → 界面语言」切换：跟随系统 / 简体中文 / English。

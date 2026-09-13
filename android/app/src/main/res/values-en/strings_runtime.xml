@@ -216,7 +216,7 @@
     <string name="rt_settings_helper_manual_model_id">You can enter model ID directly</string>
     <string name="rt_btn_fetch_models">Fetch model list</string>
     <string name="rt_zen_client_restricted">Current free tier is restricted to OpenCode client, not verified in this app; retest or switch service</string>
-    <string name="rt_zen_client_restricted_full">Not verified: Current free tier is restricted to OpenCode client, not verified in this app; retest or switch service</string>
+    <string name="rt_zen_ready_status">Free model connected (public endpoint): use directly, or tap \"Test analysis service\" to confirm availability</string>
     <string name="rt_service_option_gemini">Gemini (Official, API Key required)</string>
     <string name="rt_service_option_custom">Custom Service (Proxy / 3rd party compatible)</string>
     <string name="rt_settings_toast_format_switched">Switched to %1$s; please fetch model list again</string>

@@ -217,7 +217,7 @@
     <string name="rt_settings_helper_manual_model_id">可直接手动输入模型 ID</string>
     <string name="rt_btn_fetch_models">拉取模型列表</string>
     <string name="rt_zen_client_restricted">当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务</string>
-    <string name="rt_zen_client_restricted_full">未验证可用：当前免费接口限制仅 OpenCode 客户端使用，本 App 未验证可用；可重新测试或切换服务</string>
+    <string name="rt_zen_ready_status">已接入免费模型（公开接入点）：可直接使用，或点「测试分析服务」确认当前可用性</string>
     <string name="rt_service_option_gemini">Gemini（官方，需自备 API Key）</string>
     <string name="rt_service_option_custom">自定义服务（反代 / 第三方兼容）</string>
     <string name="rt_settings_toast_format_switched">已切换到 %1$s，请重新拉取模型列表</string>

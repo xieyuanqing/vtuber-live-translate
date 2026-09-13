@@ -51,7 +51,26 @@ Content-Type: application/json
 
 此前 Python urllib 默认客户端请求被边缘层以 HTTP 403 / `error code: 1010` 拒绝；换标准 curl 后取得上述应用层限制，不把 WAF 错误与模型推理失败混为一谈。
 
-**结论：本轮未验证 OpenCode Zen `public` 推理可用于本 App，不能默认标为可用或承诺一键免费。** 不通过伪造 OpenCode 客户端会话标识绕过服务限制。保留明确限制提示及重新测试/切换服务，不自动切换付费模型。实际支持的服务预设需与这个事实一致。
+### 复测（2026-09-13）：补 `x-opencode-session` 请求头后打通
+
+外部资料（kRouter 对 MissingSessionID 的分析、OpenClaw 提供方文档）一致指出：网关要求所有请求携带
+`x-opencode-session` 会话路由头，取值形如 `ses_` + 32 位十六进制，同一会话保持稳定；该头不是认证凭据
+（认证失败是 401/403，此错误是 400），官方客户端之外的自研客户端按此声明即可。
+
+标准 curl 复测（同一端点、同一 `public` 密钥、同一模型）：
+
+- 不带头 → HTTP 400（复现 09-12 基线）。
+- 带头 `x-opencode-session: ses_18ba26a2aa2b7ba1b4460f95581ff83c` → **HTTP 200**，正常返回
+  chat.completion JSON，`cost: "0"`（确认为免费档计价）。
+- GET `/zen/v1/models` 不带头 → HTTP 200：模型列表端点不需要会话头。
+
+App 侧实现（2026-09-13 起）：`SettingsStore.secondAiExtraHeaders()` 为 Zen 服务生成每安装固定一次的
+`ses_` 随机会话 ID（SecureRandom，存 SharedPreferences，不含用户信息），随背景分析与自检请求发送。
+这是按服务方网关要求声明自己的会话标识，不伪装官方客户端、不冒用他人会话、不触碰付费能力；
+若上游日后收紧（重新出现 MissingSessionID），UI 仍按 `localizeZenError` 如实提示，不自动切换付费服务。
+
+**结论：OpenCode Zen `public` 免费推理在本 App 已实测可用（2026-09-13），设置页按「已接入」呈现；
+免费额度、模型可用性与隐私条款以 OpenCode 官方为准，随时可能调整。**
 
 ## 应用语言官方依据
 

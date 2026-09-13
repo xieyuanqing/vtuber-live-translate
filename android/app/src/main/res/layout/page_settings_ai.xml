@@ -184,7 +184,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/grid_4"
-                        android:text="@string/zen_limitation_warning"
+                        android:text="@string/zen_session_note"
                         android:textColor="@color/warning"
                         android:textSize="12sp"/>
                     <TextView
