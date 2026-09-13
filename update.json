@@ -1,10 +1,10 @@
 {
-  "versionCode": 36,
-  "versionName": "2.4.1",
-  "title": "流译 2.4.1（多平台网页分析）",
-  "notes": "2.4.0 以来的功能与稳定性更新。\n\n• 视频链接分析扩展至 YouTube、哔哩哔哩与 Twitch\n• 其他公网播放页面可通过 Jina Reader 提取资料，并使用独立安全提示词\n• 历史详情新增二次确认删除，修复本场背景大椭圆样式\n• 修复多句字幕丢失、历史写入阻塞及聆听状态判断\n• 修复检查更新误报，并清理无效代码\n\n安装包为 Debug 签名内测包，可覆盖安装同签名旧版。",
-  "apkName": "LiveTranslate-2.4.1.apk",
+  "versionCode": 38,
+  "versionName": "2.6.0",
+  "title": "流译 2.6.0（界面收敛与开源）",
+  "notes": "2.4.1 以来的累积更新，重点是把界面收干净。\n\n• 翻译服务与背景分析 AI 两页统一骨架，按钮按主次分层\n• 模型选择改为模型框右侧刷新图标 + 就地下拉，取代全屏面板\n• 悬浮窗控制按钮 44dp 改 28dp，收起后只留一根贴边小蓝条\n• 修复控制条自动隐藏失效（倒计时被每条字幕重置）与收起态拖不动\n• 新增中英双语界面，界面语言不改变发给模型的提示词\n• 背景分析 AI 支持 OpenCode Zen 免费接入点与连通性自检\n• 仓库开源为 MIT，README 重写并补英文版\n\n安装包为 Debug 签名内测包，可覆盖安装同签名旧版。",
+  "apkName": "LiveTranslate-2.6.0.apk",
   "downloadUrls": [
-    "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.4.1/LiveTranslate-2.4.1.apk"
+    "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.6.0/LiveTranslate-2.6.0.apk"
   ]
 }
