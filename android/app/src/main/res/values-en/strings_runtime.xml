@@ -259,6 +259,9 @@
     <string name="rt_update_progress_pct">Source %1$d/%2$d · %3$s\n%4$d%%</string>
     <string name="rt_update_progress_kb">Source %1$d/%2$d · %3$s\nDownloaded %4$d KB</string>
     <string name="rt_update_download_failed">Download failed: %1$s</string>
+    <string name="rt_update_sha256_missing">The update manifest has no sha256, so installation was refused</string>
+    <string name="rt_update_sha256_mismatch">The APK digest does not match, so installation was refused</string>
+    <string name="rt_update_sha256_unreadable">The APK could not be read, so installation was refused</string>
     <string name="rt_update_toast_unknown_sources_required">Please allow installing unknown apps; installation will resume on return</string>
     <string name="rt_update_toast_cannot_open_install_settings">Cannot open install permission settings</string>
     <string name="rt_update_toast_cannot_open_installer">Cannot open installation screen: %1$s</string>

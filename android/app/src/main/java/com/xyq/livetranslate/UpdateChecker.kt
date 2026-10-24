@@ -86,14 +86,16 @@ object UpdateChecker {
         val single = json.optString("downloadUrl").trim()
         if (single.isNotEmpty()) urls += single
         require(urls.isNotEmpty()) { "缺少 downloadUrls" }
+        val notesText = notes.trim()
         return AppUpdateInfo(
             versionCode = versionCode,
             versionName = versionName,
             title = title,
-            notes = notes.trim(),
+            notes = notesText,
             apkName = apkName,
             downloadUrls = expandDownloadMirrors(urls.distinct()),
             sourceLabel = sourceLabel,
+            sha256 = readSha256(json, notesText),
         )
     }
 
@@ -126,7 +128,14 @@ object UpdateChecker {
             apkName = apkName,
             downloadUrls = expandDownloadMirrors(listOf(apkUrl)),
             sourceLabel = sourceLabel,
+            sha256 = readSha256(json, notes),
         )
+    }
+
+    /** 只接受 64 位十六进制。字段缺失、留空或格式不对都当成没提供。 */
+    fun readSha256(json: JSONObject, notes: String = json.optString("body")): String {
+        val direct = json.optString("sha256").ifBlank { json.optString("apkSha256") }
+        return UpdateVerifier.normalize(direct).ifEmpty { UpdateVerifier.sha256InText(notes) }
     }
 
     fun expandDownloadMirrors(urls: List<String>): List<String> {

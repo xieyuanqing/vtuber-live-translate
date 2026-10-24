@@ -260,6 +260,9 @@
     <string name="rt_update_progress_pct">源 %1$d/%2$d · %3$s\n%4$d%%</string>
     <string name="rt_update_progress_kb">源 %1$d/%2$d · %3$s\n已下载 %4$d KB</string>
     <string name="rt_update_download_failed">下载失败：%1$s</string>
+    <string name="rt_update_sha256_missing">更新清单没有 sha256，已拒绝安装</string>
+    <string name="rt_update_sha256_mismatch">安装包校验失败，已拒绝安装</string>
+    <string name="rt_update_sha256_unreadable">安装包无法读取，已拒绝安装</string>
     <string name="rt_update_toast_unknown_sources_required">请允许安装未知应用，返回后将继续安装</string>
     <string name="rt_update_toast_cannot_open_install_settings">无法打开安装权限设置</string>
     <string name="rt_update_toast_cannot_open_installer">无法打开安装界面：%1$s</string>
