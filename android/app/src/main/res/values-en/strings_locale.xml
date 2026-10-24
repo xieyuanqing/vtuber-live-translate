@@ -2,7 +2,7 @@
 <resources>
     <!-- Language settings strings (English) -->
     <string name="settings_language_title">App Language</string>
-    <string name="settings_language_desc">Change the display language of the app interface</string>
+    <string name="settings_language_desc">Changes the interface only, not the translation direction</string>
     <string name="locale_dialog_title">App Language</string>
     <string name="locale_option_system">Follow system</string>
     <string name="locale_option_zh_hans">Simplified Chinese</string>

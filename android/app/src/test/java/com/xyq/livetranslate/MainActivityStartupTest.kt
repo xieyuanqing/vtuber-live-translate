@@ -751,6 +751,19 @@ class MainActivityStartupTest {
     }
 
     @Test
+    fun languageRowLeadsTheGeneralSettingsCard() = withActivity { activity ->
+        val language = activity.findViewById<View>(R.id.rowSetLanguage)
+        val translate = activity.findViewById<View>(R.id.rowSetTranslate)
+        val diagnostics = activity.findViewById<View>(R.id.rowSetDiagnostics)
+        val parent = language.parent as android.view.ViewGroup
+        assertEquals(parent, translate.parent)
+        assertTrue(parent.indexOfChild(language) < parent.indexOfChild(translate))
+        assertTrue(language.parent !== diagnostics.parent)
+        val value = activity.findViewById<android.widget.TextView>(R.id.tvSettingsLanguageValue)
+        assertTrue(value.text.isNotBlank())
+    }
+
+    @Test
     fun historyRecyclerGroupsFiltersAndShares() = withActivity { activity ->
         HistoryStore.save(activity, historySession("today-live", TranslationMode.INTERPRETATION, "课堂", atHour(0, 15)))
         HistoryStore.save(activity, historySession("yesterday-video", TranslationMode.VIDEO, "直播", atHour(-1, 11)))

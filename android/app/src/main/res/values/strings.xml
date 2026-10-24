@@ -92,7 +92,7 @@
     <string name="scene_library_btn_reset_defaults">恢复该模式默认场景</string>
     <string name="scene_library_btn_new_scene">新建场景</string>
     <string name="settings_title">设置</string>
-    <string name="settings_subtitle">连接服务，调整字幕，按自己的习惯使用。</string>
+    <string name="settings_subtitle">界面语言、翻译服务和字幕都在上面。场景和背景分析在下面。</string>
     <string name="settings_section_general">常用设置</string>
     <string name="settings_row_translate_title">翻译服务</string>
     <string name="settings_row_translate_desc">API Key 与服务地址</string>
@@ -100,7 +100,7 @@
     <string name="settings_row_subtitle_desc">样式预览、字号、背景不透明度</string>
     <string name="settings_section_scenes_ai">场景与辅助</string>
     <string name="settings_row_scenes_title">场景库</string>
-    <string name="settings_row_scenes_desc">管理同传与视频的翻译偏好</string>
+    <string name="settings_row_scenes_desc">同传和视频各一套，进去后可以切换</string>
     <string name="settings_row_ai_title">背景分析 AI</string>
     <string name="settings_row_ai_desc">可选 · 帮翻译补充视频资料与背景</string>
     <string name="settings_section_maintenance">维护</string>
