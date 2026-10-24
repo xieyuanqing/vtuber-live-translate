@@ -41,6 +41,11 @@ object StatusBus {
     @Volatile var zhTail = ""
     @Volatile var currentKeyLabel = ""
     @Volatile var audioLevelPct = 0
+    /**
+     * 当前仍由 [TranscriptLogger] 写入的历史会话 id。
+     * 进程被杀后这里是空的；磁盘上 `endedAt == null` 只说明那场没正常收尾，不能当成还在翻译。
+     */
+    @Volatile var activeHistoryId: String? = null
     val chunksSent = AtomicLong(0)
 
     private val sessionRef = AtomicReference(TranslationSessionSnapshot())
@@ -101,6 +106,7 @@ object StatusBus {
         currentKeyLabel = ""
         audioLevelPct = 0
         chunksSent.set(0)
+        activeHistoryId = null
         sessionRef.set(TranslationSessionSnapshot())
         // captureMode 在 start 时写入，stop 时清空，不在这里抹掉「即将启动」的意图
     }

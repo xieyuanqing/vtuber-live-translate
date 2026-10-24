@@ -146,14 +146,14 @@ class AppLocaleTest {
         val zhTitle = AppStrings.get(R.string.locale_dialog_title)
         assertEquals("界面语言", zhTitle)
         val zhDesc = AppStrings.get("settings_language_desc")
-        assertEquals("切换应用界面的显示语言", zhDesc)
+        assertEquals("只改界面，不改翻译方向", zhDesc)
 
         // en 下资源查找
         AppLocale.save(context, AppLocale.TAG_EN)
         val enTitle = AppStrings.get(R.string.locale_dialog_title)
         assertEquals("App Language", enTitle)
         val enDesc = AppStrings.get("settings_language_desc")
-        assertEquals("Change the display language of the app interface", enDesc)
+        assertEquals("Changes the interface only, not the translation direction", enDesc)
         val enEnglishOption = AppStrings.get(R.string.locale_option_en)
         assertEquals("English", enEnglishOption)
     }

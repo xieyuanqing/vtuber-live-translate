@@ -25,7 +25,7 @@ object SettingsStore {
         apiKeysRaw(c).split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
     fun saveApiKeys(c: Context, raw: String) {
-        prefs(c).edit().putString("apiKeysEnc", KeystoreCrypto.encrypt(raw.trim())).apply()
+        saveEncrypted(c, "apiKeysEnc", raw)
     }
 
     // ---------- Base URL ----------
@@ -171,7 +171,7 @@ object SettingsStore {
     }
 
     fun saveSecondAiGeminiApiKey(c: Context, raw: String) {
-        prefs(c).edit().putString("secondAiGeminiApiKeyEnc", KeystoreCrypto.encrypt(raw.trim())).apply()
+        saveEncrypted(c, "secondAiGeminiApiKeyEnc", raw)
     }
 
     fun secondAiGeminiBaseUrl(c: Context): String {
@@ -237,7 +237,24 @@ object SettingsStore {
     }
 
     fun saveSecondAiCustomApiKey(c: Context, raw: String) {
-        prefs(c).edit().putString("secondAiCustomApiKeyEnc", KeystoreCrypto.encrypt(raw.trim())).apply()
+        saveEncrypted(c, "secondAiCustomApiKeyEnc", raw)
+    }
+
+    /**
+     * 解密失败时，空明文代表「读不出来」，不是用户把密钥删了。
+     * 这时保留原密文。加密本身失败也不拿空串覆盖已有内容。
+     */
+    private fun saveEncrypted(c: Context, prefKey: String, raw: String) {
+        val trimmed = raw.trim()
+        val existing = prefs(c).getString(prefKey, "") ?: ""
+        if (trimmed.isEmpty() && existing.isNotEmpty() &&
+            KeystoreCrypto.decryptResult(existing) == KeystoreCrypto.DecryptResult.Failed
+        ) {
+            return
+        }
+        val encrypted = KeystoreCrypto.encrypt(trimmed)
+        if (encrypted.isEmpty() && (trimmed.isNotEmpty() || existing.isNotEmpty())) return
+        prefs(c).edit().putString(prefKey, encrypted).apply()
     }
 
     fun secondAiCustomBaseUrl(c: Context): String {

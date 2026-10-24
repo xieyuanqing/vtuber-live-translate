@@ -7,6 +7,8 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
+import androidx.recyclerview.widget.RecyclerView
+import java.util.Calendar
 import com.xyq.livetranslate.ui.ModeHomeController
 import com.xyq.livetranslate.ui.ModeHomeViews
 import com.xyq.livetranslate.ui.PendingSessionSnapshot
@@ -110,8 +112,8 @@ class MainActivityStartupTest {
 
     @Test
     fun historyTabReloadsSessionsCreatedAfterStartup() = withActivity { activity ->
-        val historyList = activity.findViewById<android.widget.LinearLayout>(R.id.historyList)
-        assertEquals(0, historyList.childCount)
+        val historyList = activity.historyList()
+        assertEquals(0, historyList.adapter!!.itemCount)
 
         HistoryStore.save(
             activity,
@@ -135,10 +137,8 @@ class MainActivityStartupTest {
         ).selectedItemId = R.id.nav_history
 
         // 日期分组头 + 会话卡
-        assertEquals(2, historyList.childCount)
-        val sessionCard = (0 until historyList.childCount)
-            .map(historyList::getChildAt)
-            .first { it.findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle) != null }
+        assertEquals(2, historyList.adapter!!.itemCount)
+        val sessionCard = historyList.renderedChild(1)
         assertEquals(
             "历史测试场景",
             sessionCard.findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
@@ -158,11 +158,12 @@ class MainActivityStartupTest {
 
         assertTrue(HistoryStore.list(activity).isEmpty())
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistory).visibility)
-        assertEquals(0, historyList.childCount)
+        assertEquals(0, historyList.adapter!!.itemCount)
     }
 
     @Test
     fun activeHistoryCannotBeDeletedWhileLoggerMayStillWrite() = withActivity { activity ->
+        StatusBus.activeHistoryId = "active-session"
         HistoryStore.save(
             activity,
             HistorySession(
@@ -181,13 +182,44 @@ class MainActivityStartupTest {
         )
 
         activity.findViewById<View>(R.id.nav_history).performClick()
-        val historyList = activity.findViewById<android.widget.LinearLayout>(R.id.historyList)
-        historyList.getChildAt(1).performClick()
+        activity.historyList().renderedChild(1).performClick()
         activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
 
         assertEquals(activity.getString(R.string.rt_toast_cannot_delete_active_session), ShadowToast.getTextOfLatestToast())
         assertEquals(1, HistoryStore.list(activity).size)
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
+    }
+
+    @Test
+    fun orphanHistoryWithoutEndedAtCanBeDeletedWhenNothingIsLive() = withActivity { activity ->
+        StatusBus.activeHistoryId = null
+        HistoryStore.save(
+            activity,
+            HistorySession(
+                id = "killed-session",
+                title = "被系统杀掉",
+                mode = TranslationMode.INTERPRETATION,
+                sourceLanguageCode = "ja",
+                targetLanguageCode = "zh-Hans",
+                scenePresetId = "general",
+                sceneLabel = "通用",
+                contextSummary = "",
+                startedAt = 1_000L,
+                endedAt = null,
+                segments = listOf(TranscriptSegment(500L, "原文", "译文")),
+            ),
+        )
+
+        activity.findViewById<View>(R.id.nav_history).performClick()
+        activity.historyList().renderedChild(1).performClick()
+        activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
+
+        val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(dialog.isShowing)
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(HistoryStore.list(activity).isEmpty())
     }
 
     @Test
@@ -622,8 +654,8 @@ class MainActivityStartupTest {
 
         activity.prepareSessionSettingsForTest(StatusBus.MODE_MIC)
 
-        // Robolectric 没有 AndroidKeyStore；这里只验证保存入口写入了加密偏好项。
-        assertTrue(settingsPrefs.contains("apiKeysEnc"))
+        // Robolectric 没有 AndroidKeyStore，加密会失败。失败时不能落一条空密文冒充已保存。
+        assertFalse(settingsPrefs.contains("apiKeysEnc"))
         assertEquals("https://draft.example.test", SettingsStore.baseUrl(activity))
     }
 
@@ -716,6 +748,102 @@ class MainActivityStartupTest {
         } finally {
             controller.pause().stop().destroy()
         }
+    }
+
+    @Test
+    fun languageRowLeadsTheGeneralSettingsCard() = withActivity { activity ->
+        val language = activity.findViewById<View>(R.id.rowSetLanguage)
+        val translate = activity.findViewById<View>(R.id.rowSetTranslate)
+        val diagnostics = activity.findViewById<View>(R.id.rowSetDiagnostics)
+        val parent = language.parent as android.view.ViewGroup
+        assertEquals(parent, translate.parent)
+        assertTrue(parent.indexOfChild(language) < parent.indexOfChild(translate))
+        assertTrue(language.parent !== diagnostics.parent)
+        val value = activity.findViewById<android.widget.TextView>(R.id.tvSettingsLanguageValue)
+        assertTrue(value.text.isNotBlank())
+    }
+
+    @Test
+    fun historyRecyclerGroupsFiltersAndShares() = withActivity { activity ->
+        HistoryStore.save(activity, historySession("today-live", TranslationMode.INTERPRETATION, "课堂", atHour(0, 15)))
+        HistoryStore.save(activity, historySession("yesterday-video", TranslationMode.VIDEO, "直播", atHour(-1, 11)))
+
+        activity.findViewById<View>(R.id.nav_history).performClick()
+        val list = activity.historyList()
+        assertEquals(4, list.adapter!!.itemCount)
+        assertEquals(
+            activity.getString(R.string.rt_date_today),
+            list.renderedChild(0).findViewById<android.widget.TextView>(R.id.tvHistoryDayHeader).text,
+        )
+        assertEquals(
+            "课堂",
+            list.renderedChild(1).findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
+        )
+
+        activity.findViewById<android.widget.EditText>(R.id.etHistorySearch).setText("直播")
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(2, list.adapter!!.itemCount)
+        assertEquals(
+            "直播",
+            list.renderedChild(1).findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
+        )
+
+        activity.findViewById<android.widget.EditText>(R.id.etHistorySearch).setText("")
+        activity.findViewById<View>(R.id.chipHistoryVideo).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(2, list.adapter!!.itemCount)
+        assertEquals(
+            "直播",
+            list.renderedChild(1).findViewById<android.widget.TextView>(R.id.tvHistoryItemTitle).text,
+        )
+
+        list.renderedChild(1).performClick()
+        assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
+        activity.findViewById<View>(R.id.btnShareHistory).performClick()
+        val chooser = Shadows.shadowOf(activity).nextStartedActivity
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+    }
+
+    private fun historySession(
+        id: String,
+        mode: TranslationMode,
+        scene: String,
+        startedAt: Long,
+    ) = HistorySession(
+        id = id,
+        title = "",
+        mode = mode,
+        sourceLanguageCode = "ja",
+        targetLanguageCode = "zh",
+        scenePresetId = id,
+        sceneLabel = scene,
+        contextSummary = "",
+        startedAt = startedAt,
+        endedAt = startedAt + 60_000L,
+        segments = listOf(TranscriptSegment(1_000L, "原文", scene)),
+    )
+
+    private fun atHour(dayOffset: Int, hour: Int): Long {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DATE, dayOffset)
+        calendar.set(Calendar.HOUR_OF_DAY, hour)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
+    }
+
+    private fun MainActivity.historyList(): RecyclerView = findViewById(R.id.historyList)
+
+    private fun RecyclerView.renderedChild(index: Int): View {
+        measure(
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(4000, View.MeasureSpec.EXACTLY),
+        )
+        layout(0, 0, measuredWidth, measuredHeight)
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        return getChildAt(index)
+            ?: error("history row $index missing, children=$childCount items=${adapter?.itemCount}")
     }
 
     private fun withActivity(block: (MainActivity) -> Unit) {
@@ -875,13 +1003,14 @@ class MainActivityStartupTest {
     @Test
     fun modelDropdownListsEveryModelAndFillsTheField() = withActivity { activity ->
         val controller = activity.settingsControllerForTest()
+        val section = controller.secondAiSectionForTest()
         val models = listOf("gemini-flash-latest", "gpt-4o-mini", "claude-haiku")
-        controller.setPrivate("cachedSecondAiModels", models)
+        section.setPrivate("cachedSecondAiModels", models)
         activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).setText("gemini-flash-latest")
 
-        controller.invokePrivate("showModelPicker")
+        section.invokePrivate("showModelPicker")
 
-        val popup = controller.getPrivate<android.widget.ListPopupWindow>("modelPopup")
+        val popup = section.getPrivate<android.widget.ListPopupWindow>("modelPopup")
         assertTrue(popup.isShowing)
         assertEquals(models.size, requireNotNull(popup.listView).adapter.count)
 
@@ -890,21 +1019,25 @@ class MainActivityStartupTest {
             "gpt-4o-mini",
             activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).text.toString(),
         )
-        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+        assertNull(section.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
     }
 
     /** 离开设置页必须收掉下拉，否则它会挂在 WindowManager 上悬在别的页面。 */
     @Test
     fun modelDropdownIsDismissedWhenLeavingTheSettingsPage() = withActivity { activity ->
         val controller = activity.settingsControllerForTest()
-        controller.setPrivate("cachedSecondAiModels", listOf("gemini-flash-latest"))
-        controller.invokePrivate("showModelPicker")
-        assertTrue(controller.getPrivate<android.widget.ListPopupWindow>("modelPopup").isShowing)
+        val section = controller.secondAiSectionForTest()
+        section.setPrivate("cachedSecondAiModels", listOf("gemini-flash-latest"))
+        section.invokePrivate("showModelPicker")
+        assertTrue(section.getPrivate<android.widget.ListPopupWindow>("modelPopup").isShowing)
 
         controller.persistDraftInputs()
 
-        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+        assertNull(section.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
     }
+
+    private fun com.xyq.livetranslate.ui.SettingsController.secondAiSectionForTest(): Any =
+        getPrivate("secondAi")
 
     private fun MainActivity.settingsControllerForTest(): com.xyq.livetranslate.ui.SettingsController {
         val field = MainActivity::class.java.getDeclaredField("settingsController").apply {

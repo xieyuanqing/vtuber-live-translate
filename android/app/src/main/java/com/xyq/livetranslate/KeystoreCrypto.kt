@@ -15,6 +15,14 @@ import javax.crypto.spec.GCMParameterSpec
  */
 object KeystoreCrypto {
 
+    sealed interface DecryptResult {
+        /** 解密成功，明文可以是空串（用户主动清空）。 */
+        data class Ok(val plain: String) : DecryptResult
+
+        /** 密文损坏或 Keystore 密钥对不上。调用方不得据此把存储写成空。 */
+        data object Failed : DecryptResult
+    }
+
     private const val ALIAS = "livetranslate_aes"
     private const val STORE = "AndroidKeyStore"
 
@@ -42,13 +50,22 @@ object KeystoreCrypto {
         Base64.encodeToString(c.iv + ct, Base64.NO_WRAP)
     }.getOrDefault("")
 
-    /** 解密；失败（密钥丢失/数据损坏）返回空串。 */
-    fun decrypt(enc: String): String = runCatching {
-        val all = Base64.decode(enc, Base64.NO_WRAP)
-        val iv = all.copyOfRange(0, 12)
-        val ct = all.copyOfRange(12, all.size)
-        val c = Cipher.getInstance("AES/GCM/NoPadding")
-        c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
-        String(c.doFinal(ct), Charsets.UTF_8)
-    }.getOrDefault("")
+    /** 解密；失败（密钥丢失/数据损坏）返回空串。要区分失败和「真的是空密钥」时用 [decryptResult]。 */
+    fun decrypt(enc: String): String = when (val result = decryptResult(enc)) {
+        is DecryptResult.Ok -> result.plain
+        DecryptResult.Failed -> ""
+    }
+
+    fun decryptResult(enc: String): DecryptResult {
+        if (enc.isEmpty()) return DecryptResult.Failed
+        return runCatching {
+            val all = Base64.decode(enc, Base64.NO_WRAP)
+            if (all.size <= 12) return DecryptResult.Failed
+            val iv = all.copyOfRange(0, 12)
+            val ct = all.copyOfRange(12, all.size)
+            val c = Cipher.getInstance("AES/GCM/NoPadding")
+            c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
+            DecryptResult.Ok(String(c.doFinal(ct), Charsets.UTF_8))
+        }.getOrDefault(DecryptResult.Failed)
+    }
 }

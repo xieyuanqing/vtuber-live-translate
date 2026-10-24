@@ -13,6 +13,7 @@ import com.xyq.livetranslate.UpdateCheckResult
 import com.xyq.livetranslate.UpdateChecker
 import com.xyq.livetranslate.UpdateDownloader
 import com.xyq.livetranslate.UpdateInstaller
+import com.xyq.livetranslate.UpdateVerifier
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -142,11 +143,26 @@ internal class UpdateController(
                         }
                     }
                 }
+                val verdict = UpdateVerifier.verify(file, info.sha256)
                 postToUi {
                     busy.set(false)
                     dialog.dismiss()
                     if (!isHostActive()) return@postToUi
-                    installApk(file)
+                    when (verdict) {
+                        UpdateVerifier.Result.Trusted -> installApk(file)
+                        UpdateVerifier.Result.Missing -> {
+                            file.delete()
+                            toast(activity.getString(R.string.rt_update_sha256_missing))
+                        }
+                        is UpdateVerifier.Result.Mismatch -> {
+                            file.delete()
+                            toast(activity.getString(R.string.rt_update_sha256_mismatch))
+                        }
+                        UpdateVerifier.Result.Unreadable -> {
+                            file.delete()
+                            toast(activity.getString(R.string.rt_update_sha256_unreadable))
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 postToUi {

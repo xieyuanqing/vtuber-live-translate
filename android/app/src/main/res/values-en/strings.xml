@@ -92,7 +92,7 @@
     <string name="scene_library_btn_reset_defaults">Restore default scenes for this mode</string>
     <string name="scene_library_btn_new_scene">New Scene</string>
     <string name="settings_title">Settings</string>
-    <string name="settings_subtitle">Connect services, adjust subtitles, and tailor to your habits.</string>
+    <string name="settings_subtitle">App language, translation, and subtitles are at the top. Scenes and background analysis are below.</string>
     <string name="settings_section_general">General</string>
     <string name="settings_row_translate_title">Translation Service</string>
     <string name="settings_row_translate_desc">API key and service address</string>
@@ -100,7 +100,7 @@
     <string name="settings_row_subtitle_desc">Style preview, font size, background opacity</string>
     <string name="settings_section_scenes_ai">Scenes &amp; Assistance</string>
     <string name="settings_row_scenes_title">Scene Library</string>
-    <string name="settings_row_scenes_desc">Manage preferences for live &amp; video translation</string>
+    <string name="settings_row_scenes_desc">Live and video each have their own set; switch inside</string>
     <string name="settings_row_ai_title">Background Analysis AI</string>
     <string name="settings_row_ai_desc">Optional · Provides video context &amp; background for translation</string>
     <string name="settings_section_maintenance">Maintenance</string>

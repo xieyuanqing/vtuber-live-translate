@@ -37,7 +37,7 @@
 本项目当前仍是**纯本地、个人 Key 优先**的 Android App：
 
 - 用户自己的 Gemini API Key 和自定义 Base URL 是核心路径，不部署任何后端也必须完整可用；
-- 好友邀请网关只是可选扩展，用邀请码和设备凭据分享持有者的 Key，不是账号系统；
+- 好友邀请网关已在 2026-09-07 删除，不要按本节旧文恢复邀请码、设备绑定或 `FriendGatewayBindingViewModel`；
 - 主导航固定为“同传 / 视频 / 历史 / 设置”；
 - 同传与视频的场景库、草稿、语言和本场上下文严格隔离；
 - 启动前冻结 Prompt、语言、场景和本场上下文，权限回调不能重新读取当前草稿；
@@ -72,7 +72,7 @@
    - 权限拒绝或投屏取消不得错误消费。
 7. 普通 controller 不得持有完整 `MainActivity` 作为 service locator。只注入 `Context`、自己的 Views、窄能力接口或回调。
 8. 每个 View 只有一个绑定真源。字段移入 controller 后，同一步删除 `MainActivity` 中对应别名及全部直接访问。
-9. `FriendGatewayBindingViewModel` 仍由 Activity 创建和观察；`SettingsController` 只接收 `bind`、`clear`、`isBinding` 三个动作，不获取完整 ViewModel 或 LifecycleOwner。
+9. **已作废（2026-09-07）**：好友邀请网关和 `FriendGatewayBindingViewModel` 已从产品删除。下文若再出现 bind / clear / isBinding，只作施工当时的记录，不是现行要求。
 10. 现有测试断言不得删除或弱化。反射可改为窄 `internal` 测试入口，但“改可见性”不能替代新增的生命周期与接线测试。
 
 ## 3. 目标文件与职责

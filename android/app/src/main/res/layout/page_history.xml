@@ -1,103 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/pageHistory"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/page_margin"
+    android:paddingTop="@dimen/space_16"
+    android:paddingBottom="@dimen/page_bottom_padding"
     android:visibility="gone">
 
-    <LinearLayout
+    <TextView
+        style="@style/PageTitle"
+        android:text="@string/history_title" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Field"
+        android:layout_marginTop="@dimen/space_16"
+        android:hint="@string/history_search_hint"
+        app:startIconDrawable="@drawable/ic_search_24">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etHistorySearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupHistoryFilter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="@dimen/page_margin"
-        android:paddingTop="@dimen/space_16"
-        android:paddingBottom="@dimen/page_bottom_padding">
+        android:layout_marginTop="@dimen/space_12"
+        app:chipSpacingHorizontal="@dimen/space_8"
+        app:selectionRequired="true"
+        app:singleSelection="true">
 
-        <TextView
-            style="@style/PageTitle"
-            android:text="@string/history_title" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Field"
-            android:layout_marginTop="@dimen/space_16"
-            android:hint="@string/history_search_hint"
-            app:startIconDrawable="@drawable/ic_search_24">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etHistorySearch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionSearch"
-                android:inputType="text"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupHistoryFilter"
-            android:layout_width="match_parent"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipHistoryAll"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            app:chipSpacingHorizontal="@dimen/space_8"
-            app:selectionRequired="true"
-            app:singleSelection="true">
+            android:checked="true"
+            android:text="@string/history_filter_all"
+            android:textColor="@color/selector_scene_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_scene_chip_bg"
+            app:chipStrokeWidth="0dp"
+            app:ensureMinTouchTargetSize="true" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipHistoryAll"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/history_filter_all"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_scene_chip_bg"
-                app:chipStrokeWidth="0dp"
-                app:ensureMinTouchTargetSize="true"
-                android:textColor="@color/selector_scene_chip_text" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipHistoryInterp"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/history_filter_interp"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_scene_chip_bg"
-                app:chipStrokeWidth="0dp"
-                app:ensureMinTouchTargetSize="true"
-                android:textColor="@color/selector_scene_chip_text" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipHistoryVideo"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/history_filter_video"
-                app:checkedIconVisible="false"
-                app:chipBackgroundColor="@color/selector_scene_chip_bg"
-                app:chipStrokeWidth="0dp"
-                app:ensureMinTouchTargetSize="true"
-                android:textColor="@color/selector_scene_chip_text" />
-        </com.google.android.material.chip.ChipGroup>
-
-        <TextView
-            android:id="@+id/tvHistoryEmpty"
-            android:layout_width="match_parent"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipHistoryInterp"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_32"
-            android:gravity="center"
-            android:padding="@dimen/space_24"
-            android:text="@string/history_empty"
-            android:textColor="@color/text_muted"
-            android:textSize="14sp"
-            android:visibility="gone" />
+            android:text="@string/history_filter_interp"
+            android:textColor="@color/selector_scene_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_scene_chip_bg"
+            app:chipStrokeWidth="0dp"
+            app:ensureMinTouchTargetSize="true" />
 
-        <LinearLayout
-            android:id="@+id/historyList"
-            android:layout_width="match_parent"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipHistoryVideo"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            android:orientation="vertical" />
-    </LinearLayout>
-</ScrollView>
+            android:text="@string/history_filter_video"
+            android:textColor="@color/selector_scene_chip_text"
+            app:checkedIconVisible="false"
+            app:chipBackgroundColor="@color/selector_scene_chip_bg"
+            app:chipStrokeWidth="0dp"
+            app:ensureMinTouchTargetSize="true" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:id="@+id/tvHistoryEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_32"
+        android:gravity="center"
+        android:padding="@dimen/space_24"
+        android:text="@string/history_empty"
+        android:textColor="@color/text_muted"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/historyList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_16"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:overScrollMode="ifContentScrolls" />
+</LinearLayout>

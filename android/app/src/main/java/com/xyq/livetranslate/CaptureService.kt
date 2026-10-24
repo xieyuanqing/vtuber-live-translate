@@ -75,7 +75,7 @@ class CaptureService : Service() {
     private val sessionLines = ArrayDeque<String>()
     private var lastConfirmedZh = ""
     private var stabilizer: SubtitleStabilizer? = null
-    private var wakeLock: PowerManager.WakeLock? = null
+    private var sessionWakeLock: CaptureWakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -165,12 +165,16 @@ class CaptureService : Service() {
             return
         }
 
-        // CPU 保活（屏幕大多亮着，但防 ROM 深度休眠）；上限 4 小时兜底
-        wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "livetranslate:capture").apply {
-                setReferenceCounted(false)
-                acquire(4 * 60 * 60 * 1000L)
-            }
+        // CPU 保活。单次持有 4 小时，到期前续上，长会话不会在第 4 小时被休眠掐掉。
+        val lock = getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "livetranslate:capture")
+            .apply { setReferenceCounted(false) }
+        sessionWakeLock = CaptureWakeLock(
+            acquire = { timeoutMs -> lock.acquire(timeoutMs) },
+            releaseLock = { if (lock.isHeld) lock.release() },
+            postDelayed = { runnable, delayMs -> mainHandler.postDelayed(runnable, delayMs) },
+            removeCallbacks = { runnable -> mainHandler.removeCallbacks(runnable) },
+        ).also { it.start() }
 
         val record = if (mode == StatusBus.MODE_MIC) {
             createMicAudioRecord()
@@ -205,6 +209,7 @@ class CaptureService : Service() {
             title = intent.getStringExtra(EXTRA_SESSION_TITLE).orEmpty(),
             contextSummary = sessionContext,
         )
+        StatusBus.activeHistoryId = logger?.sessionId
         StatusBus.transcriptPath = logger?.pathHint ?: ""
 
         val useOverlay = mode == StatusBus.MODE_VIDEO || Settings.canDrawOverlays(this)
@@ -502,14 +507,15 @@ class CaptureService : Service() {
         client = null
         logger?.close()
         logger = null
+        StatusBus.activeHistoryId = null
         mainHandler.post {
             stabilizer?.reset()
             stabilizer = null
             overlay?.hide()
             overlay = null
         }
-        runCatching { wakeLock?.release() }
-        wakeLock = null
+        sessionWakeLock?.stop()
+        sessionWakeLock = null
         activeMode = ""
         StatusBus.serviceRunning = false
         StatusBus.paused = false

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="friend_gateway_v1.xml" />
+        <!-- API Key 密文离开这台设备后对不上 Keystore，恢复回来再被写成空串。 -->
+        <exclude domain="sharedpref" path="settings.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="friend_gateway_v1.xml" />
+        <exclude domain="sharedpref" path="settings.xml" />
     </device-transfer>
 </data-extraction-rules>

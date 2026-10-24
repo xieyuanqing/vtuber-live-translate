@@ -35,6 +35,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
+                <LinearLayout android:id="@+id/rowSetLanguage" style="@style/SettingsRow">
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_history_badge"
+                        android:padding="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_brand_translate_24"
+                        app:tint="@color/brand"/>
+                    <LinearLayout
+                        style="@style/SettingsRowText"
+                        android:layout_marginStart="@dimen/space_12">
+                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_language_title"/>
+                        <TextView
+                            android:id="@+id/tvSettingsLanguageValue"
+                            style="@style/SettingsRowDesc"
+                            android:text="@string/settings_language_desc"/>
+                    </LinearLayout>
+                    <TextView style="@style/SettingsRowChevron"/>
+                </LinearLayout>
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="68dp"/>
                 <LinearLayout android:id="@+id/rowSetTranslate" style="@style/SettingsRow">
                     <ImageView
                         android:layout_width="40dp"
@@ -173,30 +197,6 @@
                         android:layout_marginStart="@dimen/space_12">
                         <TextView style="@style/SettingsRowTitle" android:text="@string/settings_row_about_title"/>
                         <TextView style="@style/SettingsRowDesc" android:text="@string/settings_row_about_desc"/>
-                    </LinearLayout>
-                    <TextView style="@style/SettingsRowChevron"/>
-                </LinearLayout>
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="68dp"/>
-                <LinearLayout android:id="@+id/rowSetLanguage" style="@style/SettingsRow">
-                    <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_history_badge"
-                        android:padding="8dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_brand_translate_24"
-                        app:tint="@color/brand"/>
-                    <LinearLayout
-                        style="@style/SettingsRowText"
-                        android:layout_marginStart="@dimen/space_12">
-                        <TextView style="@style/SettingsRowTitle" android:text="@string/settings_language_title"/>
-                        <TextView
-                            android:id="@+id/tvSettingsLanguageValue"
-                            style="@style/SettingsRowDesc"
-                            android:text="@string/settings_language_desc"/>
                     </LinearLayout>
                     <TextView style="@style/SettingsRowChevron"/>
                 </LinearLayout>

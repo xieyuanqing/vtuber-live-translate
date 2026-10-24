@@ -3,6 +3,7 @@ package com.xyq.livetranslate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class UpdateCheckerTest {
 
@@ -29,6 +30,25 @@ class UpdateCheckerTest {
         assertTrue(info.downloadUrls.any { it.startsWith("https://ghproxy.net/") })
         assertTrue(info.downloadUrls.any { it.startsWith("https://mirror.ghproxy.com/") })
         assertEquals(3, info.downloadUrls.size)
+        assertEquals("", info.sha256)
+    }
+
+    @Test
+    fun parseManifestKeepsAValidSha256AndDropsAMalformedOne() {
+        val digest = "ab".repeat(32)
+        val json = """
+            {
+              "versionCode": 40,
+              "versionName": "2.6.2",
+              "apkName": "LiveTranslate-2.6.2.apk",
+              "sha256": "  ${digest.uppercase()}  ",
+              "downloadUrls": ["https://example.com/app.apk"]
+            }
+        """.trimIndent()
+        assertEquals(digest, UpdateChecker.parseManifest(json).sha256)
+
+        val malformed = json.replace(digest.uppercase(), "not-a-digest")
+        assertEquals("", UpdateChecker.parseManifest(malformed).sha256)
     }
 
     @Test
@@ -50,6 +70,41 @@ class UpdateCheckerTest {
         assertEquals(35L, info.versionCode)
         assertEquals("LiveTranslate-2.4.0.apk", info.apkName)
         assertTrue(info.downloadUrls.first().endsWith(".apk"))
+        assertEquals("", info.sha256)
+    }
+
+    @Test
+    fun parseGitHubReleaseReadsSha256FromBody() {
+        val digest = "cd".repeat(32)
+        val json = """
+            {
+              "tag_name": "v2.6.2",
+              "name": "流译 2.6.2",
+              "body": "versionCode: 40\nsha256: $digest",
+              "assets": [
+                {
+                  "name": "LiveTranslate-2.6.2.apk",
+                  "browser_download_url": "https://github.com/xieyuanqing/vtuber-live-translate/releases/download/v2.6.2/LiveTranslate-2.6.2.apk"
+                }
+              ]
+            }
+        """.trimIndent()
+        assertEquals(digest, UpdateChecker.parseGitHubRelease(json).sha256)
+    }
+
+    @Test
+    fun verifierTrustsAMatchingDigestAndRefusesMissingOrDifferentBytes() {
+        val file = File.createTempFile("livetranslate-apk", ".bin")
+        try {
+            file.writeBytes("apk-bytes".toByteArray())
+            val digest = UpdateVerifier.digest(file)
+            assertTrue(UpdateVerifier.verify(file, digest.uppercase()) is UpdateVerifier.Result.Trusted)
+            assertTrue(UpdateVerifier.verify(file, "") is UpdateVerifier.Result.Missing)
+            assertTrue(UpdateVerifier.verify(file, "ab".repeat(32)) is UpdateVerifier.Result.Mismatch)
+        } finally {
+            file.delete()
+        }
+        assertTrue(UpdateVerifier.verify(file, "ab".repeat(32)) is UpdateVerifier.Result.Unreadable)
     }
 
     @Test
