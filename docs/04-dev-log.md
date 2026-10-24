@@ -17,7 +17,7 @@
 
 - `update.json` 的 versionCode 和下载地址仍指向已发布的 2.6.1。sha256 字段先留空，等 2.6.2 的 APK 发布时再填。空着时，2.6.2 及以后的应用内更新会拒绝安装。
 
-**验证**：见本条提交时的 `testDebugUnitTest`、`lintDebug`、`assembleDebug` 结果。
+**真实验证**：`testDebugUnitTest` 165 项，0 失败 / 0 错误 / 0 跳过；`lintDebug` 0 errors、42 warnings；`assembleDebug` 通过。`aapt dump badging` 确认本地产物为 `versionCode=40 / versionName=2.6.2`。未做模拟器实测。
 
 ## 2026-09-13 · README 默认语言改为英文（v2.6.1 / 39）
 
