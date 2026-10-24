@@ -6,7 +6,7 @@
 
 基线版本：v2.3.1 / versionCode 34（2026-07-18 的界面截图诊断）。若执行时版本已前进，先核对涉及的文件与 View ID 是否仍然存在，行号仅供定位参考，以实际代码为准。
 
-**阶段 A/B/C 状态：已完成（2026-07-19）**。C6 未上 RecyclerView：`StatusBus` / `CaptureService.sessionLines` 各保留最近 **80** 条确认行，运行页用增量 `LinearLayout` 展示；用户已在底部时才自动跟随，上滑回看时不强制滚底。C7「聆听中…」只按译文更新时间计时。C9 会话历史 JSON 经 `TranscriptLogger` 单线程后台写入；历史列表 RecyclerView 仍未做。
+**阶段 A/B/C 状态：已完成（2026-07-19）**。C6 未上 RecyclerView：`StatusBus` / `CaptureService.sessionLines` 各保留最近 **80** 条确认行，运行页用增量 `LinearLayout` 展示；用户已在底部时才自动跟随，上滑回看时不强制滚底。C7「聆听中…」只按译文更新时间计时。C9 会话历史 JSON 经 `TranscriptLogger` 单线程后台写入；历史列表 RecyclerView 已在 v2.6.2 补上。
 
 ---
 
@@ -205,9 +205,9 @@ Gemini 分支同屏 9 个同权重按钮；翻译页 5 个按钮 3 种样式挤�
 - **C6 运行态字幕完整回看**：原状只展示最后 6 条。落地：确认行上限 **80**（`StatusBus` 与 `CaptureService.sessionLines` 对齐）；运行页仍用 `LinearLayout` 增量追加，不每句全量重建；用户靠近底部时才自动跟随，上滑回看时暂停跟随。`RecyclerView` 仍可选后续优化。
 - **C7 静音/聆听状态提示**：静音期长时间无输出是正常情况（`CLAUDE.md`），但界面无任何传达，用户会疑心断线。在运行态副状态派生显示：电平持续≈0 →「静音中」；有电平但超过 N 秒无新**译文** →「聆听中…」。`lastSubtitleAtMs` 只在译文确认/当前行变化时更新，原文输入不重置计时。只改 UI 派生逻辑，不动连接判定。
 - **C8 悬浮字幕收起态可纵向拖动**：`SubtitleOverlay.dragListener` 现为 `moved && !collapsed`，收起胶囊 y 锁死，挡住目标 App 控件时必须展开-拖-再收。放开 collapsed 态的纵向拖动（x 仍贴边），拖完 clamp。
-> 落地：阶段 C1–C9 已实现（C6/C9 列表未改 RecyclerView，见 dev-log）；2026-07-19 稳定性补丁对齐了 80 行生产链路、增量列表与 C7 计时。
+> 落地：阶段 C1–C9 已实现（C6 运行页列表仍不是 RecyclerView；C9 历史列表在 v2.6.2 改为 RecyclerView，见 dev-log）；2026-07-19 稳定性补丁对齐了 80 行生产链路、增量列表与 C7 计时。
 
-- **C9 历史落盘与导出**：① 空会话（无确认行且时长 < 10s）停止时不落盘，避免历史堆「00:03 · 暂无字幕摘要」垃圾条目；② 历史详情页加系统分享（`ACTION_SEND`，Markdown 文本），与「不自动写公共 Downloads」边界不冲突（用户主动动作）；③ 历史列表 `LinearLayout` 全量 addView 改 `RecyclerView`（会话多时的性能与 B4 分组一起做亦可，**尚未做**）。会话 JSON 由 `TranscriptLogger` 后台单线程写入 `history_v2`，避免确认字幕时阻塞主线程。
+- **C9 历史落盘与导出**：① 空会话（无确认行且时长 < 10s）停止时不落盘，避免历史堆「00:03 · 暂无字幕摘要」垃圾条目；② 历史详情页加系统分享（`ACTION_SEND`，Markdown 文本），与「不自动写公共 Downloads」边界不冲突（用户主动动作）；③ 历史列表改为 `RecyclerView`（**v2.6.2 已做**，View ID `historyList` 保留，按日分组仍在适配器里）。会话 JSON 由 `TranscriptLogger` 后台单线程写入 `history_v2`，避免确认字幕时阻塞主线程。
 
 ---
 

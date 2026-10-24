@@ -9,7 +9,7 @@ Microphone interpretation · In-app audio capture · System overlay subtitles
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.6.1-0058BC)
+![Version](https://img.shields.io/badge/version-2.6.2-0058BC)
 
 [简体中文](README.zh-CN.md) · [Download APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [Docs](docs/README.md)
 
@@ -176,9 +176,17 @@ Full index in [docs/README.md](docs/README.md). Most of it is written in Chinese
 
 ## Current status
 
-Current version **v2.6.1 (versionCode 39)**.
+Current version **v2.6.2 (versionCode 40)**.
 
-This release is about quieting the interface down:
+This release fixes things that get stuck in real use:
+
+- **History can be deleted** after the system kills the app mid-session. Restarting no longer leaves those sessions permanently undeletable.
+- **API keys are not wiped** when the Keystore cannot decrypt them. Settings are excluded from backup.
+- **In-app updates check the APK sha256.** A manifest without a digest is refused.
+- **Sessions longer than four hours** renew the wake lock instead of stopping at the first timeout.
+- **The history list is a RecyclerView.** App language is the first row under General settings.
+
+2.6.1 and earlier already included:
 
 - **One skeleton for both service pages** — Translation Service and Background Analysis AI now share the same structure (inputs → a small self-test button → collapsible rows for optional settings), with buttons split into three weight tiers instead of a screenful of equally loud blocks.
 - **In-place model dropdown** — a refresh icon sits next to the model field; tapping it fetches the list and expands a dropdown right there, replacing the old full-screen picker panel.

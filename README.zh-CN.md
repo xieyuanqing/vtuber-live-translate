@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-2.6.1-0058BC)
+![Version](https://img.shields.io/badge/version-2.6.2-0058BC)
 
 [English](README.md) · [下载 APK](https://github.com/xieyuanqing/vtuber-live-translate/releases/latest) · [文档索引](docs/README.md)
 
@@ -176,9 +176,17 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 当前状态
 
-当前版本 **v2.6.1（versionCode 39）**。
+当前版本 **v2.6.2（versionCode 40）**。
 
-本版的重点是把界面收干净：
+这一版修使用中会卡住的问题：
+
+- **历史删得掉** — 翻译进行中被系统杀掉之后，重启不再一直提示「正在进行的会话不能删除」。
+- **密钥不会被一次离开页面写丢** — Keystore 解不开时保留原密文，设置不再进云备份。
+- **更新会核对安装包摘要** — 清单里没有 sha256 就拒绝安装。
+- **长会话续上唤醒锁** — 超过 4 小时不会因为这一次超时被休眠掐掉。
+- **历史列表改成 RecyclerView**；设置页把界面语言放到常用设置第一行。
+
+2.6.1 及更早版本已经包含：
 
 - **设置页统一骨架** — 翻译服务与背景分析 AI 两页压成同一套结构（输入 → 小按钮自检 → 折叠行承载可选项），按钮按主次分三层，不再是一屏同权重色块。
 - **模型选择就地下拉** — 模型输入框右侧一个刷新图标，点一下拉取并原地展开选择，取代原来的全屏选择面板。
