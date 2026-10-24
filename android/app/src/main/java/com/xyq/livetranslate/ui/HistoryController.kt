@@ -11,8 +11,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.view.ViewCompat
 import androidx.core.widget.doAfterTextChanged
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.xyq.livetranslate.HistoryStore
@@ -31,7 +32,7 @@ internal data class HistoryViews(
     val interpretationChip: Chip,
     val videoChip: Chip,
     val emptyText: TextView,
-    val list: LinearLayout,
+    val list: RecyclerView,
     val detailTitle: TextView,
     val shareButton: Button,
     val copyButton: Button,
@@ -74,8 +75,11 @@ internal class HistoryController(
     private var allItems: List<HistoryStore.HistoryItem> = emptyList()
     private var modeFilter: TranslationMode? = null
     private var currentDetailFileName: String? = null
+    private val listAdapter = HistoryListAdapter { item -> showDetail(item) }
 
     fun setup() {
+        views.list.layoutManager = LinearLayoutManager(context)
+        views.list.adapter = listAdapter
         views.searchInput.doAfterTextChanged { renderList() }
         views.allChip.setOnCheckedChangeListener { _, checked ->
             if (checked) {
@@ -163,90 +167,23 @@ internal class HistoryController(
                 .lowercase()
             matchesMode && (query.isEmpty() || query in haystack)
         }
-        views.list.removeAllViews()
         views.emptyText.text = if (allItems.isEmpty()) {
             context.getString(R.string.rt_history_empty)
         } else {
             context.getString(R.string.rt_history_no_match)
         }
         views.emptyText.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        val rows = mutableListOf<HistoryRow>()
         var lastGroupKey: String? = null
         items.forEach { item ->
             val groupKey = dayGroupKey(item.updatedAt)
             if (groupKey != lastGroupKey) {
-                views.list.addView(buildDayHeader(dayGroupLabel(item.updatedAt)))
+                rows += HistoryRow.Day(dayGroupLabel(item.updatedAt))
                 lastGroupKey = groupKey
             }
-            views.list.addView(buildSessionCard(item))
+            rows += HistoryRow.Session(item)
         }
-    }
-
-    private fun buildDayHeader(label: String): TextView {
-        return TextView(context).apply {
-            text = label
-            setTextColor(context.getColor(R.color.text_muted))
-            textSize = 12f
-            setPadding(0, context.resources.getDimensionPixelSize(R.dimen.space_12), 0, context.resources.getDimensionPixelSize(R.dimen.space_8))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-        }
-    }
-
-    private fun buildSessionCard(item: HistoryStore.HistoryItem): View {
-        val card = layoutInflater.inflate(R.layout.item_history_session, views.list, false)
-        val icon = card.findViewById<TextView>(R.id.tvHistoryItemIcon)
-        val mode = card.findViewById<TextView>(R.id.tvHistoryItemMode)
-        val title = card.findViewById<TextView>(R.id.tvHistoryItemTitle)
-        val time = card.findViewById<TextView>(R.id.tvHistoryItemTime)
-        val meta = card.findViewById<TextView>(R.id.tvHistoryItemMeta)
-        val summary = card.findViewById<TextView>(R.id.tvHistoryItemSummary)
-        val isInterpretation = item.mode == TranslationMode.INTERPRETATION
-        icon.text = if (isInterpretation) {
-            context.getString(R.string.rt_history_icon_mic)
-        } else {
-            context.getString(R.string.rt_history_icon_broadcast)
-        }
-        icon.setTextColor(context.getColor(if (isInterpretation) R.color.brand else R.color.warning))
-        ViewCompat.setBackgroundTintList(
-            icon,
-            context.getColorStateList(
-                if (isInterpretation) R.color.primary_fixed else R.color.warning_container,
-            ),
-        )
-        mode.visibility = View.GONE
-        // 列表标题优先场景名；视频若自定义过会话标题（非「视频 ·」自动名）则用标题。
-        title.text = displayTitle(item)
-        time.text = formatClock(item.updatedAt)
-        val direction = "${TranslationLanguageCatalog.source(item.sourceLanguageCode).label} → " +
-            TranslationLanguageCatalog.target(item.targetLanguageCode).label
-        meta.text = "$direction · ${HistoryStore.formatDuration(item.durationMs)}"
-        summary.text = item.summary.trim().replace('\n', ' ').ifBlank { context.getString(R.string.rt_history_no_summary) }
-        card.setOnClickListener { showDetail(item) }
-        card.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { bottomMargin = context.resources.getDimensionPixelSize(R.dimen.space_12) }
-        return card
-    }
-
-    private fun displayTitle(item: HistoryStore.HistoryItem): String {
-        val scene = item.sceneLabel.trim()
-        val rawTitle = item.title.trim()
-        val autoPrefix = item.mode.label + " · "
-        val looksAuto = rawTitle.startsWith(autoPrefix) || rawTitle.isBlank()
-        return when {
-            // 视频用户手填标题优先；同传/自动标题则优先场景名。
-            item.mode == TranslationMode.VIDEO && !looksAuto -> rawTitle
-            scene.isNotEmpty() -> scene
-            rawTitle.isNotEmpty() -> rawTitle
-            else -> if (item.mode == TranslationMode.INTERPRETATION) {
-                context.getString(R.string.rt_mode_interpretation)
-            } else {
-                context.getString(R.string.rt_mode_video)
-            }
-        }
+        listAdapter.submit(rows)
     }
 
     private fun dayGroupKey(ms: Long): String =
@@ -272,10 +209,6 @@ internal class HistoryController(
         cal.set(Calendar.MILLISECOND, 0)
         return cal.timeInMillis
     }
-
-    private fun formatClock(ms: Long): String =
-        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
-
 
     private fun showDetail(item: HistoryStore.HistoryItem) {
         val session = HistoryStore.load(context, item.fileName)
