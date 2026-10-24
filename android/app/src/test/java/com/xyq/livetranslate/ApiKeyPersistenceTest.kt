@@ -44,6 +44,17 @@ class ApiKeyPersistenceTest {
     }
 
     @Test
+    fun failedEncryptDoesNotStoreOrReplaceCiphertext() {
+        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        SettingsStore.saveApiKeys(context, "fresh-key")
+        assertFalse(prefs.contains("apiKeysEnc"))
+
+        prefs.edit().putString("apiKeysEnc", "keep-me").commit()
+        SettingsStore.saveApiKeys(context, "replacement-key")
+        assertEquals("keep-me", prefs.getString("apiKeysEnc", null))
+    }
+
+    @Test
     fun backupRulesExcludeSettingsAndDropTheRemovedGateway() {
         val cloud = xmlText(R.xml.backup_rules)
         val legacy = xmlText(R.xml.backup_rules_legacy)

@@ -242,10 +242,13 @@ internal class SettingsController(
         maintenance.setup()
     }
 
+    fun persistSecondAiInputs() = secondAi.persist()
+
     fun persistDraftInputs() {
+        // 模型下拉挂在 WindowManager 上，离开设置页时必须收掉。
         secondAi.dismissModelPopup()
         translate.persist()
-        secondAi.persist()
+        persistSecondAiInputs()
     }
 
     fun renderDiagnostics(state: SettingsDiagnosticsState) = maintenance.renderDiagnostics(state)

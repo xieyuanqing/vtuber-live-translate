@@ -654,8 +654,8 @@ class MainActivityStartupTest {
 
         activity.prepareSessionSettingsForTest(StatusBus.MODE_MIC)
 
-        // Robolectric 没有 AndroidKeyStore；这里只验证保存入口写入了加密偏好项。
-        assertTrue(settingsPrefs.contains("apiKeysEnc"))
+        // Robolectric 没有 AndroidKeyStore，加密会失败。失败时不能落一条空密文冒充已保存。
+        assertFalse(settingsPrefs.contains("apiKeysEnc"))
         assertEquals("https://draft.example.test", SettingsStore.baseUrl(activity))
     }
 
@@ -1003,13 +1003,14 @@ class MainActivityStartupTest {
     @Test
     fun modelDropdownListsEveryModelAndFillsTheField() = withActivity { activity ->
         val controller = activity.settingsControllerForTest()
+        val section = controller.secondAiSectionForTest()
         val models = listOf("gemini-flash-latest", "gpt-4o-mini", "claude-haiku")
-        controller.setPrivate("cachedSecondAiModels", models)
+        section.setPrivate("cachedSecondAiModels", models)
         activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).setText("gemini-flash-latest")
 
-        controller.invokePrivate("showModelPicker")
+        section.invokePrivate("showModelPicker")
 
-        val popup = controller.getPrivate<android.widget.ListPopupWindow>("modelPopup")
+        val popup = section.getPrivate<android.widget.ListPopupWindow>("modelPopup")
         assertTrue(popup.isShowing)
         assertEquals(models.size, requireNotNull(popup.listView).adapter.count)
 
@@ -1018,21 +1019,25 @@ class MainActivityStartupTest {
             "gpt-4o-mini",
             activity.findViewById<android.widget.EditText>(R.id.etSecondAiModel).text.toString(),
         )
-        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+        assertNull(section.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
     }
 
     /** 离开设置页必须收掉下拉，否则它会挂在 WindowManager 上悬在别的页面。 */
     @Test
     fun modelDropdownIsDismissedWhenLeavingTheSettingsPage() = withActivity { activity ->
         val controller = activity.settingsControllerForTest()
-        controller.setPrivate("cachedSecondAiModels", listOf("gemini-flash-latest"))
-        controller.invokePrivate("showModelPicker")
-        assertTrue(controller.getPrivate<android.widget.ListPopupWindow>("modelPopup").isShowing)
+        val section = controller.secondAiSectionForTest()
+        section.setPrivate("cachedSecondAiModels", listOf("gemini-flash-latest"))
+        section.invokePrivate("showModelPicker")
+        assertTrue(section.getPrivate<android.widget.ListPopupWindow>("modelPopup").isShowing)
 
         controller.persistDraftInputs()
 
-        assertNull(controller.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
+        assertNull(section.getPrivate<android.widget.ListPopupWindow?>("modelPopup"))
     }
+
+    private fun com.xyq.livetranslate.ui.SettingsController.secondAiSectionForTest(): Any =
+        getPrivate("secondAi")
 
     private fun MainActivity.settingsControllerForTest(): com.xyq.livetranslate.ui.SettingsController {
         val field = MainActivity::class.java.getDeclaredField("settingsController").apply {
