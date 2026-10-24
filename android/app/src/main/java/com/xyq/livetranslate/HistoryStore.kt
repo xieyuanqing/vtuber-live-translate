@@ -60,6 +60,49 @@ object HistoryStore {
         }
         .sortedByDescending { it.updatedAt }
 
+    /**
+     * 只有本进程里还活着的 [TranscriptLogger] 才算「正在进行」。
+     * `endedAt == null` 也会出现在被系统杀掉的旧会话上，那种文件必须能删。
+     */
+    fun isLiveSession(fileNameOrId: String, activeSessionId: String? = StatusBus.activeHistoryId): Boolean {
+        val active = activeSessionId?.takeIf { it.isNotBlank() } ?: return false
+        return fileNameOrId.removeSuffix(".json") == active
+    }
+
+    /**
+     * 给没有结束时间、且不是当前正在写的会话补上 `endedAt`。
+     * 优先用文件最后修改时间（每次确认字幕都会重写文件），否则用最后一段的相对时间。
+     * @return 补写的条数
+     */
+    fun repairOrphans(
+        context: Context,
+        activeSessionId: String? = StatusBus.activeHistoryId,
+        nowMs: Long = System.currentTimeMillis(),
+    ): Int {
+        val dir = historyDir(context)
+        if (!dir.isDirectory) return 0
+        var repaired = 0
+        dir.listFiles { file -> file.isFile && file.extension.equals("json", ignoreCase = true) }
+            .orEmpty()
+            .forEach { file ->
+                val session = runCatching {
+                    HistorySessionJson.decode(org.json.JSONObject(file.readText(Charsets.UTF_8)))
+                }.getOrNull() ?: return@forEach
+                if (session.id.isBlank() || session.endedAt != null) return@forEach
+                if (isLiveSession(session.id, activeSessionId)) return@forEach
+                val lastModified = file.lastModified()
+                val endedAt = when {
+                    lastModified >= session.startedAt && lastModified > 0L -> lastModified
+                    session.segments.isNotEmpty() ->
+                        session.startedAt + session.segments.last().elapsedMs
+                    else -> nowMs
+                }
+                save(context, session.copy(endedAt = endedAt.coerceAtLeast(session.startedAt)))
+                repaired++
+            }
+        return repaired
+    }
+
     fun load(context: Context, fileNameOrId: String): HistorySession? {
         val file = File(historyDir(context), safeFileName(fileNameOrId.removeSuffix(".json")))
         if (!file.isFile) return null

@@ -163,6 +163,7 @@ class MainActivityStartupTest {
 
     @Test
     fun activeHistoryCannotBeDeletedWhileLoggerMayStillWrite() = withActivity { activity ->
+        StatusBus.activeHistoryId = "active-session"
         HistoryStore.save(
             activity,
             HistorySession(
@@ -188,6 +189,39 @@ class MainActivityStartupTest {
         assertEquals(activity.getString(R.string.rt_toast_cannot_delete_active_session), ShadowToast.getTextOfLatestToast())
         assertEquals(1, HistoryStore.list(activity).size)
         assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.pageHistoryDetail).visibility)
+    }
+
+    @Test
+    fun orphanHistoryWithoutEndedAtCanBeDeletedWhenNothingIsLive() = withActivity { activity ->
+        StatusBus.activeHistoryId = null
+        HistoryStore.save(
+            activity,
+            HistorySession(
+                id = "killed-session",
+                title = "被系统杀掉",
+                mode = TranslationMode.INTERPRETATION,
+                sourceLanguageCode = "ja",
+                targetLanguageCode = "zh-Hans",
+                scenePresetId = "general",
+                sceneLabel = "通用",
+                contextSummary = "",
+                startedAt = 1_000L,
+                endedAt = null,
+                segments = listOf(TranscriptSegment(500L, "原文", "译文")),
+            ),
+        )
+
+        activity.findViewById<View>(R.id.nav_history).performClick()
+        val historyList = activity.findViewById<android.widget.LinearLayout>(R.id.historyList)
+        historyList.getChildAt(1).performClick()
+        activity.findViewById<View>(R.id.btnDeleteHistory).performClick()
+
+        val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(dialog.isShowing)
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(HistoryStore.list(activity).isEmpty())
     }
 
     @Test

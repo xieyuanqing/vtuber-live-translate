@@ -205,6 +205,7 @@ class CaptureService : Service() {
             title = intent.getStringExtra(EXTRA_SESSION_TITLE).orEmpty(),
             contextSummary = sessionContext,
         )
+        StatusBus.activeHistoryId = logger?.sessionId
         StatusBus.transcriptPath = logger?.pathHint ?: ""
 
         val useOverlay = mode == StatusBus.MODE_VIDEO || Settings.canDrawOverlays(this)
@@ -502,6 +503,7 @@ class CaptureService : Service() {
         client = null
         logger?.close()
         logger = null
+        StatusBus.activeHistoryId = null
         mainHandler.post {
             stabilizer?.reset()
             stabilizer = null

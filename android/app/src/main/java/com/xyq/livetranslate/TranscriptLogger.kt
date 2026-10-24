@@ -8,6 +8,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * 维护 App 内结构化会话。原文碎片先缓冲，字幕稳定器确认译文时才生成一个
@@ -32,7 +33,7 @@ class TranscriptLogger(
         Thread(task, "history-writer")
     }
     private val startedAt = System.currentTimeMillis()
-    private val sessionId = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(startedAt)) +
+    val sessionId: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(startedAt)) +
         "_" + UUID.randomUUID().toString().take(8)
     private val sourceBuffer = StringBuilder()
     private val rawTranslationBuffer = StringBuilder()
@@ -139,5 +140,7 @@ class TranscriptLogger(
             saveHistory(session)
         }
         historyWriter.shutdown()
+        // 停止路径在主线程调用。写完再返回，避免 stopSelf 之后进程马上被杀、endedAt 没落盘。
+        runCatching { historyWriter.awaitTermination(5, TimeUnit.SECONDS) }
     }
 }

@@ -17,6 +17,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.xyq.livetranslate.HistoryStore
 import com.xyq.livetranslate.R
+import com.xyq.livetranslate.StatusBus
 import com.xyq.livetranslate.TranslationLanguageCatalog
 import com.xyq.livetranslate.TranslationMode
 import java.text.SimpleDateFormat
@@ -73,7 +74,6 @@ internal class HistoryController(
     private var allItems: List<HistoryStore.HistoryItem> = emptyList()
     private var modeFilter: TranslationMode? = null
     private var currentDetailFileName: String? = null
-    private var currentDetailIsActive = false
 
     fun setup() {
         views.searchInput.doAfterTextChanged { renderList() }
@@ -117,7 +117,8 @@ internal class HistoryController(
         }
         views.deleteButton.setOnClickListener {
             val fileName = currentDetailFileName ?: return@setOnClickListener
-            if (currentDetailIsActive) {
+            // 点删除时再看一次，不使用打开详情时缓存的「进行中」标记。
+            if (HistoryStore.isLiveSession(fileName, StatusBus.activeHistoryId)) {
                 toast(context.getString(R.string.rt_toast_cannot_delete_active_session))
                 return@setOnClickListener
             }
@@ -128,7 +129,6 @@ internal class HistoryController(
                 .setPositiveButton(context.getString(R.string.rt_action_delete)) { _, _ ->
                     if (HistoryStore.delete(context, fileName)) {
                         currentDetailFileName = null
-                        currentDetailIsActive = false
                         views.detailText.text = ""
                         reload()
                         closeDetailPage()
@@ -281,13 +281,11 @@ internal class HistoryController(
         val session = HistoryStore.load(context, item.fileName)
         if (session == null) {
             currentDetailFileName = null
-            currentDetailIsActive = false
             toast(context.getString(R.string.rt_toast_history_not_found_or_corrupt))
             reload()
             return
         }
         currentDetailFileName = item.fileName
-        currentDetailIsActive = session.endedAt == null
         views.detailTitle.text = session.title
         views.detailText.text = HistoryStore.toMarkdown(session, context)
         val modeLabel = if (session.mode == TranslationMode.INTERPRETATION) {
